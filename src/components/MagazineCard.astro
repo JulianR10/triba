@@ -1,0 +1,19 @@
+---
+export interface Props {
+  number: string;
+  title: string;
+  description: string;
+  image: string;
+  coverId?: string;
+}
+
+const { number, title, description, image, coverId } = Astro.props;
+---
+
+<div class="flex flex-col gap-4">
+  <div id={coverId} class="relative w-full aspect-[3/4] rounded-lg overflow-hidden will-change-transform">
+    <img src={image} alt={`Triba Tomo ${number}`} loading="lazy" class="w-full h-full object-cover" />
+  </div>
+  <h2 class="font-heading text-lg uppercase tracking-wide text-triba-black font-bold">#{number} {title}</h2>
+  <p class="font-sans text-triba-brown text-sm leading-relaxed">{description}</p>
+</div>

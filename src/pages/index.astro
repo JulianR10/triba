@@ -1,0 +1,346 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import MagazineCard from "../components/MagazineCard.astro";
+import NewsletterForm from "../components/NewsletterForm.astro";
+
+const title = "Inicio";
+const description = "Triba es una revista digital mensual escrita por y para mujeres. Descubrí nuestra comunidad, ediciones, newsletter y mucho más.";
+const canonical = "/";
+
+import { getEditions } from "../lib/editions";
+const editions = await getEditions();
+const magazines = editions.map((e, i) => ({
+  number: String(e.edition_number),
+  title: e.title,
+  description: e.description,
+  image: e.cover_url,
+  coverId: `cover-${e.id}`,
+}));
+---
+
+<Layout title={title} description={description} canonical={canonical}>
+  <section class="relative pb-12 md:pb-20 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone bg-cover bg-center bg-fixed overflow-x-hidden md:min-h-screen" style="padding-top: var(--nav-height, 64px); background-image: linear-gradient(rgba(242,241,235,0.5),rgba(242,241,235,0.5)), url('/fondo-cielo.webp')">
+
+    <div class="relative z-10 flex flex-col items-center justify-center gap-6 mb-12 md:mb-16">
+      <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
+        <img src="/logo-triba.svg" alt="Triba" class="h-24 md:h-40 shrink-0" />
+        <div class="bg-triba-pink border-2 border-triba-black px-8 md:px-16 py-4 md:py-5" style="border-radius: 50%">
+          <p class="font-heading text-xl md:text-2xl text-triba-brown uppercase tracking-wide leading-snug text-center whitespace-nowrap">
+            Tu nueva lectura favorita<br />en forma de revista digital
+          </p>
+        </div>
+      </div>
+    </div>
+
+    <div class="md:hidden mb-8 flex justify-center">
+      <div class="w-[72vw] max-w-64 select-none touch-pan-y relative" id="card-stack">
+        <div class="relative w-full" style="aspect-ratio: 3/4">
+          {Array.from({ length: 11 }, (_, i) => {
+            const colors = [
+              "bg-triba-pink", "bg-triba-cream", "bg-triba-light-cream", "bg-triba-pink",
+              "bg-triba-blue/20", "bg-triba-cream", "bg-triba-pink", "bg-triba-light-cream",
+              "bg-triba-pink", "bg-triba-cream", "bg-triba-blue/20",
+            ];
+            return (
+              <div
+                id={`stack-card-${i}`}
+                class={`absolute left-1/2 w-full rounded-xl overflow-hidden ${colors[i]} transition-all duration-500 ease-out will-change-transform shadow-xl`}
+                style="display: none; height: 100%; top: 0;"
+              >
+                <img src={`/mini-portadas/img${i + 1}.webp`} alt={`Portada ${i + 1}`} loading="lazy" class="w-full h-full object-cover" />
+              </div>
+            );
+          })}
+        </div>
+        <div id="stack-dots" class="flex justify-center gap-1.5 mt-3"></div>
+      </div>
+    </div>
+
+    <div class="relative z-10 max-w-6xl mx-auto flex flex-col md:flex-row gap-8 md:gap-12 pb-8 md:pb-16">
+      <div class="w-full md:w-[35%]">
+        <h1 class="font-heading text-5xl md:text-7xl uppercase tracking-wide text-triba-black font-bold mb-6 leading-none">¿Qué somos?</h1>
+        <ul class="space-y-1 font-sans text-triba-brown text-sm leading-relaxed mb-6">
+          {["Una revista digital mensual", "Escrita por mujeres de todo el mundo", "Cultura, arte, identidad, y todo lo que nos interesa"].map((item) => (
+            <li class="flex items-start gap-2">
+              <span class="text-triba-red mt-0.5 shrink-0">✦</span>
+              <span>{item}</span>
+            </li>
+          ))}
+        </ul>
+        <p class="font-sans text-triba-brown text-sm leading-relaxed">
+          Nos gusta pensar que somos un universo cultural, porque las posibilidades son infinitas. Hoy existimos de esta forma pero hay muchos proyectos por delante.
+        </p>
+        <p class="font-sans text-triba-brown text-sm leading-relaxed mt-3">
+          Nacimos de la necesidad de volver a consumir contenido de calidad, y creemos en la magia que existe cuando mujeres de todo el mundo crean juntas.
+        </p>
+      </div>
+      <div class="hidden md:block w-full md:w-[65%] relative z-10">
+        <div class="parallax-gallery grid grid-cols-4 gap-6 md:gap-8 -mt-[15px]" style="will-change: transform">
+          {[
+            "translate-y-0", "-translate-y-2", "-translate-y-10", "-translate-y-10",
+            "translate-y-2", "-translate-y-3", "-translate-y-10", "-translate-y-10",
+            "-translate-y-2", "translate-y-3", "-translate-y-10",
+          ].map((offsetY, i) => {
+            const colors = [
+              "bg-triba-pink", "bg-triba-cream", "bg-triba-light-cream", "bg-triba-pink",
+              "bg-triba-blue/20", "bg-triba-cream", "bg-triba-pink", "bg-triba-light-cream",
+              "bg-triba-pink", "bg-triba-cream", "bg-triba-blue/20",
+            ];
+            return (
+              <div class={`max-w-[68%] mx-auto aspect-[3/4] rounded-lg ${colors[i]} ${offsetY} transition-transform hover:scale-[1.03] flex items-center justify-center overflow-hidden`}>
+                <img src={`/mini-portadas/img${i + 1}.webp`} alt={`Portada ${i + 1}`} loading="lazy" class="w-full h-full object-cover" />
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+
+    <div class="flex flex-col sm:flex-row gap-3 items-center justify-center mt-16 md:mt-24 mb-4">
+      <Button variant="default" href="/suscribirme">Suscribirme</Button>
+      <Button variant="default" href="#newsletter">Recibir newsletter gratis</Button>
+    </div>
+
+    <div id="scroll-cards" class="relative bg-white px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 py-16 md:py-20 mt-[200px] rounded-[20px] mx-auto">
+      <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+        {magazines.map((m) => (
+          <MagazineCard {...m} />
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <section class="relative min-h-screen px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 overflow-hidden flex flex-col items-start bg-cover bg-center bg-fixed" style="background-image: linear-gradient(rgba(242,241,235,0.5),rgba(242,241,235,0.5)), url('/fondo-cielo.webp')">
+    <div class="relative z-10 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-12 md:gap-20 pt-20 pb-10">
+      <div class="w-full md:w-1/2">
+        <h2 class="font-heading text-5xl md:text-7xl uppercase tracking-wide text-triba-black font-bold mb-6 leading-none">ESCRITA POR Y PARA MUJERES</h2>
+        <p class="font-sans text-triba-brown text-sm leading-relaxed font-medium">Todos los meses sumamos colaboradoras a nuestra revista y nos encanta recibir nuevas propuestas.</p>
+        <p class="font-sans text-triba-brown text-sm leading-relaxed mt-4 font-medium">Hasta ahora hemos tenido Tribu creators que escriben desde: España, Argentina, Estados Unidos, Puerto Rico, México, Colombia, Francia, Chile, Uruguay, etc.</p>
+        <p class="font-sans text-triba-brown text-sm leading-relaxed mt-4 font-medium">Tribu es un proyecto universal que se enriquece en la convivencia de diferentes voces provenientes de todo el mundo, la suma de culturas y puntos de vista que se nutren entre sí es uno de nuestros pilares más importantes.</p>
+      </div>
+      <div class="w-full md:w-1/2 flex items-center justify-center relative">
+        <article class="w-full max-w-md mx-auto aspect-[1454/1460] overflow-hidden relative z-0">
+          <img src="/assets-images-tomos/compumundo.webp?v=2" alt="Compumundo" loading="lazy" class="w-full h-full object-cover" />
+        </article>
+      </div>
+    </div>
+
+    <div class="relative bg-white w-full px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 py-16 md:py-20 rounded-[20px] mx-auto mt-[50px] mb-16 md:mb-20">
+      <div class="max-w-6xl mx-auto">
+        <h2 class="font-heading text-5xl md:text-7xl uppercase tracking-wide text-triba-black font-bold mb-6 leading-none">newsletter gratuito</h2>
+        <p class="font-sans text-lg md:text-xl text-triba-brown font-medium mb-4">Recibi triba gratis todos los meses</p>
+        <p class="font-sans text-sm text-triba-brown leading-relaxed mb-6 max-w-2xl">
+          Dos articulos periodisticos + un articulo de la revista de muestra, directo a tu casilla de correo.
+        </p>
+        <NewsletterForm />
+      </div>
+    </div>
+
+    <div class="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-12 md:gap-20 items-center pb-16 md:pb-20">
+      <div class="w-full md:w-1/2">
+        <img src="/img-suscribirse.webp" alt="Triba Creator" class="w-full h-auto rounded-xl object-cover transition-transform duration-500 hover:scale-[1.03]" />
+      </div>
+      <div class="w-full md:w-1/2 space-y-5">
+        <h2 class="font-heading text-5xl md:text-7xl uppercase tracking-wide text-triba-black font-bold leading-none">Conviértete en Triba Creator</h2>
+        <p class="font-sans text-triba-brown text-sm leading-relaxed">
+          A Triba la construimos entre todas las personas que forman parte de nuestra comunidad. Cada nueva edición suma voces, ideas y experiencias que enriquecen el proyecto y lo hacen crecer.
+        </p>
+        <p class="font-sans text-triba-brown text-sm leading-relaxed">
+          Podés colaborar escribiendo artículos, ilustrando, diseñando, fotografiando, compartiendo proyectos o aportando cualquier contenido que inspire y aporte valor a quienes nos leen.
+        </p>
+        <p class="font-sans text-triba-brown text-sm leading-relaxed">
+          Si sentís que tenés algo para contar, enseñar o crear, queremos conocerte. Siempre estamos abiertos a incorporar nuevos colaboradores y descubrir nuevas perspectivas.
+        </p>
+        <Button variant="primary" href="/suscribirme" class="mt-2">Quiero ser Triba Creator</Button>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import "../scripts/parallax-gallery.js";
+  import "../scripts/scroll-cards.js";
+</script>
+
+<script>
+  (function () {
+    var container = document.getElementById("card-stack");
+    if (!container) return;
+
+    var cards = [];
+    for (var i = 0; i < 11; i++) {
+      var el = document.getElementById("stack-card-" + i);
+      if (el) cards.push(el);
+    }
+
+    var dotsEl = document.getElementById("stack-dots");
+
+    var current = 0;
+    var total = cards.length;
+    var animating = false;
+    var OFFSET = 6;
+    var STACK_VISIBLE = 3;
+    var PEEK_TOTAL = (STACK_VISIBLE - 1) * OFFSET;
+
+    for (var d = 0; d < total; d++) {
+      var dot = document.createElement("span");
+      dot.className = "w-2 h-2 rounded-full bg-triba-black/20 transition-all duration-300 cursor-pointer";
+      dot.dataset.index = d;
+      (function (idx) {
+        dot.addEventListener("click", function () {
+          if (animating || idx === current) return;
+          goTo(idx);
+        });
+      })(d);
+      dotsEl.appendChild(dot);
+    }
+
+    function getPos(index) {
+      return (index - current + total) % total;
+    }
+
+    function render(exitingIndex) {
+      for (var i = 0; i < total; i++) {
+        var el = cards[i];
+        var pos = getPos(i);
+
+        if (i === exitingIndex) {
+          el.style.display = "block";
+          el.style.transform = "translateX(-50%) scale(0.5)";
+          el.style.opacity = "0";
+          el.style.zIndex = 0;
+          el.style.top = "0px";
+          el.style.height = "100%";
+        } else if (pos < STACK_VISIBLE) {
+          el.style.display = "block";
+          el.style.top = 0;
+          el.style.height = "calc(100% - " + PEEK_TOTAL + "px)";
+          el.style.zIndex = 20 - pos;
+          if (pos === 0) {
+            el.style.transform = "translateX(-50%)";
+            el.style.opacity = "1";
+          } else if (pos === 1) {
+            el.style.transform = "translateX(-50%) translateX(14%) scale(0.95) translateY(" + OFFSET + "px)";
+            el.style.opacity = "0.75";
+          } else if (pos === 2) {
+            el.style.transform = "translateX(-50%) translateX(-14%) scale(0.90) translateY(" + (OFFSET * 2) + "px)";
+            el.style.opacity = "0.55";
+          }
+        } else {
+          el.style.display = "none";
+        }
+      }
+
+      var dots = dotsEl.querySelectorAll("span");
+      for (var d = 0; d < dots.length; d++) {
+        if (d === current) {
+          dots[d].className = "w-3 h-3 rounded-full bg-triba-red transition-all duration-300 cursor-pointer";
+        } else {
+          dots[d].className = "w-2 h-2 rounded-full bg-triba-black/20 transition-all duration-300 cursor-pointer";
+        }
+      }
+    }
+
+    function goTo(index) {
+      if (animating || index === current) return;
+      animating = true;
+
+      var diff = (index - current + total) % total;
+      var direction = diff <= total / 2 ? 1 : -1;
+
+      if (direction === 1) {
+        var exiting = current;
+        current = index;
+        render(exiting);
+      } else {
+        var prevCurrent = current;
+        current = index;
+        render(-1);
+        var exitingCard = cards[prevCurrent];
+        exitingCard.style.display = "block";
+        exitingCard.style.transform = "translateX(-50%) scale(0.5)";
+        exitingCard.style.opacity = "0";
+        exitingCard.style.zIndex = 0;
+        exitingCard.style.top = "0px";
+        exitingCard.style.height = "100%";
+        setTimeout(function () {
+          exitingCard.style.display = "none";
+        }, 500);
+      }
+
+      setTimeout(function () {
+        animating = false;
+      }, 500);
+    }
+
+    render(-1);
+
+    var startX = 0;
+    var startY = 0;
+    var isDragging = false;
+
+    container.addEventListener("touchstart", function (e) {
+      if (animating) return;
+      startX = e.touches[0].clientX;
+      startY = e.touches[0].clientY;
+      isDragging = true;
+    }, { passive: true });
+
+    container.addEventListener("touchmove", function (e) {
+      if (!isDragging || animating) return;
+      var dx = e.touches[0].clientX - startX;
+      var dy = e.touches[0].clientY - startY;
+      if (Math.abs(dx) > Math.abs(dy) + 10) {
+        e.preventDefault();
+      }
+    }, { passive: false });
+
+    container.addEventListener("touchend", function (e) {
+      if (!isDragging || animating) return;
+      isDragging = false;
+      var dx = e.changedTouches[0].clientX - startX;
+      if (Math.abs(dx) > 40) {
+        if (dx < 0) {
+          goTo((current + 1) % total);
+        } else {
+          goTo((current - 1 + total) % total);
+        }
+      }
+    }, { passive: true });
+
+    var mouseStartX = 0;
+    var mouseDown = false;
+
+    container.addEventListener("mousedown", function (e) {
+      if (animating) return;
+      mouseStartX = e.clientX;
+      mouseDown = true;
+    });
+
+    container.addEventListener("mousemove", function (e) {
+      if (!mouseDown || animating) return;
+      var dx = e.clientX - mouseStartX;
+      if (Math.abs(dx) > 10) {
+        e.preventDefault();
+      }
+    });
+
+    container.addEventListener("mouseup", function (e) {
+      if (!mouseDown || animating) return;
+      mouseDown = false;
+      var dx = e.clientX - mouseStartX;
+      if (Math.abs(dx) > 40) {
+        if (dx < 0) {
+          goTo((current + 1) % total);
+        } else {
+          goTo((current - 1 + total) % total);
+        }
+      }
+    });
+
+    container.addEventListener("mouseleave", function () {
+      mouseDown = false;
+    });
+  })();
+</script>

@@ -1,0 +1,33 @@
+{
+  "name": "triba",
+  "type": "module",
+  "version": "0.0.1",
+  "private": true,
+  "scripts": {
+    "dev": "astro dev",
+    "build": "astro build",
+    "preview": "astro preview",
+    "astro": "astro"
+  },
+  "dependencies": {
+    "@astrojs/node": "^9.5.5",
+    "@astrojs/react": "^4.2.4",
+    "@astrojs/tailwind": "^6.0.2",
+    "@paypal/checkout-server-sdk": "^1.0.3",
+    "@paypal/paypal-server-sdk": "^2.4.0",
+    "@supabase/ssr": "^0.12.1",
+    "@supabase/supabase-js": "^2.49.4",
+    "astro": "^5.6.2",
+    "mercadopago": "^3.2.0",
+    "pg": "^8.22.0",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0",
+    "react-pageflip": "^2.0.3",
+    "stripe": "^22.3.1",
+    "tailwindcss": "^3.4.17"
+  },
+  "devDependencies": {
+    "@types/react": "^19.1.2",
+    "@types/react-dom": "^19.1.2"
+  }
+}

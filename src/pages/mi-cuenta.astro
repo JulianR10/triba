@@ -1,0 +1,170 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import MagazineCarousel from "../components/MagazineCarousel.astro";
+import PageFlipViewer from "../components/PageFlipViewer.tsx";
+import TitleBadge from "../components/TitleBadge.astro";
+
+import { getEditions, getFeaturedEdition, getEditionPages } from "../lib/editions";
+const allEditions = await getEditions();
+const featuredEdition = await getFeaturedEdition();
+const featuredPages = featuredEdition ? await getEditionPages(featuredEdition.id) : [];
+
+const previewPages = featuredPages.map((p) => ({
+  src: p.image_url,
+  alt: p.alt_text,
+}));
+
+const editions = allEditions.map((e) => ({
+  id: e.id,
+  edition: `#${e.edition_number}`,
+  title: e.title,
+  description: e.description,
+  cover: e.cover_url,
+  pdf: e.pdf_url || "#",
+  featured: e.featured,
+  badge: e.badge,
+  previewArticle: true,
+}));
+
+const featured = editions.find((e) => e.featured) || editions[0];
+
+const blogPosts = allEditions.map((e) => ({
+  title: e.title,
+  image: e.cover_url,
+  excerpt: e.description.split("\n")[0],
+}));
+---
+
+<Layout>
+  <section class="py-16 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: var(--nav-height, 64px)">
+    <div class="max-w-6xl mx-auto">
+
+      <!-- 1. Bienvenida -->
+      <p class="font-heading text-lg md:text-xl text-triba-brown mb-10">
+        Bienvenido/a, <span class="font-bold text-triba-red">julia</span>
+      </p>
+
+      <!-- 2. Edición actual -->
+      <div class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 mb-16 md:mb-20">
+        <div class="flex-1 flex flex-col justify-center">
+          <h2 class="font-heading text-2xl md:text-3xl text-triba-brown mb-4 uppercase">
+            {featured.edition} {featured.title}
+          </h2>
+          <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8 whitespace-pre-line">
+            {featured.description}
+          </p>
+          <div class="flex flex-wrap gap-4">
+            <Button variant="primary" size="md" href={featured.pdf}>Leer aquí</Button>
+            <Button variant="default" size="md" href={featured.pdf}>Descargar PDF</Button>
+          </div>
+        </div>
+        <div class="flex-1">
+          <div class="max-w-sm mx-auto md:mx-0">
+            <img src={featured.cover} alt={`Portada de ${featured.title}`} class="w-full rounded-xl border-2 border-triba-black shadow-lg" />
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Carrusel de ediciones -->
+      <div class="relative bg-triba-white w-full px-5 md:px-10 lg:px-20 py-10 md:py-14 rounded-[20px] mx-auto mb-16 md:mb-20">
+        <div class="max-w-6xl mx-auto">
+          <MagazineCarousel editions={editions} selectedId={featured.id} />
+        </div>
+      </div>
+
+      <!-- 4. Archivo de noticias -->
+      <div class="mb-16 md:mb-20">
+        <div class="mb-14">
+          <TitleBadge text="Nuestro archivo de noticias" color="pink" centered={false} />
+        </div>
+
+        <div class="bg-triba-cream rounded-xl p-6 md:p-10">
+          <div class="grid md:grid-cols-3 gap-6 mb-8">
+            {blogPosts.map((post) => (
+              <div class="bg-triba-white rounded-xl overflow-hidden transition-all hover:scale-[1.02]">
+                <div class="aspect-[4/3] overflow-hidden">
+                  <img src={post.image} alt={post.title} class="w-full h-full object-cover" />
+                </div>
+                <div class="p-4">
+                  <h3 class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-2">{post.title}</h3>
+                  <p class="font-sans text-xs text-triba-brown/70 leading-relaxed">{post.excerpt}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div class="text-center">
+            <Button variant="default" size="md">Ver más</Button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Visor de revista -->
+      <div class="mb-16 md:mb-20">
+        <h2 class="font-heading text-2xl md:text-3xl text-triba-brown mb-8 text-center uppercase">
+          {featured.edition} {featured.title}
+        </h2>
+
+        <PageFlipViewer pages={previewPages} client:visible />
+      </div>
+
+      <!-- 6. Feedback -->
+      <div>
+        <TitleBadge text="¿Qué te pareció esta edición?" color="blue" />
+
+        <div class="max-w-lg mx-auto">
+          <form id="feedback-form">
+            <textarea
+              name="feedback"
+              rows="5"
+              placeholder="Contanos qué te pareció esta edición..."
+              class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none mb-4"
+            ></textarea>
+            <p id="feedback-msg" class="font-sans text-sm text-center hidden mb-4"></p>
+            <div class="text-center">
+              <Button variant="primary" type="submit">Enviar</Button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { supabase } from "../lib/supabase";
+
+  const fbForm = document.getElementById("feedback-form");
+  const fbMsg = document.getElementById("feedback-msg");
+
+  fbForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    fbMsg.classList.add("hidden");
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      fbMsg.textContent = "Debés iniciar sesión para enviar feedback";
+      fbMsg.className = "font-sans text-sm text-center text-triba-red";
+      fbMsg.classList.remove("hidden");
+      return;
+    }
+
+    const mensaje = fbForm.querySelector("textarea[name=feedback]").value;
+    const { error } = await supabase.from("feedback").insert({
+      user_id: user.id,
+      mensaje,
+    });
+
+    if (error) {
+      fbMsg.textContent = "Error al enviar. Intentalo de nuevo.";
+      fbMsg.className = "font-sans text-sm text-center text-triba-red";
+    } else {
+      fbMsg.textContent = "¡Gracias por tu feedback!";
+      fbMsg.className = "font-sans text-sm text-center text-triba-green";
+      fbForm.querySelector("textarea[name=feedback]").value = "";
+    }
+    fbMsg.classList.remove("hidden");
+  });
+</script>

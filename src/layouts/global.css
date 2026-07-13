@@ -1,0 +1,41 @@
+@font-face {
+  font-family: "Bootzy TM";
+  src: url("/fonts/bootzyTM/BootzyTM.woff2") format("woff2"),
+       url("/fonts/bootzyTM/BootzyTM.woff") format("woff"),
+       url("/fonts/bootzyTM/BootzyTM.ttf") format("truetype");
+  font-weight: bold;
+  font-style: normal;
+  font-display: swap;
+}
+
+body {
+  margin: 0;
+  font-family: "Montserrat", Helvetica, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+img {
+  max-width: 100%;
+  height: auto;
+}
+
+a {
+  text-decoration: none;
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+

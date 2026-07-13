@@ -1,0 +1,160 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import MagazineCarousel from "../components/MagazineCarousel.astro";
+import PageFlipViewer from "../components/PageFlipViewer.tsx";
+
+const title = "Revista";
+const description = "Explorá las ediciones de Triba, nuestra revista digital mensual. Leé online, descargá PDF y descubrí artículos de cultura, arte e identidad.";
+const canonical = "/revista";
+
+import { getEditions, getFeaturedEdition, getEditionPages } from "../lib/editions";
+const allEditions = await getEditions();
+const featuredEdition = await getFeaturedEdition();
+const featuredPages = featuredEdition ? await getEditionPages(featuredEdition.id) : [];
+
+const previewPages = featuredPages.map((p) => ({
+  src: p.image_url,
+  alt: p.alt_text,
+}));
+
+const editions = allEditions.map((e) => ({
+  id: e.id,
+  edition: `#${e.edition_number}`,
+  title: e.title,
+  description: e.description,
+  cover: e.cover_url,
+  pdf: e.pdf_url || "#",
+  featured: e.featured,
+  badge: e.badge,
+  previewArticle: e.edition_number === (featuredEdition?.edition_number || 3),
+}));
+
+const featured = editions.find((e) => e.featured) || editions[0];
+---
+
+<Layout title={title} description={description} canonical={canonical}>
+  <section class="py-16 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: var(--nav-height, 64px)">
+    <div class="max-w-6xl mx-auto">
+      <div class="bg-triba-pink border-2 border-triba-black px-8 md:px-16 py-4 md:py-5 mb-10 mt-[50px] inline-block" style="border-radius: 50%; transform: rotate(-10deg)">
+        <h1 class="font-heading text-xl md:text-2xl text-triba-brown uppercase tracking-wide leading-snug text-center whitespace-nowrap">
+          Nuestra revista
+        </h1>
+      </div>
+
+      <!-- Bloque 1: Edición destacada -->
+      <div class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 mb-16 md:mb-20">
+        <div class="flex-1 flex flex-col justify-center order-1">
+          <p id="featured-desc" class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8 whitespace-pre-line">
+            {featured.description}
+          </p>
+          <div>
+            <Button variant="primary" id="featured-cta" href={featured.pdf}>LA QUIERO!</Button>
+          </div>
+        </div>
+        <div class="flex-1 order-2 md:order-2">
+          <div class="relative max-w-sm mx-auto md:mx-0">
+            <img id="featured-cover" src={featured.cover} alt={`Portada de ${featured.title}`} class="w-full rounded-xl border-2 border-triba-black shadow-lg" />
+            <span id="featured-badge" class={"absolute -top-3 -right-3 bg-triba-red text-triba-white font-heading text-xs uppercase px-3 py-1 rounded-full border-2 border-triba-black " + (featured.badge ? "" : "hidden")}>
+              {featured.badge}
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloque 2: Carrusel de ediciones -->
+      <div class="relative bg-white w-full px-5 md:px-10 lg:px-20 py-10 md:py-14 rounded-[20px] mx-auto mb-16 md:mb-20">
+        <div class="max-w-6xl mx-auto">
+          <MagazineCarousel editions={editions} selectedId={featured.id} />
+        </div>
+      </div>
+
+      <!-- Bloque 3: Vista previa de artículo -->
+      <div class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16">
+        <div class="flex-1 order-2 md:order-1">
+          <PageFlipViewer pages={previewPages} client:visible />
+        </div>
+        <div class="flex-1 flex flex-col justify-center order-1 md:order-2">
+          <h2 class="font-heading text-2xl md:text-3xl text-triba-brown mb-4">
+            ¡ECHALE UN VISTAZO A UNO<br />DE NUESTROS ARTICULOS!
+          </h2>
+          <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-6">
+            Como sabemos que no se puede desear lo que no se conoce, queremos regalarte un artículo gratis de la última edición de nuestra revista.
+          </p>
+          <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8">
+            Si disfrutas de tu lectura, te esperamos en la suscripción!
+          </p>
+          <div>
+            <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  (function () {
+    var featuredCover = document.getElementById("featured-cover");
+    var featuredBadge = document.getElementById("featured-badge");
+    var featuredDesc = document.getElementById("featured-desc");
+    var featuredCta = document.getElementById("featured-cta");
+    var carousel = document.querySelector("[data-carousel]");
+
+    var currentId = parseInt(document.querySelector("[data-featured=true]").dataset.editionId);
+
+    function readEdition(card) {
+      return {
+        id: parseInt(card.dataset.editionId),
+        edition: card.dataset.editionName,
+        title: card.dataset.title,
+        description: card.dataset.description,
+        cover: card.dataset.cover,
+        pdf: card.dataset.pdf,
+        badge: card.dataset.badge || null,
+      };
+    }
+
+    function setActiveCard(id) {
+      if (!carousel) return;
+      var cards = carousel.querySelectorAll("[data-edition-id]");
+      for (var i = 0; i < cards.length; i++) {
+        var cardId = parseInt(cards[i].dataset.editionId);
+        var isSelected = cardId === id;
+        cards[i].setAttribute("aria-selected", isSelected);
+      }
+    }
+
+    function selectEdition(id) {
+      if (id === currentId) return;
+      var card = carousel.querySelector('[data-edition-id="' + id + '"]');
+      if (!card) return;
+      var ed = readEdition(card);
+      currentId = id;
+
+      featuredCover.src = ed.cover;
+      featuredCover.alt = "Portada de " + ed.title;
+      featuredDesc.textContent = ed.description;
+      featuredCta.href = ed.pdf || "#";
+
+      if (ed.badge) {
+        featuredBadge.textContent = ed.badge;
+        featuredBadge.classList.remove("hidden");
+      } else {
+        featuredBadge.classList.add("hidden");
+      }
+
+      setActiveCard(id);
+    }
+
+    if (carousel) {
+      carousel.addEventListener("click", function (e) {
+        var card = e.target.closest("[data-edition-id]");
+        if (card) {
+          var id = parseInt(card.dataset.editionId);
+          selectEdition(id);
+        }
+      });
+    }
+  })();
+</script>

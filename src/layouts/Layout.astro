@@ -1,0 +1,73 @@
+---
+import Navbar from "../components/Navbar.astro";
+import "./global.css";
+
+const { title, description, image, canonical } = Astro.props;
+
+const siteTitle = title
+  ? `${title} — Triba`
+  : "Comunidad Triba — Revista digital hecha por y para mujeres";
+
+const siteDescription = description ||
+  "Triba es una revista digital mensual escrita por y para mujeres. Cultura, arte, identidad y todo lo que nos interesa.";
+
+const ogImage = image || "/logo-triba.svg";
+const siteUrl = "https://triba.com";
+const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+
+    <title>{siteTitle}</title>
+    <meta name="description" content={siteDescription} />
+
+    {canonical && <link rel="canonical" href={pageUrl} />}
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={siteTitle} />
+    <meta property="og:description" content={siteDescription} />
+    <meta property="og:image" content={`${siteUrl}${ogImage}`} />
+    <meta property="og:url" content={pageUrl} />
+    <meta property="og:locale" content="es_ES" />
+    <meta property="og:site_name" content="Triba" />
+
+    <!-- Twitter Cards -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={siteTitle} />
+    <meta name="twitter:description" content={siteDescription} />
+    <meta name="twitter:image" content={`${siteUrl}${ogImage}`} />
+
+    <!-- Schema.org JSON-LD -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "WebSite",
+        "name": "Triba",
+        "url": "https://triba.com",
+        "description": "Revista digital mensual escrita por y para mujeres. Cultura, arte, identidad.",
+        "publisher": {
+          "@type": "Organization",
+          "name": "Triba",
+          "logo": { "@type": "ImageObject", "url": "https://triba.com/logo-triba.svg" }
+        }
+      }
+    </script>
+  </head>
+  <body class="bg-triba-bone text-triba-black text-pretty">
+    <Navbar />
+    <main>
+      <slot />
+    </main>
+  </body>
+</html>

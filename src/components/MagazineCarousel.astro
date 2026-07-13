@@ -1,0 +1,105 @@
+---
+export interface Edition {
+  id: number;
+  edition: string;
+  title: string;
+  description: string;
+  cover: string;
+  pdf: string;
+  featured: boolean;
+  badge: string | null;
+  previewArticle: boolean;
+}
+
+export interface Props {
+  editions: Edition[];
+  selectedId?: number;
+}
+
+const { editions, selectedId } = Astro.props;
+---
+
+<div class="relative" data-carousel>
+   <button data-carousel-prev class="absolute -left-4 md:-left-10 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red" aria-label="Edición anterior">
+    <span class="text-xl font-heading text-triba-brown -mt-0.5">‹</span>
+  </button>
+  <div data-carousel-scroll class="overflow-x-auto scrollbar-hide snap-x snap-mandatory py-1">
+    <div class="flex justify-center gap-4 md:gap-6">
+      {editions.map((ed) => (
+        <div
+          data-edition-id={ed.id}
+          data-edition-name={ed.edition}
+          data-title={ed.title}
+          data-description={ed.description}
+          data-cover={ed.cover}
+          data-pdf={ed.pdf}
+          data-badge={ed.badge || ''}
+          data-featured={ed.featured}
+          role="option"
+          aria-selected={ed.id === selectedId}
+          tabindex="0"
+          class={"snap-center shrink-0 w-[72vw] sm:w-[40vw] md:w-[30%] cursor-pointer transition-all duration-300 hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-triba-red focus-visible:outline-offset-2 rounded-xl"}
+        >
+          <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black">
+            <img src={ed.cover} alt={`Portada de edición ${ed.edition}`} class="w-full h-full object-cover" loading="lazy" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+  <button data-carousel-next class="absolute -right-4 md:-right-10 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red" aria-label="Siguiente edición">
+    <span class="text-xl font-heading text-triba-brown -mt-0.5">›</span>
+  </button>
+</div>
+
+<script>
+  (function () {
+    var carousel = document.querySelector("[data-carousel]");
+    if (!carousel) return;
+
+    var scroll = carousel.querySelector("[data-carousel-scroll]");
+    var prev = carousel.querySelector("[data-carousel-prev]");
+    var next = carousel.querySelector("[data-carousel-next]");
+
+    if (!scroll) return;
+
+    function getCardWidth() {
+      var first = scroll.querySelector("[data-edition-id]");
+      if (!first) return 200;
+      var gap = 16;
+      return first.offsetWidth + gap;
+    }
+
+    if (prev) {
+      prev.addEventListener("click", function () {
+        scroll.scrollBy({ left: -getCardWidth(), behavior: "smooth" });
+      });
+    }
+
+    if (next) {
+      next.addEventListener("click", function () {
+        scroll.scrollBy({ left: getCardWidth(), behavior: "smooth" });
+      });
+    }
+
+    scroll.addEventListener("keydown", function (e) {
+      var focused = scroll.querySelector("[data-edition-id]:focus");
+      if (!focused) return;
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        var prevCard = focused.previousElementSibling;
+        if (prevCard && prevCard.hasAttribute("data-edition-id")) {
+          prevCard.focus();
+          prevCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        }
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        var nextCard = focused.nextElementSibling;
+        if (nextCard && nextCard.hasAttribute("data-edition-id")) {
+          nextCard.focus();
+          nextCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        }
+      }
+    });
+  })();
+</script>

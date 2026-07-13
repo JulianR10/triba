@@ -1,0 +1,77 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import Input from "../components/Input.astro";
+---
+
+<Layout title="Iniciar sesión" description="Accedé a tu cuenta de Triba para leer la revista, gestionar tu suscripción y acceder al archivo." canonical="/iniciar-sesion">
+  <section class="min-h-[70vh] flex items-center justify-center py-16 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone">
+    <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 w-full max-w-md">
+      <h1 class="font-heading text-xl uppercase tracking-wider text-triba-brown text-center mb-8">Iniciar sesión</h1>
+      <form class="space-y-5" id="login-form">
+        <Input label="Email" name="email" type="email" required />
+        <Input label="Contraseña" name="password" type="password" required />
+        <div id="login-error" class="font-sans text-sm text-triba-red hidden"></div>
+        <div class="flex items-center justify-between text-sm">
+          <label class="flex items-center gap-2 font-sans text-triba-brown cursor-pointer">
+            <input type="checkbox" class="accent-triba-red" />
+            Recordarme
+          </label>
+          <a href="#" class="font-sans text-triba-red hover:text-triba-brown transition-colors" id="forgot-password">Olvidé mi contraseña</a>
+        </div>
+        <Button variant="primary" fullWidth>Ingresar</Button>
+      </form>
+    </div>
+    <div id="recovery-success" class="hidden max-w-md mx-auto mt-8 p-6 bg-triba-green/30 border-2 border-triba-green rounded-xl text-center">
+      <p class="font-sans text-triba-brown text-sm">Te enviamos un email para restablecer tu contraseña. Revisá tu bandeja de entrada.</p>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { supabase } from "../lib/supabase";
+
+  const form = document.getElementById("login-form");
+  const errorDiv = document.getElementById("login-error");
+  const forgotBtn = document.getElementById("forgot-password");
+  const recoveryMsg = document.getElementById("recovery-success");
+
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    errorDiv.classList.add("hidden");
+    errorDiv.textContent = "";
+
+    const email = form.querySelector("[name=email]").value;
+    const password = form.querySelector("[name=password]").value;
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error) {
+      errorDiv.textContent = error.message;
+      errorDiv.classList.remove("hidden");
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    window.location.href = params.get("redirect") || "/mi-cuenta";
+  });
+
+  forgotBtn.addEventListener("click", async (e) => {
+    e.preventDefault();
+    const email = form.querySelector("[name=email]").value;
+    if (!email) {
+      errorDiv.textContent = "Ingresá tu email primero";
+      errorDiv.classList.remove("hidden");
+      return;
+    }
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + "/mi-cuenta",
+    });
+    if (error) {
+      errorDiv.textContent = error.message;
+      errorDiv.classList.remove("hidden");
+      return;
+    }
+    recoveryMsg.classList.remove("hidden");
+  });
+</script>

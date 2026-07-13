@@ -1,0 +1,20 @@
+---
+export interface Props {
+  text: string;
+  color?: "pink" | "blue";
+  centered?: boolean;
+}
+
+const { text, color = "pink", centered = true } = Astro.props;
+const bgClass = color === "blue" ? "bg-triba-blue" : "bg-triba-pink";
+const alignClass = centered ? "mx-auto" : "";
+---
+
+<div
+  class={`${bgClass} border-2 border-triba-black px-8 md:px-16 py-4 md:py-5 mb-10 mt-[50px] w-fit ${alignClass}`}
+  style="border-radius: 9999px; transform: rotate(-10deg)"
+>
+  <p class="font-heading text-xl md:text-2xl text-triba-brown uppercase tracking-wide leading-snug text-center whitespace-nowrap">
+    {text}
+  </p>
+</div>

@@ -1,0 +1,38 @@
+---
+export interface Props {
+  variant?: "primary" | "default" | "ghost";
+  size?: "sm" | "md";
+  href?: string;
+  fullWidth?: boolean;
+  class?: string;
+}
+
+const { variant = "default", size = "md", href, fullWidth = false } = Astro.props;
+
+const base = "rounded-button font-heading font-medium uppercase border-2 border-triba-black transition-all hover:scale-[1.02] active:scale-[0.98] inline-block";
+
+const variants = {
+  primary: "bg-triba-red text-triba-white",
+  default: "bg-triba-bone text-triba-brown",
+  ghost: "bg-transparent text-triba-brown",
+};
+
+const sizes = {
+  sm: "px-6 py-2.5 text-xs",
+  md: "px-8 py-3 text-sm",
+};
+
+const classes = `${base} ${variants[variant]} ${sizes[size]} ${fullWidth ? "w-full" : ""} ${Astro.props.class || ""}`;
+---
+
+{
+  href ? (
+    <a href={href} class={classes}>
+      <slot />
+    </a>
+  ) : (
+    <button type="submit" class={classes}>
+      <slot />
+    </button>
+  )
+}
