@@ -1,0 +1,241 @@
+---
+import AdminLayout from "../../components/admin/AdminLayout.astro";
+---
+
+<AdminLayout title="Suscriptoras" active="suscriptoras">
+  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+    <div class="bg-triba-green/30 rounded-xl border-2 border-triba-black p-4">
+      <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/80">Activas</p>
+      <p class="font-heading text-2xl text-triba-brown" id="stat-active">—</p>
+    </div>
+    <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-4">
+      <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/80">Canceladas</p>
+      <p class="font-heading text-2xl text-triba-brown" id="stat-canceled">—</p>
+    </div>
+    <div class="bg-triba-bone rounded-xl border-2 border-triba-black p-4">
+      <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/80">Sin sub</p>
+      <p class="font-heading text-2xl text-triba-brown" id="stat-nosub">—</p>
+    </div>
+  </div>
+
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
+    <div class="flex gap-2 flex-wrap">
+      {[
+        { key: "all", label: "Todas" },
+        { key: "active", label: "Activas" },
+        { key: "canceled", label: "Canceladas" },
+        { key: "none", label: "Sin sub" },
+      ].map((tab) => (
+        <button
+          class="sub-filter-btn rounded-button border-2 px-4 py-1.5 font-heading text-xs uppercase tracking-wider transition-all"
+          data-filter={tab.key}
+        >
+          {tab.label}
+        </button>
+      ))}
+    </div>
+    <div class="flex gap-2 w-full sm:w-auto">
+      <input
+        id="sub-search"
+        type="search"
+        placeholder="Buscar por email…"
+        class="flex-1 sm:w-64 px-4 py-2 rounded-button border-2 border-triba-black/20 bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors"
+      />
+      <button id="sub-export" class="rounded-button bg-triba-bone text-triba-brown border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shrink-0" title="Exportar CSV">⬇</button>
+    </div>
+  </div>
+
+  <div id="subscribers-table-wrapper" class="bg-triba-white rounded-xl border-2 border-triba-black overflow-x-auto">
+    <table class="w-full font-sans text-sm">
+      <thead class="bg-triba-bone border-b-2 border-triba-black">
+        <tr>
+          <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Email</th>
+          <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Provider</th>
+          <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Plan</th>
+          <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Estado</th>
+          <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider hidden md:table-cell">Vence</th>
+          <th class="text-right px-4 py-3 font-heading text-xs uppercase tracking-wider">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="subscribers-tbody">
+        <tr><td colspan="6" class="px-4 py-8 text-center text-triba-brown/50 font-sans text-sm">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="sub-pagination" class="flex items-center justify-between mt-4 gap-3 flex-wrap">
+    <p id="sub-info" class="font-sans text-xs text-triba-brown/60"></p>
+    <div class="flex gap-2">
+      <button id="sub-prev" class="rounded-button border-2 border-triba-black/20 bg-triba-white text-triba-brown px-4 py-1.5 font-heading text-xs uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed hover:border-triba-black transition-all" disabled>Anterior</button>
+      <button id="sub-next" class="rounded-button border-2 border-triba-black/20 bg-triba-white text-triba-brown px-4 py-1.5 font-heading text-xs uppercase tracking-wider disabled:opacity-30 disabled:cursor-not-allowed hover:border-triba-black transition-all" disabled>Siguiente</button>
+    </div>
+  </div>
+</AdminLayout>
+
+<script>
+  let currentPage = 1;
+  let currentFilter = "all";
+  let currentSearch = "";
+  let currentTotal = 0;
+  let currentTotalPages = 0;
+
+  const tbody = document.getElementById("subscribers-tbody")!;
+  const searchInput = document.getElementById("sub-search") as HTMLInputElement;
+  const prevBtn = document.getElementById("sub-prev") as HTMLButtonElement;
+  const nextBtn = document.getElementById("sub-next") as HTMLButtonElement;
+  const infoEl = document.getElementById("sub-info")!;
+  const statActive = document.getElementById("stat-active")!;
+  const statCanceled = document.getElementById("stat-canceled")!;
+  const statNosub = document.getElementById("stat-nosub")!;
+
+  let searchTimer: ReturnType<typeof setTimeout> | null = null;
+
+  async function loadSubscribers() {
+    const params = new URLSearchParams();
+    params.set("page", String(currentPage));
+    params.set("status", currentFilter);
+    params.set("pageSize", "20");
+    if (currentSearch) params.set("search", currentSearch);
+
+    try {
+      const res = await fetch(`/api/admin/subscribers?${params}`);
+      const data = await res.json();
+      if (!res.ok) return;
+
+      const { rows, total, page, totalPages } = data;
+      currentTotal = total;
+      currentTotalPages = totalPages;
+
+      if (rows.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-triba-brown/50 font-sans text-sm">No se encontraron suscriptoras.</td></tr>`;
+      } else {
+        tbody.innerHTML = rows.map((row: any) => {
+          const s = row.subscription;
+          const statusClass = s?.status === "active"
+            ? "bg-triba-green text-triba-brown"
+            : s?.status === "canceled"
+              ? "bg-triba-bone text-triba-brown/60"
+              : "";
+          const statusLabel = s?.status === "active" ? "Activa" : s?.status === "canceled" ? "Cancelada" : "—";
+          const periodEnd = s?.current_period_end
+            ? new Date(s.current_period_end).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
+            : "—";
+          const cancelBtn = s?.status === "active"
+            ? `<button class="cancel-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-email="${row.profile.email}">Cancelar</button>`
+            : "";
+          return `<tr class="border-b border-triba-black/10 last:border-0 hover:bg-triba-bone/50">
+            <td class="px-4 py-3"><p class="font-sans">${escapeHtml(row.profile.email)}</p><p class="font-sans text-xs text-triba-brown/60">${row.profile.role}</p></td>
+            <td class="px-4 py-3 capitalize">${s?.provider || "—"}</td>
+            <td class="px-4 py-3">${s?.plan_currency || "—"}</td>
+            <td class="px-4 py-3">${statusLabel !== "—" ? `<span class="inline-block px-2 py-0.5 rounded-full ${statusClass} font-heading text-[10px] uppercase tracking-wider">${statusLabel}</span>` : statusLabel}</td>
+            <td class="px-4 py-3 text-triba-brown/70 hidden md:table-cell">${periodEnd}</td>
+            <td class="px-4 py-3 text-right">${cancelBtn}</td>
+          </tr>`;
+        }).join("");
+      }
+
+      infoEl.textContent = `Página ${page} de ${totalPages} (${total} total)`;
+      prevBtn.disabled = page <= 1;
+      nextBtn.disabled = page >= totalPages;
+
+      updateStats(rows);
+      bindCancelButtons();
+    } catch {
+      tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-triba-red/70 font-sans text-sm">Error al cargar</td></tr>`;
+    }
+  }
+
+  function updateStats(rows: any[]) {
+    const active = rows.filter((r: any) => r.subscription?.status === "active").length;
+    const canceled = rows.filter((r: any) => r.subscription?.status === "canceled").length;
+    const none = rows.filter((r: any) => !r.subscription).length;
+    statActive.textContent = String(active);
+    statCanceled.textContent = String(canceled);
+    statNosub.textContent = String(none);
+  }
+
+  function bindCancelButtons() {
+    document.querySelectorAll<HTMLButtonElement>(".cancel-btn").forEach((btn) => {
+      if (btn.dataset.bound === "1") return;
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", async () => {
+        const userId = btn.dataset.userId!;
+        const email = btn.dataset.email!;
+        const confirmed = await (window as any).adminConfirm?.(
+          "Cancelar suscripción",
+          `¿Cancelar la suscripción de ${email}? Esto también resetea su role a 'free'.`
+        );
+        if (!confirmed) return;
+        btn.disabled = true;
+        const original = btn.textContent;
+        btn.textContent = "Cancelando...";
+        try {
+          const res = await fetch(`/api/admin/subscribers/${userId}/cancel`, { method: "POST" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            (window as any).adminToast?.(data.error || "Error cancelando", "error");
+            btn.disabled = false;
+            btn.textContent = original;
+            return;
+          }
+          (window as any).adminToast?.("Suscripción cancelada", "success");
+          loadSubscribers();
+        } catch {
+          (window as any).adminToast?.("Error de conexión", "error");
+          btn.disabled = false;
+          btn.textContent = original;
+        }
+      });
+    });
+  }
+
+  function escapeHtml(str: string) {
+    const div = document.createElement("div");
+    div.textContent = str;
+    return div.innerHTML;
+  }
+
+  function initSubscribers() {
+    searchInput.addEventListener("input", () => {
+      if (searchTimer) clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        currentSearch = searchInput.value.trim();
+        currentPage = 1;
+        loadSubscribers();
+      }, 300);
+    });
+
+    document.querySelectorAll<HTMLButtonElement>(".sub-filter-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll(".sub-filter-btn").forEach((b) => {
+          b.className = b.className.replace(/bg-triba-red text-triba-white border-triba-black/g, "bg-triba-white text-triba-brown border-triba-black/20");
+        });
+        btn.className = btn.className.replace(/bg-triba-white text-triba-brown border-triba-black\/20/g, "bg-triba-red text-triba-white border-triba-black");
+        currentFilter = btn.dataset.filter!;
+        currentPage = 1;
+        loadSubscribers();
+      });
+    });
+
+    document.getElementById("sub-export")!.addEventListener("click", () => {
+      const params = new URLSearchParams();
+      params.set("status", currentFilter);
+      if (currentSearch) params.set("search", currentSearch);
+      window.open(`/api/admin/subscribers/export?${params}`, "_blank");
+    });
+
+    prevBtn.addEventListener("click", () => {
+      if (currentPage > 1) { currentPage--; loadSubscribers(); }
+    });
+    nextBtn.addEventListener("click", () => {
+      if (currentPage < currentTotalPages) { currentPage++; loadSubscribers(); }
+    });
+
+    document.querySelector<HTMLButtonElement>('.sub-filter-btn[data-filter="all"]')?.classList.add("bg-triba-red", "text-triba-white", "border-triba-black");
+
+    loadSubscribers();
+  }
+
+  initSubscribers();
+  document.addEventListener("astro:page-load", initSubscribers);
+</script>

@@ -1,0 +1,62 @@
+---
+export interface Word {
+  t: string;
+  bg?: string;
+  tx?: string;
+  rot?: string;
+  cls?: string;
+  sh?: string;
+}
+
+export interface Props {
+  lines?: Word[][];
+  content?: string;
+  tag?: "h1" | "h2" | "h3";
+  centered?: boolean;
+  class?: string;
+}
+
+const { lines, content, tag: Tag = "h2", centered = true, class: className = "" } = Astro.props;
+
+const palette = [
+  { bg: "bg-triba-cream",     rot: "-1.5deg", cls: "word-cut-slant",              sh: "1px 1px 0 rgba(0,0,0,0.06)" },
+  { bg: "bg-triba-pink",      rot: "2deg",    cls: "relative word-dog-ear-tr",    sh: "-1px 1px 0 rgba(0,0,0,0.06)" },
+  { bg: "bg-triba-white",     rot: "-2deg",   cls: "relative word-crease",        sh: "2px 2px 0 rgba(0,0,0,0.08)" },
+  { bg: "bg-triba-green",     rot: "1.5deg",  cls: "word-cut-notch",              sh: "1px -1px 0 rgba(0,0,0,0.05)" },
+  { bg: "bg-triba-bone",      rot: "-1deg",   cls: "",                            sh: "0 1px 0 rgba(0,0,0,0.05)" },
+  { bg: "bg-triba-blue/20",   rot: "2.5deg",  cls: "relative word-dog-ear-br",    sh: "1px 2px 0 rgba(0,0,0,0.06)" },
+  { bg: "bg-triba-light-cream", rot: "1deg",  cls: "",                            sh: "2px 1px 0 rgba(0,0,0,0.06)" },
+  { bg: "bg-triba-pink",      rot: "-2.5deg", cls: "relative word-dog-ear-bl",    sh: "-2px 1px 0 rgba(0,0,0,0.06)" },
+];
+
+function getStyle(word: Word, index: number) {
+  const i = index % palette.length;
+  return {
+    bg: word.bg ?? palette[i].bg,
+    rot: word.rot ?? palette[i].rot,
+    cls: word.cls ?? palette[i].cls,
+    sh: word.sh ?? palette[i].sh,
+    tx: word.tx ?? "text-triba-brown",
+  };
+}
+
+const allWords: Word[] = lines
+  ? lines.flat()
+  : content
+    ? content.trim().split(/\s+/).map((t) => ({ t }))
+    : [];
+
+const alignClass = centered ? "text-center" : "text-left";
+---
+
+<Tag class={"font-heading uppercase tracking-wide leading-snug " + alignClass + " " + className} style="text-wrap: balance">
+  {allWords.map((word, wi) => {
+    const s = getStyle(word, wi);
+    return (
+      <span
+        class={"inline-block align-middle leading-none px-3 py-1.5 rounded-sm mr-2 mb-2 " + s.bg + " " + s.tx + " " + s.cls}
+        style={"transform: rotate(" + s.rot + "); box-shadow: " + s.sh}
+      >{word.t}</span>
+    );
+  })}
+</Tag>

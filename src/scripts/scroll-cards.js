@@ -2,12 +2,7 @@
   var cards = document.getElementById("scroll-cards");
   if (!cards) return;
 
-  var covers = [];
-  for (var i = 1; i <= 3; i++) {
-    var el = document.getElementById("cover-" + i);
-    if (el) covers.push(el);
-  }
-
+  var covers = cards.querySelectorAll("[id^='cover-']");
   if (covers.length === 0) return;
 
   var ticking = false;

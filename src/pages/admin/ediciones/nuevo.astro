@@ -1,0 +1,28 @@
+---
+import AdminLayout from "../../../components/admin/AdminLayout.astro";
+import EditionForm from "../../../components/admin/EditionForm.astro";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
+
+let suggestedNumber = 1;
+try {
+  const { data } = await supabaseAdmin
+    .from("editions")
+    .select("edition_number")
+    .order("edition_number", { ascending: false })
+    .limit(1)
+    .single();
+  if (data?.edition_number) suggestedNumber = data.edition_number + 1;
+} catch {}
+---
+
+<AdminLayout title="Nueva edición" active="ediciones">
+  <p class="font-sans text-sm text-triba-brown/70 mb-6">
+    Sugerimos el número <span class="font-heading text-triba-red">#{suggestedNumber}</span>. Cambialo si es una edición retroactiva.
+  </p>
+  <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6">
+    <EditionForm
+      mode="create"
+      edition={{ edition_number: suggestedNumber } as any}
+    />
+  </div>
+</AdminLayout>

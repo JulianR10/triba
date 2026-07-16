@@ -11,12 +11,10 @@ import Button from "./Button.astro";
     class="flex-1 px-4 py-3 border-2 border-triba-black bg-white text-triba-brown font-sans text-sm placeholder:text-triba-brown/50 focus:outline-none focus:ring-2 focus:ring-triba-red/30 rounded-md"
   />
   <Button variant="primary" class="shrink-0" type="submit">Suscribirme</Button>
-  <div id="newsletter-msg" class="font-sans text-sm text-triba-green hidden sm:absolute sm:bottom-0 sm:left-0 sm:mt-1"></div>
+  <div id="newsletter-msg" class="font-sans text-sm mt-2"></div>
 </form>
 
 <script>
-  import { supabase } from "../lib/supabase";
-
   const form = document.getElementById("newsletter-form");
   const msg = document.getElementById("newsletter-msg");
 
@@ -24,19 +22,28 @@ import Button from "./Button.astro";
     e.preventDefault();
     const email = form.querySelector("[name=email]").value;
 
-    const { error } = await supabase.from("newsletters").insert({ email });
+    try {
+      const res = await fetch("/api/newsletter", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const data = await res.json();
 
-    if (error) {
-      if (error.code === "23505") {
+      if (data.ok) {
+        msg.textContent = "¡Gracias por suscribirte!";
+        msg.className = "font-sans text-sm text-triba-green mt-2";
+        form.querySelector("[name=email]").value = "";
+      } else if (data.existing) {
         msg.textContent = "Ya estás suscripta";
+        msg.className = "font-sans text-sm text-triba-red mt-2";
       } else {
         msg.textContent = "Error al suscribirte. Intentalo de nuevo.";
+        msg.className = "font-sans text-sm text-triba-red mt-2";
       }
+    } catch {
+      msg.textContent = "Error de conexión. Intentalo de nuevo.";
       msg.className = "font-sans text-sm text-triba-red mt-2";
-    } else {
-      msg.textContent = "¡Gracias por suscribirte!";
-      msg.className = "font-sans text-sm text-triba-green mt-2";
-      form.querySelector("[name=email]").value = "";
     }
   });
 </script>

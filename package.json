@@ -13,13 +13,10 @@
     "@astrojs/node": "^9.5.5",
     "@astrojs/react": "^4.2.4",
     "@astrojs/tailwind": "^6.0.2",
-    "@paypal/checkout-server-sdk": "^1.0.3",
-    "@paypal/paypal-server-sdk": "^2.4.0",
     "@supabase/ssr": "^0.12.1",
     "@supabase/supabase-js": "^2.49.4",
     "astro": "^5.6.2",
     "mercadopago": "^3.2.0",
-    "pg": "^8.22.0",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
     "react-pageflip": "^2.0.3",
@@ -27,7 +24,10 @@
     "tailwindcss": "^3.4.17"
   },
   "devDependencies": {
+    "@astrojs/check": "^0.9.9",
     "@types/react": "^19.1.2",
-    "@types/react-dom": "^19.1.2"
+    "@types/react-dom": "^19.1.2",
+    "playwright": "^1.61.1",
+    "typescript": "^5.9.3"
   }
 }

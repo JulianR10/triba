@@ -3,9 +3,10 @@ import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
 import CheckoutButton from "../components/CheckoutButton.astro";
 import { plans } from "../lib/pricing";
+import PatchTitle from "../components/PatchTitle.astro";
 
 const title = "Suscribirme";
-const description = "Elegí tu plan de suscripción a Triba: newsletter gratuito o suscripción paga con acceso a la revista completa, archivo y descarga PDF. Pago seguro con Stripe, Mercado Pago o PayPal.";
+const description = "Elegí tu plan de suscripción a Triba: newsletter gratuito o suscripción paga con acceso a la revista completa, archivo y descarga PDF. Pago seguro con Stripe o Mercado Pago.";
 const canonical = "/suscribirme";
 
 const faqs = [
@@ -13,102 +14,108 @@ const faqs = [
   { q: "¿Puedo cancelar mi suscripción?", a: "Sí, podés cancelar en cualquier momento desde tu cuenta. Sin preguntas ni complicaciones." },
   { q: "¿Cómo accedo a la revista?", a: "Una vez suscripta, vas a poder leerla online desde nuestro visor o descargarla en PDF." },
 ];
+
+const checkoutStatus = Astro.url.searchParams.get("checkout");
 ---
 
 <Layout title={title} description={description} canonical={canonical}>
-  <section class="py-16 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone">
-    <div class="max-w-6xl mx-auto">
+  <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
+      <div class="max-w-6xl mx-auto">
 
-      <div class="bg-triba-pink border-2 border-triba-black px-8 md:px-16 py-4 md:py-5 mb-10 mt-[50px] w-fit mx-auto" style="border-radius: 50%; transform: rotate(-10deg)">
-        <h1 class="font-heading text-xl md:text-2xl text-triba-brown uppercase tracking-wide leading-snug text-center whitespace-nowrap">
-          Nuestra suscripción
-        </h1>
+      {checkoutStatus === "canceled" && (
+        <div data-banner="checkout-canceled" class="mb-8 p-4 bg-triba-red/10 border-2 border-triba-red rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
+          <p class="font-sans text-sm text-triba-brown">Pago cancelado. No se realizó ningún cargo. Podés intentar de nuevo cuando quieras.</p>
+          <button type="button" data-dismiss-banner class="shrink-0 text-triba-brown hover:text-triba-red text-xl leading-none" aria-label="Cerrar">×</button>
+        </div>
+      )}
+
+      {checkoutStatus === "pending" && (
+        <div data-banner="checkout-pending" class="mb-8 p-4 bg-triba-blue/10 border-2 border-triba-blue rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
+          <p class="font-sans text-sm text-triba-brown">Tu pago está siendo procesado. Te avisaremos por email cuando se confirme.</p>
+          <button type="button" data-dismiss-banner class="shrink-0 text-triba-brown hover:text-triba-red text-xl leading-none" aria-label="Cerrar">×</button>
+        </div>
+      )}
+
+      <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content="Nuestra suscripción" tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
       </div>
 
-      <!-- Cards de plan -->
-      <div class="grid md:grid-cols-2 gap-6 mb-12">
-        <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 text-center">
-          <h3 class="font-heading text-base font-bold text-triba-brown mb-3 uppercase tracking-wider">Newsletter gratuito</h3>
-          <ul class="space-y-2 font-sans text-sm text-triba-brown">
-            <li class="flex justify-center gap-2">✦ 2 ARTICULOS PERIODISTICOS POR MES</li>
-            <li class="flex justify-center gap-2">✦ 1 ARTICULO SELECTO DE NUESTRA REVISTA</li>
-          </ul>
-          <p class="font-sans text-xs text-triba-brown/70 mt-4 leading-relaxed">Te llega a tu correo todos los meses, como un blog de noticias</p>
-          <form class="mt-4 space-y-4" id="newsletter-form-card">
-            <div class="max-w-[80%] mx-auto">
-              <input type="email" name="email" required placeholder="tu@email.com" class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors text-center" />
-            </div>
-            <Button variant="ghost" size="md" type="submit">Quiero el newsletter</Button>
-            <p id="newsletter-card-msg" class="font-sans text-xs text-center"></p>
-          </form>
-        </div>
-        <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 text-center">
-          <h3 class="font-heading text-lg font-bold text-triba-brown mb-3 uppercase tracking-wider">Suscripción Triba</h3>
-          <ul class="space-y-2 font-sans text-sm text-triba-brown">
+      <!-- Card principal: Suscripción Triba -->
+      <div class="max-w-lg mx-auto mb-8 reveal-stagger" data-reveal>
+        <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-8 text-center">
+          <div class="inline-block bg-triba-red text-triba-white font-heading text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-triba-black mb-3 shadow-[1px_1px_0_rgba(0,0,0,0.15)]">Recomendado</div>
+          <h3 class="font-heading text-lg font-bold text-triba-brown mb-4 uppercase tracking-wider">Suscripción Triba</h3>
+          <ul class="space-y-2 font-sans text-sm text-triba-brown mb-4">
             <li class="flex justify-center gap-2">✦ NEWSLETTER INCLUIDO</li>
-            <li class="flex justify-center gap-2">✦ REVISTA COMPLETA (+15 ARTICULOS)</li>
+            <li class="flex justify-center gap-2">✦ REVISTA COMPLETA (+15 ARTÍCULOS)</li>
             <li class="flex justify-center gap-2">✦ ACCESO AL ARCHIVO DE TODAS LAS EDICIONES</li>
-            <li class="flex justify-center gap-2">✦ DESCARGA LA REVISTA EN FORMATO PDF CON TU NOMBRE</li>
+            <li class="flex justify-center gap-2">✦ DESCARGA LA REVISTA CON TU NOMBRE</li>
           </ul>
-          <p class="font-sans text-xs text-triba-brown/70 mt-4 leading-relaxed text-balance">Accedes a traves de tu perfil de usuario en nuestro sitio web</p>
-          <Button variant="primary" size="md" href="#precios" class="mt-4">Quiero suscribirme</Button>
-        </div>
-      </div>
+          <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">Accedés a través de tu perfil de usuario en nuestro sitio web</p>
 
-      <!-- Social proof -->
-      <div class="text-center mb-16">
-        <p class="font-serif italic text-base text-triba-brown/70 max-w-lg mx-auto">
-          "Somos una comunidad de mujeres que escriben para mujeres. Cada suscripción nos ayuda a seguir creciendo."
-        </p>
-        <p class="font-heading text-xs uppercase tracking-wider text-triba-red mt-2">— Equipo Triba</p>
-      </div>
-
-      <!-- Precios con segmented control -->
-      <div id="precios" class="mb-16">
-        <h2 class="font-heading text-xl uppercase tracking-wider text-triba-brown mb-8 text-center">Elegí tu moneda</h2>
-
-        <div class="max-w-sm mx-auto">
-          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-8 md:p-10 text-center">
-            <div class="flex border-2 border-triba-black rounded-full overflow-hidden mb-8" id="currency-segments">
+          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8">
+            <div class="flex border-2 border-triba-black rounded-full overflow-hidden mb-6 w-full max-w-xs mx-auto" id="currency-segments">
               {plans.map((p, i) => (
                 <button
                   data-currency={p.moneda}
-                  class={"flex-1 py-3 font-heading text-xs uppercase tracking-wider transition-all " + (i < plans.length - 1 ? "border-r-2 border-triba-black " : "") + (p.moneda === "EUR" ? "bg-triba-red text-triba-white" : "bg-triba-white text-triba-brown hover:bg-triba-cream")}
+                  class={"flex-1 py-4 font-heading text-sm uppercase tracking-wider transition-all " + (i < plans.length - 1 ? "border-r-2 border-triba-black " : "") + (p.moneda === "EUR" ? "bg-triba-red text-triba-white" : "bg-triba-white text-triba-brown hover:bg-triba-cream")}
                 >
-                  <span class="block">{p.moneda}</span>
-                  <span class="block text-[10px] opacity-70 mt-0.5">{p.simbolo}{p.precio}</span>
+                  {p.moneda}
                 </button>
               ))}
             </div>
 
             {plans.map((p) => (
               <div data-plan={p.moneda} class={p.moneda === "EUR" ? "" : "hidden"}>
-                <p class="font-heading text-5xl md:text-6xl font-bold text-triba-red mb-1">{p.simbolo}{p.precio}</p>
-                <p class="font-sans text-sm text-triba-brown/60 mb-8">{p.periodo}</p>
+                <p class="font-heading text-4xl md:text-6xl font-bold text-triba-red mb-1">{p.simbolo}{p.precio}</p>
+                <p class="font-sans text-sm text-triba-brown/60 mb-6">{p.periodo}</p>
 
-                <!-- Métodos de pago -->
-                <div class="space-y-3 mb-6">
-                  <CheckoutButton provider="stripe" currency={p.moneda} fullWidth />
+                <div class="space-y-3 mb-4">
+                  <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth />
                   <CheckoutButton provider="mercadopago" currency={p.moneda} variant="default" fullWidth />
-                  <CheckoutButton provider="paypal" currency={p.moneda} variant="ghost" fullWidth />
                 </div>
 
-                <p class="font-sans text-[11px] text-triba-brown/50">Pago único mensual. Cancelá cuando quieras.</p>
+                <p class="font-sans text-[11px] text-triba-brown/50">Suscripción mensual. Cancelá cuando quieras.</p>
               </div>
             ))}
           </div>
         </div>
       </div>
 
+      <!-- Card secundaria: Newsletter gratuito -->
+      <div class="max-w-sm mx-auto mb-12 reveal" data-reveal>
+        <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 text-center">
+          <h3 class="font-heading text-base font-bold text-triba-brown mb-3 uppercase tracking-wider">Newsletter gratuito</h3>
+          <ul class="space-y-2 font-sans text-sm text-triba-brown">
+            <li class="flex justify-center gap-2">✦ 2 ARTÍCULOS PERIODÍSTICOS POR MES</li>
+            <li class="flex justify-center gap-2">✦ 1 ARTÍCULO SELECTO DE NUESTRA REVISTA</li>
+          </ul>
+          <p class="font-sans text-xs text-triba-brown/70 mt-4 leading-relaxed text-balance">Te llega a tu correo todos los meses, como un blog de noticias</p>
+          <form class="mt-4 space-y-4" id="newsletter-form-card">
+            <input type="email" name="email" required placeholder="tu@email.com" class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors text-center" />
+            <Button variant="ghost" size="md" type="submit">Quiero el newsletter</Button>
+            <p id="newsletter-card-msg" class="font-sans text-xs text-center"></p>
+          </form>
+        </div>
+      </div>
+
+      <!-- Social proof -->
+      <div class="text-center mb-16 reveal" data-reveal>
+        <p class="font-serif italic text-base text-triba-brown/70 max-w-lg mx-auto">
+          "Somos una comunidad de mujeres que escriben para mujeres. Cada suscripción nos ayuda a seguir creciendo."
+        </p>
+        <p class="font-heading text-xs uppercase tracking-wider text-triba-red mt-2">— Equipo Triba</p>
+      </div>
+
       <!-- FAQ -->
-      <div>
-        <h2 class="font-heading text-xl uppercase tracking-wider text-triba-brown mb-8">Preguntas frecuentes</h2>
-        <div class="space-y-4 max-w-2xl">
+      <div class="reveal" data-reveal>
+        <h2 class="font-heading text-xl uppercase tracking-wide text-triba-brown mb-8 text-center">Preguntas frecuentes</h2>
+        <div class="space-y-4 max-w-2xl mx-auto reveal-stagger" data-reveal>
           {faqs.map((faq) => (
-            <details class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group">
+            <details class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group transition-all duration-300 hover:shadow-md">
               <summary class="px-5 py-4 font-heading text-sm font-medium uppercase tracking-wider text-triba-brown cursor-pointer list-none flex items-center justify-between">
                 {faq.q}
-                <span class="text-triba-red text-lg transition-transform duration-300 group-open:rotate-45">+</span>
+                <span class="text-triba-red text-lg transition-transform duration-300 group-open:rotate-45 shrink-0 ml-3">+</span>
               </summary>
               <div class="px-5 pb-4 font-sans text-sm text-triba-brown leading-relaxed">
                 {faq.a}
@@ -156,6 +163,14 @@ const faqs = [
     // Newsletter form card
     var nf = document.getElementById("newsletter-form-card");
     var nm = document.getElementById("newsletter-card-msg");
+
+    // Banner dismiss
+    document.querySelectorAll("[data-dismiss-banner]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var banner = btn.closest("[data-banner]");
+        if (banner) banner.style.display = "none";
+      });
+    });
     if (nf) {
       nf.addEventListener("submit", async function (e) {
         e.preventDefault();

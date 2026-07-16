@@ -2,38 +2,35 @@
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
 import Input from "../components/Input.astro";
+import PatchTitle from "../components/PatchTitle.astro";
 ---
 
-<Layout title="Triba Creators" description="Sumate como Triba Creator: escribí, diseñá, fotografíá o aportá tu arte a nuestra revista digital. ¡Te esperamos!" canonical="/triba-creators">
-  <section class="py-16 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone">
+<Layout title="Triba Creators" description="Sumate como Triba Creator: escribí, diseñá, fotografiá o aportá tu arte a nuestra revista digital. ¡Te esperamos!" canonical="/triba-creators">
+  <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
     <div class="max-w-6xl mx-auto">
 
-      <div class="bg-triba-pink border-2 border-triba-black px-8 md:px-16 py-4 md:py-5 mb-10 mt-[50px] w-fit mx-auto" style="border-radius: 50%; transform: rotate(-10deg)">
-        <h1 class="font-heading text-xl md:text-2xl text-triba-brown uppercase tracking-wide leading-snug text-center whitespace-nowrap">
-          Sumate como Triba Creator
-        </h1>
+      <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content="Sumate como Triba Creator" tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
       </div>
 
-      <div class="flex flex-col md:flex-row gap-12 items-center mb-16">
+      <div class="flex flex-col md:flex-row gap-8 md:gap-12 items-center mb-12 reveal-stagger" data-reveal>
         <div class="flex-1">
+          <img src="/post-triba-creators.webp" alt="Creatividad sin límites" class="w-full h-auto rounded-xl object-cover transition-transform duration-500 hover:scale-[1.03]" />
+        </div>
+        <div class="flex-1 text-center md:text-left">
           <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">
             A Triba la construimos entre todas y es por eso que todos los meses sumamos nuevas Triba Creator a nuestro equipo de colaboradoras.
           </p>
           <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">
-            Podes sumarte como escritora, diseñadora, artista, periodista o lo que quieras :) Siempre que sientas que tienes algo para aportar a este universo sos bienvenida a enviarnos tu propuesta.
+            Podés sumarte como escritora, diseñadora, artista, periodista o lo que quieras :) Siempre que sientas que tenés algo para aportar a este universo sos bienvenida a enviarnos tu propuesta.
           </p>
-          <p class="font-sans text-base text-triba-brown leading-relaxed">
-            Evaluamos todas las propuestas y de acuerdo a nuestras necesidades vamos incorporandolas al proyecto.
+          <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">
+            Evaluamos todas las propuestas y de acuerdo a nuestras necesidades vamos incorporándolas al proyecto.
           </p>
-        </div>
-        <div class="flex-1">
-          <div class="bg-triba-pink rounded-xl border-2 border-triba-black aspect-square max-w-sm mx-auto flex items-center justify-center">
-            <span class="font-heading text-4xl text-triba-pink/30 text-center px-4">Ilustración</span>
-          </div>
         </div>
       </div>
 
-      <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 md:p-10 max-w-2xl mx-auto">
+      <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 md:p-10 max-w-2xl mx-auto reveal" data-reveal>
         <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown mb-6 text-center">Formulario de contacto</h2>
         <form class="space-y-5" id="creators-form">
           <Input label="Nombre" name="nombre" required />
@@ -41,7 +38,7 @@ import Input from "../components/Input.astro";
           <Input label="País y Ciudad" name="pais" required />
           <div>
             <span class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">¿Qué querés aportar?</span>
-            <div class="grid grid-cols-2 gap-2">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {["Escritura", "Producción", "Fotografía", "Diseño gráfico", "Arte", "Otros"].map((area) => (
                 <label class="flex items-center gap-2 font-sans text-sm text-triba-brown cursor-pointer">
                   <input type="checkbox" name="area" value={area} class="accent-triba-red" />
@@ -53,7 +50,7 @@ import Input from "../components/Input.astro";
           <Input label="Contanos tu propuesta" name="propuesta" isTextarea required />
           <Input label="¿Dónde podemos ver tu trabajo?" name="trabajo" type="url" placeholder="https://..." />
           <p id="creators-msg" class="font-sans text-sm text-center hidden"></p>
-          <Button variant="primary" fullWidth>Enviar postulación</Button>
+          <Button variant="primary" fullWidth type="submit">Enviar postulación</Button>
         </form>
       </div>
 

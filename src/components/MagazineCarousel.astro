@@ -20,8 +20,8 @@ const { editions, selectedId } = Astro.props;
 ---
 
 <div class="relative" data-carousel>
-   <button data-carousel-prev class="absolute -left-4 md:-left-10 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red" aria-label="Edición anterior">
-    <span class="text-xl font-heading text-triba-brown -mt-0.5">‹</span>
+   <button data-carousel-prev class="absolute -left-2 sm:-left-4 md:-left-10 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-triba-pink to-triba-red flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red" aria-label="Edición anterior">
+    <span class="text-xl font-heading text-triba-white -mt-0.5">‹</span>
   </button>
   <div data-carousel-scroll class="overflow-x-auto scrollbar-hide snap-x snap-mandatory py-1">
     <div class="flex justify-center gap-4 md:gap-6">
@@ -47,8 +47,8 @@ const { editions, selectedId } = Astro.props;
       ))}
     </div>
   </div>
-  <button data-carousel-next class="absolute -right-4 md:-right-10 top-1/2 -translate-y-1/2 z-10 w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red" aria-label="Siguiente edición">
-    <span class="text-xl font-heading text-triba-brown -mt-0.5">›</span>
+  <button data-carousel-next class="absolute -right-2 sm:-right-4 md:-right-10 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-triba-pink to-triba-red flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red" aria-label="Siguiente edición">
+    <span class="text-xl font-heading text-triba-white -mt-0.5">›</span>
   </button>
 </div>
 

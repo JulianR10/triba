@@ -1,0 +1,106 @@
+---
+import "../../layouts/global.css";
+
+interface Props {
+  title: string;
+  active: "dashboard" | "ediciones" | "suscriptoras" | "feedback" | "creators" | "audit-log";
+}
+
+const { title, active } = Astro.props;
+const profile = Astro.locals.profile;
+
+const items = [
+  { key: "dashboard", href: "/admin", label: "Dashboard" },
+  { key: "ediciones", href: "/admin/ediciones", label: "Ediciones" },
+  { key: "suscriptoras", href: "/admin/suscriptoras", label: "Suscriptoras" },
+  { key: "feedback", href: "/admin/feedback", label: "Feedback" },
+  { key: "creators", href: "/admin/creators", label: "Creators" },
+  { key: "audit-log", href: "/admin/audit-log", label: "Actividad" },
+] as const;
+---
+
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <title>{title} — Triba Admin</title>
+  </head>
+  <body class="bg-triba-bone text-triba-brown">
+    <div class="min-h-screen flex flex-col">
+      <header class="bg-triba-black text-triba-white">
+        <div class="max-w-6xl mx-auto px-5 md:px-10 py-4 flex items-center justify-between">
+          <div class="flex items-center gap-6">
+            <a href="/admin" class="font-heading text-lg uppercase tracking-wider">Triba · Admin</a>
+            <span class="text-xs text-triba-bone/60">v1.0</span>
+          </div>
+          <div class="flex items-center gap-4">
+            <span class="font-sans text-xs text-triba-bone/80 hidden md:inline">{profile?.email}</span>
+            <a href="/" class="font-heading text-xs uppercase tracking-wider text-triba-white hover:text-triba-green">Ver sitio</a>
+            <button id="admin-logout" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-white px-4 py-1.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Salir</button>
+          </div>
+        </div>
+      </header>
+
+      <div class="flex-1 max-w-6xl mx-auto w-full px-5 md:px-10 py-8 flex flex-col md:flex-row gap-8">
+        <aside class="md:w-56 shrink-0">
+          <nav class="flex md:flex-col gap-1 overflow-x-auto md:overflow-visible">
+            {items.map((item) => (
+              <a
+                href={item.href}
+                class={`whitespace-nowrap font-heading text-xs uppercase tracking-wider px-3 py-2 rounded-button border-2 transition-all ${
+                  active === item.key
+                    ? "bg-triba-red text-triba-white border-triba-black"
+                    : "bg-triba-white text-triba-brown border-triba-black/10 hover:border-triba-black"
+                }`}
+              >
+                {item.label}
+              </a>
+            ))}
+          </nav>
+        </aside>
+
+        <main class="flex-1 min-w-0">
+          <slot />
+        </main>
+      </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="admin-toast-container"></div>
+
+    <!-- Confirm modal -->
+    <div id="admin-confirm-overlay" class="hidden">
+      <div id="admin-confirm-box">
+        <p id="admin-confirm-title"></p>
+        <p id="admin-confirm-message"></p>
+        <div id="admin-confirm-actions">
+          <button id="admin-confirm-cancel" class="rounded-button bg-triba-bone text-triba-brown border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Cancelar</button>
+          <button id="admin-confirm-accept" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Confirmar</button>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      import { showToast, showConfirm } from "./AdminUI";
+
+      (window as any).adminToast = showToast;
+      (window as any).adminConfirm = showConfirm;
+
+      const btn = document.getElementById("admin-logout");
+      if (btn) {
+        btn.addEventListener("click", async () => {
+          const confirmed = await showConfirm("Cerrar sesión", "¿Estás segura de que querés salir del panel de administración?");
+          if (!confirmed) return;
+          const { supabase: client } = await import("../../lib/supabase");
+          if (client) await client.auth.signOut();
+          window.location.href = "/";
+        });
+      }
+    </script>
+  </body>
+</html>

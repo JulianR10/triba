@@ -3,7 +3,7 @@ import Stripe from "stripe";
 const stripeSecretKey = import.meta.env.STRIPE_SECRET_KEY || "";
 
 export const stripe = stripeSecretKey
-  ? new Stripe(stripeSecretKey, { apiVersion: "2025-03-31" as any })
+  ? new Stripe(stripeSecretKey, { apiVersion: "2026-06-24.dahlia" })
   : null;
 
 export const STRIPE_WEBHOOK_SECRET = import.meta.env.STRIPE_WEBHOOK_SECRET || "";

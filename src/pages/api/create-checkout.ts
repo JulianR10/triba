@@ -26,7 +26,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   const { provider, currency } = body;
 
-  if (!["stripe", "mercadopago", "paypal"].includes(provider)) {
+  if (!["stripe", "mercadopago"].includes(provider)) {
     return new Response(JSON.stringify({ error: "Invalid provider" }), { status: 400 });
   }
 
@@ -71,7 +71,7 @@ export const POST: APIRoute = async ({ request }) => {
               id: `subscription-${currency}`,
               title: `Suscripción Triba (${currency})`,
               quantity: 1,
-              unit_price: MONTHLY_PRICE_CENTS[currency] / 100,
+              unit_price: currency === "ARS" ? MONTHLY_PRICE_CENTS[currency] : MONTHLY_PRICE_CENTS[currency] / 100,
               currency_id: currency === "ARS" ? "ARS" : currency,
             }],
             payer: { email: user.email },
@@ -82,7 +82,6 @@ export const POST: APIRoute = async ({ request }) => {
             },
             auto_return: "approved",
             external_reference: user.id,
-            purpose: "subscription",
           },
         });
 
@@ -90,15 +89,6 @@ export const POST: APIRoute = async ({ request }) => {
           status: 200,
           headers: { "Content-Type": "application/json" },
         });
-      }
-
-      case "paypal": {
-        return new Response(
-          JSON.stringify({
-            error: "PayPal subscriptions require client-side order creation. Use POST /api/create-paypal-order instead.",
-          }),
-          { status: 400, headers: { "Content-Type": "application/json" } }
-        );
       }
 
       default:

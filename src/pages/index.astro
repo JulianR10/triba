@@ -2,7 +2,9 @@
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
 import MagazineCard from "../components/MagazineCard.astro";
+import MagazineSlider from "../components/MagazineSlider.astro";
 import NewsletterForm from "../components/NewsletterForm.astro";
+import PatchTitle from "../components/PatchTitle.astro";
 
 const title = "Inicio";
 const description = "Triba es una revista digital mensual escrita por y para mujeres. Descubrí nuestra comunidad, ediciones, newsletter y mucho más.";
@@ -10,31 +12,140 @@ const canonical = "/";
 
 import { getEditions } from "../lib/editions";
 const editions = await getEditions();
+const shortDesc = (text) => text.length > 120 ? text.slice(0, 120).trimEnd() + '…' : text;
 const magazines = editions.map((e, i) => ({
   number: String(e.edition_number),
   title: e.title,
-  description: e.description,
+  description: e.title === "El show debe continuar"
+    ? "Esta edición viene a recordarnos un poco quienes fuimos y quienes somos hoy, transitando por 15 articulos diferentes."
+    : shortDesc(e.description),
   image: e.cover_url,
   coverId: `cover-${e.id}`,
 }));
+
+// Reorder: 3 → 1, 2 queda, 1 → 3
+if (magazines.length >= 3) {
+  const temp = magazines[0];
+  magazines[0] = magazines[2];
+  magazines[2] = temp;
+}
 ---
 
 <Layout title={title} description={description} canonical={canonical}>
-  <section class="relative pb-12 md:pb-20 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone bg-cover bg-center bg-fixed overflow-x-hidden md:min-h-screen" style="padding-top: var(--nav-height, 64px); background-image: linear-gradient(rgba(242,241,235,0.5),rgba(242,241,235,0.5)), url('/fondo-cielo.webp')">
+<style is:global>
+  .washi-tape {
+    display: inline-block;
+    position: relative;
+    isolation: isolate;
+    background-color: rgba(255, 204, 228, 0.55);
+    background-image:
+      repeating-linear-gradient(
+        90deg,
+        transparent 0px,
+        transparent 12px,
+        rgba(255, 204, 228, 0.15) 12px,
+        rgba(255, 204, 228, 0.15) 13px
+      ),
+      repeating-linear-gradient(
+        0deg,
+        transparent 0px,
+        transparent 20px,
+        rgba(255, 255, 255, 0.04) 20px,
+        rgba(255, 255, 255, 0.04) 21px
+      );
+    border-radius: 1px;
+    box-shadow:
+      0 2px 6px rgba(0,0,0,0.05),
+      0 1px 2px rgba(0,0,0,0.03),
+      inset 0 1px 0 rgba(255,255,255,0.3);
+    transform: rotate(-0.8deg);
+    clip-path: polygon(
+      0.3% 4px, 0% 0.5%,
+      99.5% 2px, 100% 3px,
+      100% calc(100% - 2px), 99.8% 100%,
+      0.2% calc(100% - 1px), 0.5% calc(100% - 3px)
+    );
+  }
+  .washi-tape::before {
+    content: '';
+    position: absolute;
+    top: -1px;
+    left: -1px;
+    width: 14px;
+    height: 10px;
+    background: linear-gradient(135deg,
+      rgba(255,204,228,0.3) 0%,
+      transparent 60%
+    );
+    border-radius: 0 0 6px 0;
+    box-shadow: 1px 1px 3px rgba(0,0,0,0.04);
+    z-index: -1;
+  }
+  .washi-tape::after {
+    content: '';
+    position: absolute;
+    bottom: -1px;
+    right: -1px;
+    width: 12px;
+    height: 8px;
+    background: linear-gradient(315deg,
+      rgba(255,204,228,0.25) 0%,
+      transparent 60%
+    );
+    border-radius: 6px 0 0 0;
+    box-shadow: -1px -1px 3px rgba(0,0,0,0.04);
+    z-index: -1;
+  }
+</style>
 
-    <div class="relative z-10 flex flex-col items-center justify-center gap-6 mb-12 md:mb-16">
-      <div class="flex flex-col md:flex-row items-center justify-center gap-8 md:gap-12">
-        <img src="/logo-triba.svg" alt="Triba" class="h-24 md:h-40 shrink-0" />
-        <div class="bg-triba-pink border-2 border-triba-black px-8 md:px-16 py-4 md:py-5" style="border-radius: 50%">
-          <p class="font-heading text-xl md:text-2xl text-triba-brown uppercase tracking-wide leading-snug text-center whitespace-nowrap">
-            Tu nueva lectura favorita<br />en forma de revista digital
+<style is:global>
+  /* Mobile centering override for PatchTitle */
+  @media (max-width: 767px) {
+    .mobile-center h1, .mobile-center h2, .mobile-center h3 {
+      text-align: center !important;
+    }
+    .mobile-center [class*="flex"] {
+      justify-content: center !important;
+    }
+  }
+  .hero-section {
+    padding-top: calc(var(--nav-height, 64px) + 2.5rem);
+  }
+  @media (max-width: 767px) {
+    .hero-section {
+      padding-top: 1rem !important;
+    }
+  }
+</style>
+
+  <div class="relative isolate min-h-screen">
+    <div aria-hidden="true" class="fixed inset-0 -z-10 bg-triba-bone bg-cover bg-center" style="background-image: linear-gradient(rgba(242,241,235,0.5),rgba(242,241,235,0.5)), url('/fondo-cielo.webp')"></div>
+
+  <section class="relative pb-12 md:pb-20 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 overflow-x-hidden md:min-h-screen hero-section">
+
+    <a href="/" class="block w-fit mx-auto md:hidden mb-4">
+      <img src="/logo-triba.svg" alt="Triba" class="h-[50px]" />
+    </a>
+
+    <div class="relative z-10 flex flex-col items-center gap-6 md:gap-8 mb-10 md:mb-14">
+      <!-- Soft glow behind -->
+      <div class="absolute inset-0 flex items-center justify-center pointer-events-none -z-0">
+        <div class="w-[500px] h-[150px] bg-triba-pink/25 blur-[80px] rounded-full"></div>
+      </div>
+
+      <!-- Tagline - washi tape -->
+      <div class="relative z-10 flex items-center justify-center max-w-2xl reveal" data-reveal>
+        <div class="washi-tape relative">
+          <p class="font-serif italic text-2xl md:text-5xl text-triba-brown leading-relaxed text-center px-5 py-3 md:px-10 md:py-5" style="text-wrap: balance">
+            Tu nueva lectura favorita en forma de revista digital
           </p>
         </div>
       </div>
+
     </div>
 
     <div class="md:hidden mb-8 flex justify-center">
-      <div class="w-[72vw] max-w-64 select-none touch-pan-y relative" id="card-stack">
+      <div class="w-[80vw] sm:w-[72vw] max-w-64 select-none touch-pan-y relative" id="card-stack">
         <div class="relative w-full" style="aspect-ratio: 3/4">
           {Array.from({ length: 11 }, (_, i) => {
             const colors = [
@@ -58,37 +169,39 @@ const magazines = editions.map((e, i) => ({
     </div>
 
     <div class="relative z-10 max-w-6xl mx-auto flex flex-col md:flex-row gap-8 md:gap-12 pb-8 md:pb-16">
-      <div class="w-full md:w-[35%]">
-        <h1 class="font-heading text-5xl md:text-7xl uppercase tracking-wide text-triba-black font-bold mb-6 leading-none">¿Qué somos?</h1>
-        <ul class="space-y-1 font-sans text-triba-brown text-sm leading-relaxed mb-6">
+      <div class="w-full md:w-[35%] reveal mobile-center" data-reveal>
+        <PatchTitle content="¿Qué somos?" tag="h1" centered={false} class="text-3xl sm:text-4xl md:text-7xl text-triba-black font-bold mb-6" />
+        <ul class="space-y-1 font-sans text-triba-brown text-sm leading-relaxed mb-6 font-medium text-center md:text-left">
           {["Una revista digital mensual", "Escrita por mujeres de todo el mundo", "Cultura, arte, identidad, y todo lo que nos interesa"].map((item) => (
-            <li class="flex items-start gap-2">
+            <li class="flex items-start gap-2 justify-center md:justify-start">
               <span class="text-triba-red mt-0.5 shrink-0">✦</span>
               <span>{item}</span>
             </li>
           ))}
         </ul>
-        <p class="font-sans text-triba-brown text-sm leading-relaxed">
+        <p class="font-sans text-triba-brown text-sm leading-relaxed font-medium text-center md:text-left max-w-xl mx-auto md:mx-0">
           Nos gusta pensar que somos un universo cultural, porque las posibilidades son infinitas. Hoy existimos de esta forma pero hay muchos proyectos por delante.
         </p>
-        <p class="font-sans text-triba-brown text-sm leading-relaxed mt-3">
+        <p class="font-sans text-triba-brown text-sm leading-relaxed mt-3 font-medium text-center md:text-left max-w-xl mx-auto md:mx-0">
           Nacimos de la necesidad de volver a consumir contenido de calidad, y creemos en la magia que existe cuando mujeres de todo el mundo crean juntas.
         </p>
+        <div class="flex flex-col sm:flex-row gap-4 items-center md:items-start justify-center md:justify-start mt-8">
+          <Button variant="default" href="/suscribirme">Suscribirme</Button>
+          <Button variant="default" href="#newsletter">Recibir newsletter gratis</Button>
+        </div>
       </div>
-      <div class="hidden md:block w-full md:w-[65%] relative z-10">
-        <div class="parallax-gallery grid grid-cols-4 gap-6 md:gap-8 -mt-[15px]" style="will-change: transform">
-          {[
-            "translate-y-0", "-translate-y-2", "-translate-y-10", "-translate-y-10",
-            "translate-y-2", "-translate-y-3", "-translate-y-10", "-translate-y-10",
-            "-translate-y-2", "translate-y-3", "-translate-y-10",
-          ].map((offsetY, i) => {
+      <div class="hidden md:block flex-1 relative z-10">
+        <div class="grid grid-cols-4 gap-6 md:gap-8">
+          {Array.from({ length: 11 }, (_, i) => {
             const colors = [
               "bg-triba-pink", "bg-triba-cream", "bg-triba-light-cream", "bg-triba-pink",
               "bg-triba-blue/20", "bg-triba-cream", "bg-triba-pink", "bg-triba-light-cream",
               "bg-triba-pink", "bg-triba-cream", "bg-triba-blue/20",
             ];
+            const col = i % 4;
+            const translateY = col === 2 ? "-30%" : col === 3 ? "-20%" : "0";
             return (
-              <div class={`max-w-[68%] mx-auto aspect-[3/4] rounded-lg ${colors[i]} ${offsetY} transition-transform hover:scale-[1.03] flex items-center justify-center overflow-hidden`}>
+              <div class={`aspect-[3/4] rounded-lg ${colors[i]} overflow-hidden mx-auto max-w-[80%]`} style={translateY !== "0" ? `transform: translateY(${translateY})` : undefined}>
                 <img src={`/mini-portadas/img${i + 1}.webp`} alt={`Portada ${i + 1}`} loading="lazy" class="w-full h-full object-cover" />
               </div>
             );
@@ -97,13 +210,16 @@ const magazines = editions.map((e, i) => ({
       </div>
     </div>
 
-    <div class="flex flex-col sm:flex-row gap-3 items-center justify-center mt-16 md:mt-24 mb-4">
-      <Button variant="default" href="/suscribirme">Suscribirme</Button>
-      <Button variant="default" href="#newsletter">Recibir newsletter gratis</Button>
-    </div>
-
-    <div id="scroll-cards" class="relative bg-white px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 py-16 md:py-20 mt-[200px] rounded-[20px] mx-auto">
-      <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
+    <div id="scroll-cards" class="relative bg-white px-0 md:px-10 lg:px-20 xl:px-32 2xl:px-48 py-16 md:py-20 mt-12 md:mt-16 rounded-[20px] mx-auto reveal" data-reveal>
+      <MagazineSlider
+        items={magazines.map((m) => ({
+          id: m.coverId ? parseInt(m.coverId.replace("cover-", ""), 10) : 0,
+          cover: m.image,
+          title: `#${m.number} ${m.title}`,
+          description: m.description,
+        }))}
+      />
+      <div class="hidden md:grid max-w-6xl mx-auto grid-cols-3 gap-8 md:gap-12">
         {magazines.map((m) => (
           <MagazineCard {...m} />
         ))}
@@ -111,57 +227,63 @@ const magazines = editions.map((e, i) => ({
     </div>
   </section>
 
-  <section class="relative min-h-screen px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 overflow-hidden flex flex-col items-start bg-cover bg-center bg-fixed" style="background-image: linear-gradient(rgba(242,241,235,0.5),rgba(242,241,235,0.5)), url('/fondo-cielo.webp')">
-    <div class="relative z-10 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-12 md:gap-20 pt-20 pb-10">
-      <div class="w-full md:w-1/2">
-        <h2 class="font-heading text-5xl md:text-7xl uppercase tracking-wide text-triba-black font-bold mb-6 leading-none">ESCRITA POR Y PARA MUJERES</h2>
-        <p class="font-sans text-triba-brown text-sm leading-relaxed font-medium">Todos los meses sumamos colaboradoras a nuestra revista y nos encanta recibir nuevas propuestas.</p>
-        <p class="font-sans text-triba-brown text-sm leading-relaxed mt-4 font-medium">Hasta ahora hemos tenido Tribu creators que escriben desde: España, Argentina, Estados Unidos, Puerto Rico, México, Colombia, Francia, Chile, Uruguay, etc.</p>
-        <p class="font-sans text-triba-brown text-sm leading-relaxed mt-4 font-medium">Tribu es un proyecto universal que se enriquece en la convivencia de diferentes voces provenientes de todo el mundo, la suma de culturas y puntos de vista que se nutren entre sí es uno de nuestros pilares más importantes.</p>
+  <section class="relative min-h-screen px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 overflow-hidden flex flex-col items-center md:items-start">
+    <div class="relative z-10 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8 md:gap-12 md:gap-20 pt-12 md:pt-20 pb-10">
+      <div class="w-full md:w-1/2 reveal mobile-center" data-reveal>
+        <PatchTitle tag="h2" centered={false} class="text-3xl sm:text-4xl md:text-7xl text-triba-black font-bold mb-6" lines={[
+          [
+            { t: "ESCRITA", bg: "bg-triba-cream" },
+            { t: "POR", bg: "bg-triba-green" },
+            { t: "Y", bg: "bg-triba-white" },
+            { t: "PARA", bg: "bg-triba-blue/20" },
+            { t: "MUJERES", bg: "bg-triba-pink" },
+          ],
+        ]} />
+        <p class="font-sans text-triba-brown text-sm leading-relaxed font-medium text-center md:text-left max-w-xl mx-auto md:mx-0">Todos los meses sumamos colaboradoras a nuestra revista y nos encanta recibir nuevas propuestas.<br /><br />Hasta ahora hemos tenido Tribu creators que escriben desde España, Argentina, Estados Unidos, Puerto Rico, México, Colombia, Francia, Chile, Uruguay, etc.<br /><br />Tribu es un proyecto universal que se enriquece en la convivencia de diferentes voces provenientes de todo el mundo, la suma de culturas y puntos de vista que se nutren entre sí es uno de nuestros pilares más importantes.</p>
       </div>
-      <div class="w-full md:w-1/2 flex items-center justify-center relative">
+      <div class="w-full md:w-1/2 flex items-center justify-center relative reveal" data-reveal>
         <article class="w-full max-w-md mx-auto aspect-[1454/1460] overflow-hidden relative z-0">
           <img src="/assets-images-tomos/compumundo.webp?v=2" alt="Compumundo" loading="lazy" class="w-full h-full object-cover" />
         </article>
       </div>
     </div>
 
-    <div class="relative bg-white w-full px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 py-16 md:py-20 rounded-[20px] mx-auto mt-[50px] mb-16 md:mb-20">
+    <div class="relative bg-white w-full px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 py-12 md:py-20 rounded-[20px] mx-auto mt-10 md:mt-[50px] mb-12 md:mb-20 reveal" data-reveal>
       <div class="max-w-6xl mx-auto">
-        <h2 class="font-heading text-5xl md:text-7xl uppercase tracking-wide text-triba-black font-bold mb-6 leading-none">newsletter gratuito</h2>
-        <p class="font-sans text-lg md:text-xl text-triba-brown font-medium mb-4">Recibi triba gratis todos los meses</p>
-        <p class="font-sans text-sm text-triba-brown leading-relaxed mb-6 max-w-2xl">
-          Dos articulos periodisticos + un articulo de la revista de muestra, directo a tu casilla de correo.
+        <PatchTitle content="newsletter gratuito" tag="h2" class="text-3xl sm:text-4xl md:text-7xl text-triba-black font-bold mb-6" />
+        <p class="font-sans text-lg md:text-xl text-triba-brown font-medium mb-4 text-center md:text-left">Recibí triba gratis todos los meses</p>
+        <p class="font-sans text-sm text-triba-brown leading-relaxed mb-6 max-w-2xl text-center md:text-left">
+          Dos artículos periodísticos + un artículo de la revista de muestra, directo a tu casilla de correo.
         </p>
         <NewsletterForm />
       </div>
     </div>
 
-    <div class="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-12 md:gap-20 items-center pb-16 md:pb-20">
-      <div class="w-full md:w-1/2">
+    <div class="max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8 md:gap-12 md:gap-20 items-center pb-12 md:pb-20">
+      <div class="w-full md:w-1/2 reveal" data-reveal>
         <img src="/img-suscribirse.webp" alt="Triba Creator" class="w-full h-auto rounded-xl object-cover transition-transform duration-500 hover:scale-[1.03]" />
       </div>
-      <div class="w-full md:w-1/2 space-y-5">
-        <h2 class="font-heading text-5xl md:text-7xl uppercase tracking-wide text-triba-black font-bold leading-none">Conviértete en Triba Creator</h2>
-        <p class="font-sans text-triba-brown text-sm leading-relaxed">
+      <div class="w-full md:w-1/2 space-y-5 reveal mobile-center" data-reveal>
+        <PatchTitle content="Conviértete en Triba Creator" tag="h2" centered={false} class="text-3xl sm:text-4xl md:text-7xl text-triba-black font-bold" />
+        <p class="font-sans text-triba-brown text-sm leading-relaxed text-center md:text-left">
           A Triba la construimos entre todas las personas que forman parte de nuestra comunidad. Cada nueva edición suma voces, ideas y experiencias que enriquecen el proyecto y lo hacen crecer.
         </p>
-        <p class="font-sans text-triba-brown text-sm leading-relaxed">
+        <p class="font-sans text-triba-brown text-sm leading-relaxed text-center md:text-left">
           Podés colaborar escribiendo artículos, ilustrando, diseñando, fotografiando, compartiendo proyectos o aportando cualquier contenido que inspire y aporte valor a quienes nos leen.
         </p>
-        <p class="font-sans text-triba-brown text-sm leading-relaxed">
+        <p class="font-sans text-triba-brown text-sm leading-relaxed text-center md:text-left">
           Si sentís que tenés algo para contar, enseñar o crear, queremos conocerte. Siempre estamos abiertos a incorporar nuevos colaboradores y descubrir nuevas perspectivas.
         </p>
-        <Button variant="primary" href="/suscribirme" class="mt-2">Quiero ser Triba Creator</Button>
+        <div class="text-center md:text-left">
+          <Button variant="primary" href="/triba-creators" class="mt-2">Quiero ser Triba Creator</Button>
+        </div>
       </div>
     </div>
   </section>
+  </div>
 </Layout>
 
-<script>
-  import "../scripts/parallax-gallery.js";
-  import "../scripts/scroll-cards.js";
-</script>
+<script src="/scripts/scroll-cards.js" is:inline></script>
 
 <script>
   (function () {

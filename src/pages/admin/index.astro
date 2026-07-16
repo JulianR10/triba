@@ -1,0 +1,107 @@
+---
+import AdminLayout from "../../components/admin/AdminLayout.astro";
+import { getAdminDashboardStats, getAdminAuditLog } from "../../lib/admin";
+
+const stats = await getAdminDashboardStats();
+const recentLogs = await getAdminAuditLog(5);
+
+const cards = [
+  {
+    label: "Suscriptoras activas",
+    value: stats.active_subscribers,
+    href: "/admin/suscriptoras",
+    color: "bg-triba-green/30",
+  },
+  {
+    label: "Ediciones totales",
+    value: stats.editions_total,
+    sub: stats.editions_featured === 1 ? "1 destacada" : `${stats.editions_featured} destacadas`,
+    href: "/admin/ediciones",
+    color: "bg-triba-pink",
+  },
+  {
+    label: "Feedback recibido",
+    value: stats.feedback_count,
+    href: "/admin/feedback",
+    color: "bg-triba-cream",
+  },
+  {
+    label: "Creators pendientes",
+    value: stats.creators_pending,
+    href: "/admin/creators",
+    color: "bg-triba-light-cream",
+  },
+  {
+    label: "Newsletter",
+    value: stats.newsletter_count,
+    color: "bg-triba-bone",
+  },
+  {
+    label: "Suscripciones canceladas",
+    value: stats.canceled_subscribers,
+    href: "/admin/suscriptoras",
+    color: "bg-triba-bone",
+  },
+  {
+    label: "Actividad registrada",
+    value: stats.audit_log_count,
+    href: "/admin/audit-log",
+    color: "bg-triba-bone",
+  },
+];
+---
+
+<AdminLayout title="Dashboard" active="dashboard">
+  <p class="font-sans text-sm text-triba-brown/70 mb-8">
+    Accesos rápidos para operar Triba: crear una edición, ver suscriptoras, responder creators.
+  </p>
+
+  <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+    {
+      cards.map((card) => {
+        const inner = (
+          <div class={`${card.color} rounded-xl border-2 border-triba-black p-5 transition-all hover:scale-[1.02] h-full`}>
+            <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/80 mb-1">{card.label}</p>
+            <p class="font-heading text-3xl text-triba-brown">{card.value}</p>
+            {card.sub && <p class="font-sans text-xs text-triba-brown/60 mt-1">{card.sub}</p>}
+          </div>
+        );
+        return card.href ? (
+          <a href={card.href}>{inner}</a>
+        ) : (
+          inner
+        );
+      })
+    }
+  </div>
+
+  <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6">
+    <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">Acciones rápidas</h2>
+    <div class="flex flex-wrap gap-3">
+      <a href="/admin/ediciones/nuevo" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">+ Nueva edición</a>
+      <a href="/admin/creators?status=pending" class="rounded-button bg-triba-bone text-triba-brown border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Revisar creators</a>
+    </div>
+  </div>
+
+  <div class="mt-8 bg-triba-white rounded-xl border-2 border-triba-black p-6">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown">Actividad reciente</h2>
+      <a href="/admin/audit-log" class="font-sans text-xs text-triba-red hover:underline">Ver todo →</a>
+    </div>
+    {recentLogs.length === 0 ? (
+      <p class="font-sans text-xs text-triba-brown/60">Todavía no hay actividad registrada.</p>
+    ) : (
+      <div class="space-y-2">
+        {recentLogs.map((log) => (
+          <div class="flex items-center gap-3 text-xs font-sans text-triba-brown/80">
+            <span class="shrink-0 w-16 text-triba-brown/50">{new Date(log.created_at).toLocaleString("es-AR", { hour: "2-digit", minute: "2-digit" })}</span>
+            <span class="inline-block px-2 py-0.5 rounded-full bg-triba-light-cream text-triba-brown font-heading text-[10px] uppercase tracking-wider shrink-0">
+              {log.action.replace("edition.", "").replace("subscriber.", "").replace("creator.", "")}
+            </span>
+            <span class="truncate">{log.admin_email}</span>
+          </div>
+        ))}
+      </div>
+    )}
+  </div>
+</AdminLayout>

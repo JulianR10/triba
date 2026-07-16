@@ -2,28 +2,95 @@
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
 import Input from "../components/Input.astro";
+
+const params = new URLSearchParams(Astro.url.search);
+const isRecovery = params.get("recovery") === "true";
+const initialMode = params.get("signup") === "true" ? "signup" : "login";
 ---
 
+<style>
+  #navbar {
+    position: relative !important;
+    transform: none !important;
+  }
+</style>
+
 <Layout title="Iniciar sesión" description="Accedé a tu cuenta de Triba para leer la revista, gestionar tu suscripción y acceder al archivo." canonical="/iniciar-sesion">
-  <section class="min-h-[70vh] flex items-center justify-center py-16 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone">
-    <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 w-full max-w-md">
-      <h1 class="font-heading text-xl uppercase tracking-wider text-triba-brown text-center mb-8">Iniciar sesión</h1>
-      <form class="space-y-5" id="login-form">
-        <Input label="Email" name="email" type="email" required />
-        <Input label="Contraseña" name="password" type="password" required />
-        <div id="login-error" class="font-sans text-sm text-triba-red hidden"></div>
-        <div class="flex items-center justify-between text-sm">
-          <label class="flex items-center gap-2 font-sans text-triba-brown cursor-pointer">
-            <input type="checkbox" class="accent-triba-red" />
-            Recordarme
-          </label>
-          <a href="#" class="font-sans text-triba-red hover:text-triba-brown transition-colors" id="forgot-password">Olvidé mi contraseña</a>
+  <section class="flex-1 flex items-center justify-center px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone py-20">
+    <div class="w-full max-w-md">
+
+      <div id="login-card" class={"bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 reveal " + (isRecovery || initialMode === "signup" ? "hidden" : "")} data-reveal>
+        <h1 class="font-heading text-xl uppercase tracking-wider text-triba-brown text-center mb-8">Iniciar sesión</h1>
+        <form class="space-y-5" id="login-form">
+          <Input label="Email" name="email" type="email" required />
+          <Input label="Contraseña" name="password" type="password" required />
+          <div id="login-error" class="font-sans text-sm text-triba-red hidden"></div>
+          <Button variant="primary" fullWidth type="submit">Ingresar</Button>
+        </form>
+        <div class="mt-6 text-center space-y-2">
+          <button type="button" class="font-sans text-sm text-triba-red hover:text-triba-brown transition-colors" id="forgot-password">Olvidé mi contraseña</button>
+          <p class="font-sans text-sm text-triba-brown/60">
+            No tenés cuenta?{" "}
+            <button type="button" id="go-signup" class="text-triba-red hover:text-triba-brown transition-colors font-medium">Crear cuenta</button>
+          </p>
         </div>
-        <Button variant="primary" fullWidth>Ingresar</Button>
-      </form>
-    </div>
-    <div id="recovery-success" class="hidden max-w-md mx-auto mt-8 p-6 bg-triba-green/30 border-2 border-triba-green rounded-xl text-center">
-      <p class="font-sans text-triba-brown text-sm">Te enviamos un email para restablecer tu contraseña. Revisá tu bandeja de entrada.</p>
+      </div>
+
+      <div id="signup-card" class={"bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 reveal " + (initialMode === "signup" ? "" : "hidden")} data-reveal>
+        <h1 class="font-heading text-xl uppercase tracking-wider text-triba-brown text-center mb-8">Crear cuenta</h1>
+        <form class="space-y-5" id="signup-form">
+          <Input label="Email" name="email" type="email" required />
+          <Input label="Contraseña" name="password" type="password" required />
+          <Input label="Confirmar contraseña" name="confirm" type="password" required />
+          <p class="font-sans text-xs text-triba-brown/60">Mínimo 6 caracteres.</p>
+          <div id="signup-error" class="font-sans text-sm text-triba-red hidden"></div>
+          <Button variant="primary" fullWidth type="submit">Crear cuenta</Button>
+        </form>
+        <div class="mt-6 text-center">
+          <p class="font-sans text-sm text-triba-brown/60">
+            Ya tenés cuenta?{" "}
+            <button type="button" id="go-login" class="text-triba-red hover:text-triba-brown transition-colors font-medium">Iniciar sesión</button>
+          </p>
+        </div>
+      </div>
+
+      <div id="forgot-card" class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 hidden reveal" data-reveal>
+        <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">Recuperar contraseña</h2>
+        <p class="font-sans text-sm text-triba-brown/70 text-center mb-6">Ingresá tu email y te enviaremos un link para restablecer tu contraseña.</p>
+        <form class="space-y-5" id="forgot-form">
+          <Input label="Email" name="email" type="email" required />
+          <div id="forgot-error" class="font-sans text-sm text-triba-red hidden"></div>
+          <Button variant="primary" fullWidth type="submit">Enviar link</Button>
+        </form>
+        <div class="mt-4 text-center">
+          <button type="button" class="font-sans text-sm text-triba-brown/60 hover:text-triba-brown transition-colors" id="back-to-login">Volver al login</button>
+        </div>
+      </div>
+
+      <div id="recovery-success" class="hidden max-w-md mx-auto mt-8 p-6 bg-triba-green/30 border-2 border-triba-green rounded-xl text-center">
+        <p class="font-sans text-triba-brown text-sm">Te enviamos un email para restablecer tu contraseña. Revisá tu bandeja de entrada.</p>
+      </div>
+
+      <div id="check-email-card" class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 hidden reveal" data-reveal>
+        <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">Revisá tu email</h2>
+        <p class="font-sans text-sm text-triba-brown/80 text-center mb-2">Te enviamos un link de confirmación.</p>
+        <p class="font-sans text-sm text-triba-brown/60 text-center mb-6">Hacé click en el link que te llegó por email para activar tu cuenta y continuar con tu suscripción.</p>
+        <div class="text-center">
+          <button type="button" class="font-sans text-sm text-triba-red hover:text-triba-brown transition-colors" id="check-email-back">Volver al login</button>
+        </div>
+      </div>
+
+      <div id="reset-card" class={"bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 reveal " + (isRecovery ? "" : "hidden")} data-reveal>
+        <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">Nueva contraseña</h2>
+        <p class="font-sans text-sm text-triba-brown/70 text-center mb-6">Ingresá tu nueva contraseña para acceder a tu cuenta.</p>
+        <form class="space-y-5" id="reset-form">
+          <Input label="Nueva contraseña" name="password" type="password" required />
+          <Input label="Confirmar contraseña" name="confirm" type="password" required />
+          <div id="reset-error" class="font-sans text-sm text-triba-red hidden"></div>
+          <Button variant="primary" fullWidth type="submit">Actualizar contraseña</Button>
+        </form>
+      </div>
+
     </div>
   </section>
 </Layout>
@@ -31,47 +98,261 @@ import Input from "../components/Input.astro";
 <script>
   import { supabase } from "../lib/supabase";
 
-  const form = document.getElementById("login-form");
-  const errorDiv = document.getElementById("login-error");
+  const loginCard = document.getElementById("login-card");
+  const signupCard = document.getElementById("signup-card");
+  const forgotCard = document.getElementById("forgot-card");
+  const resetCard = document.getElementById("reset-card");
+  const checkEmailCard = document.getElementById("check-email-card");
+  const recoverySuccess = document.getElementById("recovery-success");
+
+  const allCards = [loginCard, signupCard, forgotCard, resetCard, checkEmailCard];
+
   const forgotBtn = document.getElementById("forgot-password");
-  const recoveryMsg = document.getElementById("recovery-success");
+  const backBtn = document.getElementById("back-to-login");
+  const goSignupBtn = document.getElementById("go-signup");
+  const goLoginBtn = document.getElementById("go-login");
+  const checkEmailBackBtn = document.getElementById("check-email-back");
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    errorDiv.classList.add("hidden");
-    errorDiv.textContent = "";
+  const loginForm = document.getElementById("login-form");
+  const loginError = document.getElementById("login-error");
 
-    const email = form.querySelector("[name=email]").value;
-    const password = form.querySelector("[name=password]").value;
+  const signupForm = document.getElementById("signup-form");
+  const signupError = document.getElementById("signup-error");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const forgotForm = document.getElementById("forgot-form");
+  const forgotError = document.getElementById("forgot-error");
 
-    if (error) {
-      errorDiv.textContent = error.message;
-      errorDiv.classList.remove("hidden");
-      return;
-    }
+  const resetForm = document.getElementById("reset-form");
+  const resetError = document.getElementById("reset-error");
 
-    const params = new URLSearchParams(window.location.search);
-    window.location.href = params.get("redirect") || "/mi-cuenta";
-  });
-
-  forgotBtn.addEventListener("click", async (e) => {
-    e.preventDefault();
-    const email = form.querySelector("[name=email]").value;
-    if (!email) {
-      errorDiv.textContent = "Ingresá tu email primero";
-      errorDiv.classList.remove("hidden");
-      return;
-    }
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: window.location.origin + "/mi-cuenta",
+  function showCard(card) {
+    allCards.forEach((c) => {
+      if (c) c.classList.add("hidden");
     });
-    if (error) {
-      errorDiv.textContent = error.message;
-      errorDiv.classList.remove("hidden");
-      return;
+    if (recoverySuccess) recoverySuccess.classList.add("hidden");
+    if (card) card.classList.remove("hidden");
+  }
+
+  function isSafeRedirect(url) {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url, window.location.origin);
+      return parsed.origin === window.location.origin;
+    } catch {
+      return false;
     }
-    recoveryMsg.classList.remove("hidden");
-  });
+  }
+
+  function getSafeRedirect() {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+    return isSafeRedirect(redirect) ? redirect : "/mi-cuenta";
+  }
+
+  if (forgotBtn) {
+    forgotBtn.addEventListener("click", () => showCard(forgotCard));
+  }
+
+  if (backBtn) {
+    backBtn.addEventListener("click", () => showCard(loginCard));
+  }
+
+  if (goSignupBtn) {
+    goSignupBtn.addEventListener("click", () => showCard(signupCard));
+  }
+
+  if (goLoginBtn) {
+    goLoginBtn.addEventListener("click", () => showCard(loginCard));
+  }
+
+  if (checkEmailBackBtn) {
+    checkEmailBackBtn.addEventListener("click", () => showCard(loginCard));
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      loginError.classList.add("hidden");
+      loginError.textContent = "";
+
+      const email = loginForm.querySelector("[name=email]").value;
+      const password = loginForm.querySelector("[name=password]").value;
+      const submitBtn = loginForm.querySelector("button[type=submit]");
+      const defaultLabel = submitBtn?.textContent || "Ingresar";
+      const setBusy = (label) => {
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = label;
+        }
+      };
+      const reset = () => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = defaultLabel;
+        }
+      };
+
+      setBusy("Ingresando...");
+
+      try {
+        const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+        if (authError) {
+          loginError.textContent = authError.message;
+          loginError.classList.remove("hidden");
+          return;
+        }
+
+        const explicitRedirect = getSafeRedirect();
+        const hasExplicitRedirect = new URLSearchParams(window.location.search).get("redirect");
+        if (hasExplicitRedirect) {
+          window.location.href = explicitRedirect;
+          return;
+        }
+
+        setBusy("Verificando permisos...");
+
+        let role = null;
+        try {
+          const { data: { user } } = await supabase.auth.getUser();
+          if (user) {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("role")
+              .eq("id", user.id)
+              .single();
+            role = profile?.role ?? null;
+          }
+        } catch (err) {
+          console.error("No se pudo leer el role del user, fallback a /mi-cuenta:", err);
+        }
+
+        window.location.href = role === "admin" ? "/admin" : "/mi-cuenta";
+      } catch (err) {
+        loginError.textContent = "Error de conexión. Intentalo de nuevo.";
+        loginError.classList.remove("hidden");
+      } finally {
+        reset();
+      }
+    });
+  }
+
+  if (signupForm) {
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      signupError.classList.add("hidden");
+      signupError.textContent = "";
+
+      const email = signupForm.querySelector("[name=email]").value;
+      const password = signupForm.querySelector("[name=password]").value;
+      const confirm = signupForm.querySelector("[name=confirm]").value;
+
+      if (password !== confirm) {
+        signupError.textContent = "Las contraseñas no coinciden";
+        signupError.classList.remove("hidden");
+        return;
+      }
+
+      if (password.length < 6) {
+        signupError.textContent = "La contraseña debe tener al menos 6 caracteres";
+        signupError.classList.remove("hidden");
+        return;
+      }
+
+      const redirect = getSafeRedirect();
+      const emailRedirectTo = window.location.origin + redirect;
+
+      const submitBtn = signupForm.querySelector("button[type=submit]");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Creando cuenta...";
+      }
+
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo },
+      });
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = "Crear cuenta";
+      }
+
+      if (error) {
+        signupError.textContent = error.message;
+        signupError.classList.remove("hidden");
+        return;
+      }
+
+      if (data.session) {
+        window.location.href = redirect;
+        return;
+      }
+
+      showCard(checkEmailCard);
+    });
+  }
+
+  if (forgotForm) {
+    forgotForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      forgotError.classList.add("hidden");
+      forgotError.textContent = "";
+
+      const email = forgotForm.querySelector("[name=email]").value;
+      if (!email) {
+        forgotError.textContent = "Ingresá tu email";
+        forgotError.classList.remove("hidden");
+        return;
+      }
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + "/iniciar-sesion?recovery=true",
+      });
+      if (error) {
+        forgotError.textContent = error.message;
+        forgotError.classList.remove("hidden");
+        return;
+      }
+      showCard(null);
+      recoverySuccess.classList.remove("hidden");
+    });
+  }
+
+  if (resetForm) {
+    resetForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      resetError.classList.add("hidden");
+      resetError.textContent = "";
+
+      const password = resetForm.querySelector("[name=password]").value;
+      const confirm = resetForm.querySelector("[name=confirm]").value;
+
+      if (password !== confirm) {
+        resetError.textContent = "Las contraseñas no coinciden";
+        resetError.classList.remove("hidden");
+        return;
+      }
+
+      if (password.length < 6) {
+        resetError.textContent = "La contraseña debe tener al menos 6 caracteres";
+        resetError.classList.remove("hidden");
+        return;
+      }
+
+      const { error } = await supabase.auth.updateUser({ password });
+      if (error) {
+        resetError.textContent = error.message;
+        resetError.classList.remove("hidden");
+        return;
+      }
+
+      window.location.href = "/mi-cuenta";
+    });
+  }
+
+  const pageParams = new URLSearchParams(window.location.search);
+  if (pageParams.get("recovery") === "true" && !pageParams.get("code")) {
+    showCard(resetCard);
+  }
 </script>

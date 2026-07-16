@@ -1,0 +1,101 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PatchTitle from "../components/PatchTitle.astro";
+---
+
+<Layout title="Política de privacidad" canonical="/privacidad">
+  <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
+    <div class="max-w-3xl mx-auto">
+
+      <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content="Política de privacidad" tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
+      </div>
+
+      <div class="space-y-6 font-sans text-sm text-triba-brown leading-relaxed reveal-stagger" data-reveal>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">1. Responsable del tratamiento</h2>
+          <p>Triba es una revista digital mensual. Al utilizar nuestro sitio web y suscribirte a nuestros servicios, confías tus datos personales. Esta política explica qué datos recopilamos, cómo los usamos y qué derechos tienes.</p>
+          <p class="mt-2">Contacto: <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a></p>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">2. Datos que recopilamos</h2>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Datos de cuenta:</strong> nombre y correo electrónico al registrarte.</li>
+            <li><strong>Datos de pago:</strong> no almacenamos números de tarjeta ni datos financieros. Los pagos son procesados por Stripe y Mercado Pago según sus propias políticas de privacidad.</li>
+            <li><strong>Datos de navegación:</strong> información anónima sobre tu interacción con el sitio (páginas visitadas, tiempo de sesión) para mejorar la experiencia.</li>
+            <li><strong>Comunicaciones:</strong> mensajes que nos envías a través del formulario de contacto, feedback o postulación como creadora.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">3. Finalidad del tratamiento</h2>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Gestionar tu suscripción y acceso a la revista.</li>
+            <li>Enviarte el newsletter gratuito si te suscribiste a él.</li>
+            <li>Procesar pagos a través de los proveedores de pago que elijas.</li>
+            <li>Responder a tus consultas, feedback y postulaciones.</li>
+            <li>Mejorar nuestro sitio web y servicios.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">4. Base legal</h2>
+          <p>El tratamiento de tus datos se basa en:</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Ejecución de un contrato:</strong> gestión de la suscripción y acceso a la revista.</li>
+            <li><strong>Consentimiento:</strong> newsletter, comunicaciones y postulaciones.</li>
+            <li><strong>Interés legítimo:</strong> mejora del sitio y análisis de uso.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">5. Almacenamiento y seguridad</h2>
+          <p>Tus datos se almacenan en <strong>Supabase</strong>, proveedor de base de datos y autenticación con servidores en la Unión Europea. Implementamos medidas de seguridad técnicas y organizativas para proteger tu información contra accesos no autorizados, pérdida o alteración.</p>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">6. Compartición de datos</h2>
+          <p>No vendemos tus datos personales a terceros. Compartimos datos únicamente con:</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Supabase:</strong> autenticación y base de datos.</li>
+            <li><strong>Stripe, Mercado Pago:</strong> procesamiento de pagos (solo los datos necesarios para la transacción).</li>
+            <li><strong>Google (Gmail):</strong> envío de correos transaccionales y newsletter.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">7. Tus derechos</h2>
+          <p>Puedes ejercer los siguientes derechos en cualquier momento escribiéndonos a <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a>:</p>
+          <ul class="list-disc pl-5 space-y-1">
+            <li><strong>Acceso:</strong> conocer qué datos tenemos sobre ti.</li>
+            <li><strong>Rectificación:</strong> corregir datos inexactos o incompletos.</li>
+            <li><strong>Supresión:</strong> solicitar la eliminación de tus datos.</li>
+            <li><strong>Oposición:</strong> oponerte al tratamiento de tus datos.</li>
+            <li><strong>Portabilidad:</strong> recibir tus datos en formato estructurado.</li>
+            <li><strong>Retirar el consentimiento:</strong> en cualquier momento, sin afectar la legalidad del tratamiento previo.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">8. Cookies</h2>
+          <p>Utilizamos cookies esenciales para el funcionamiento del sitio (sesión de usuario, autenticación). No utilizamos cookies de rastreo publicitario. Puedes configurar tu navegador para rechazar todas las cookies, pero algunas funciones del sitio podrían no estar disponibles.</p>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">9. Conservación de datos</h2>
+          <p>Conservamos tus datos mientras mantengas una cuenta activa. Al cancelar tu suscripción o solicitar la eliminación de tu cuenta, tus datos se eliminan en un plazo máximo de 30 días, salvo obligación legal de retenerlos por más tiempo.</p>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">10. Cambios en esta política</h2>
+          <p>Podemos actualizar esta política de privacidad periódicamente. Te notificaremos los cambios significativos a través del sitio web o por correo electrónico.</p>
+          <p class="mt-2 text-triba-brown/60">Última actualización: julio de 2026.</p>
+        </section>
+
+      </div>
+
+    </div>
+  </section>
+</Layout>

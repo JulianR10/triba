@@ -10,9 +10,10 @@ export interface Props {
   pattern?: string;
   minlength?: number;
   validationMsg?: string;
+  value?: string;
 }
 
-const { label, name, type = "text", required = false, placeholder, rows = 4, isTextarea = false, pattern, minlength, validationMsg } = Astro.props;
+const { label, name, type = "text" as any, required = false, placeholder, rows = 4, isTextarea = false, pattern, minlength, validationMsg, value } = Astro.props;
 
 const inputClasses = "w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors";
 const errorId = `${name}-error`;
@@ -22,9 +23,9 @@ const errorId = `${name}-error`;
   <label for={name} class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">{label}</label>
   {
     isTextarea ? (
-      <textarea id={name} name={name} rows={rows} {required} {minlength} placeholder={placeholder} aria-describedby={required || validationMsg ? errorId : undefined} class={`${inputClasses} resize-none`}></textarea>
+      <textarea id={name} name={name} rows={rows} {required} {minlength} placeholder={placeholder} aria-describedby={required || validationMsg ? errorId : undefined} class={`${inputClasses} resize-none`}>{value ?? ""}</textarea>
     ) : (
-      <input type={type} id={name} name={name} {required} {pattern} {minlength} placeholder={placeholder} aria-describedby={required || validationMsg ? errorId : undefined} class={inputClasses} />
+      <input type={type} id={name} name={name} {required} {pattern} {minlength} placeholder={placeholder} aria-describedby={required || validationMsg ? errorId : undefined} class={inputClasses} value={value ?? ""} />
     )
   }
   <p id={errorId} class="font-sans text-xs text-triba-red mt-1 hidden" data-validation-msg>{validationMsg || "Este campo es obligatorio"}</p>
@@ -32,29 +33,33 @@ const errorId = `${name}-error`;
 
 <script>
   document.querySelectorAll("[data-validation-msg]").forEach((msgEl) => {
-    const input = msgEl.previousElementSibling?.querySelector?.("input, textarea") || msgEl.previousElementSibling;
-    if (!input || !(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)) return;
+    const prev = msgEl.previousElementSibling;
+    const found = (prev?.querySelector?.("input, textarea") as HTMLElement | null) || prev;
+    const input = found as HTMLInputElement | HTMLTextAreaElement | null;
+    if (!input) return;
+    if (!(input instanceof HTMLInputElement || input instanceof HTMLTextAreaElement)) return;
+    const el = input;
 
     function validate() {
-      if (input.validity.valueMissing) {
-        msgEl.textContent = input.dataset.validationMsg || "Este campo es obligatorio";
+      if (el.validity.valueMissing) {
+        msgEl.textContent = el.dataset.validationMsg || "Este campo es obligatorio";
         msgEl.classList.remove("hidden");
-        input.classList.add("border-triba-red");
-      } else if (input.validity.typeMismatch) {
+        el.classList.add("border-triba-red");
+      } else if (el.validity.typeMismatch) {
         msgEl.textContent = "Formato incorrecto";
         msgEl.classList.remove("hidden");
-        input.classList.add("border-triba-red");
-      } else if (input.validity.patternMismatch) {
-        msgEl.textContent = input.dataset.validationMsg || "Formato no válido";
+        el.classList.add("border-triba-red");
+      } else if (el.validity.patternMismatch) {
+        msgEl.textContent = el.dataset.validationMsg || "Formato no válido";
         msgEl.classList.remove("hidden");
-        input.classList.add("border-triba-red");
+        el.classList.add("border-triba-red");
       } else {
         msgEl.classList.add("hidden");
-        input.classList.remove("border-triba-red");
+        el.classList.remove("border-triba-red");
       }
     }
 
-    input.addEventListener("blur", validate);
-    input.addEventListener("input", validate);
+    el.addEventListener("blur", validate);
+    el.addEventListener("input", validate);
   });
 </script>

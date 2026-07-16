@@ -1,6 +1,8 @@
 ---
 import Navbar from "../components/Navbar.astro";
+import Footer from "../components/Footer.astro";
 import "./global.css";
+import { ClientRouter } from "astro:transitions";
 
 const { title, description, image, canonical } = Astro.props;
 
@@ -48,6 +50,9 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
     <meta name="twitter:description" content={siteDescription} />
     <meta name="twitter:image" content={`${siteUrl}${ogImage}`} />
 
+    <!-- View Transitions (Paso 1) -->
+    <ClientRouter fallback="swap" />
+
     <!-- Schema.org JSON-LD -->
     <script type="application/ld+json">
       {
@@ -64,10 +69,58 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
       }
     </script>
   </head>
-  <body class="bg-triba-bone text-triba-black text-pretty">
+  <body class="bg-triba-bone text-triba-black text-pretty flex flex-col min-h-screen">
     <Navbar />
-    <main>
+    <main class="flex-1 flex flex-col">
       <slot />
     </main>
+    <Footer />
+
+    <!-- Animation scripts -->
+    <script src="/scripts/magnetic.js" is:inline></script>
+    <script>
+      (function () {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+        var observer = new IntersectionObserver(
+          function (entries) {
+            entries.forEach(function (entry) {
+              if (!entry.isIntersecting) return;
+              var el = entry.target;
+
+              if (el.hasAttribute("data-reveal-text") && !el._revealSplit) {
+                el._revealSplit = true;
+                var words = el.textContent.trim().split(/\s+/);
+                if (words.length > 1) {
+                  el.innerHTML = words
+                    .map(function (w) {
+                      return '<span class="reveal-word" style="display:inline-block">' + w + "</span>";
+                    })
+                    .join(" ");
+                }
+              }
+
+              el.classList.add("revealed");
+
+              if (el.dataset.revealOnce !== undefined || el.hasAttribute("data-reveal-once")) {
+                observer.unobserve(el);
+              }
+            });
+          },
+          { threshold: 0.15, rootMargin: "0px 0px -40px 0px" }
+        );
+
+        function observeAll() {
+          document.querySelectorAll("[data-reveal], [data-reveal-text], .reveal-stagger").forEach(function (el) {
+            if (!el.classList.contains("revealed")) {
+              observer.observe(el);
+            }
+          });
+        }
+
+        observeAll();
+        document.addEventListener("astro:page-load", observeAll);
+      })();
+    </script>
   </body>
 </html>

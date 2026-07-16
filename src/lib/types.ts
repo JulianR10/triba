@@ -1,6 +1,6 @@
 export type SubscriptionStatus = "active" | "canceled" | "past_due" | "trialing" | "incomplete";
 
-export type PaymentProvider = "stripe" | "mercadopago" | "paypal";
+export type PaymentProvider = "stripe" | "mercadopago";
 
 export interface Profile {
   id: string;

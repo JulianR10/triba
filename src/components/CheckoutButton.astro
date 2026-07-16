@@ -1,6 +1,6 @@
 ---
 interface Props {
-  provider: "stripe" | "mercadopago" | "paypal";
+  provider: "stripe" | "mercadopago";
   currency: "EUR" | "USD" | "ARS";
   variant?: "primary" | "default" | "ghost";
   size?: "sm" | "md";
@@ -9,20 +9,20 @@ interface Props {
 }
 
 const { provider, currency, variant = "primary", size = "md", label, fullWidth } = Astro.props;
-const displayLabel = label || `Pagar con ${provider === "stripe" ? "Tarjeta" : provider === "mercadopago" ? "Mercado Pago" : "PayPal"}`;
+const displayLabel = label || `${provider === "stripe" ? "Tarjeta (Stripe)" : provider === "mercadopago" ? "Mercado Pago" : "Pagar"}`;
 const btnClass = `
   inline-flex items-center justify-center font-heading uppercase tracking-wider transition-all duration-200 hover:scale-[1.02]
   ${fullWidth ? "w-full" : ""}
   ${variant === "primary"
     ? "bg-triba-red text-triba-white border-2 border-triba-red rounded-button"
     : variant === "default"
-    ? "bg-triba-bone text-triba-black border-2 border-triba-black rounded-button"
+    ? "bg-triba-white text-triba-black border-2 border-triba-black rounded-button"
     : "bg-transparent text-triba-black border-2 border-triba-black rounded-button"}
   ${size === "sm" ? "px-6 py-2.5 text-xs" : "px-8 py-3 text-sm"}
 `;
 ---
 
-<button type="button" data-provider={provider} data-currency={currency} class={btnClass}>
+<button type="button" data-provider={provider} data-currency={currency} class={btnClass} data-magnetic>
   {displayLabel}
 </button>
 <p class="font-sans text-xs text-triba-red text-center mt-1 hidden" data-checkout-error></p>
@@ -42,25 +42,11 @@ const btnClass = `
       btn.textContent = "Procesando...";
 
       try {
+        if (!supabase) throw new Error("Supabase no configurado");
         const { data: { session } } = await supabase.auth.getSession();
         if (!session) {
           const redirect = encodeURIComponent(window.location.pathname + "?currency=" + currency);
           window.location.href = "/iniciar-sesion?redirect=" + redirect;
-          return;
-        }
-
-        if (provider === "paypal") {
-          const res = await fetch("/api/create-paypal-order", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-            body: JSON.stringify({ currency }),
-          });
-          const data = await res.json();
-          if (data.approvalUrl) window.location.href = data.approvalUrl;
-          else throw new Error(data.error || "Error creando orden PayPal");
           return;
         }
 

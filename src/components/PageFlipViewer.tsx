@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useRef, useState, useCallback } from "react";
 import HTMLFlipBook from "react-pageflip";
 
 interface PageData {
@@ -15,11 +15,16 @@ interface Props {
 
 export default function PageFlipViewer({
   pages,
-  width = 380,
-  height = 507,
+  width = 340,
+  height = 453,
   className = "",
 }: Props) {
   const book = useRef<any>(null);
+  const [currentPage, setCurrentPage] = useState(0);
+
+  const onFlip = useCallback((e: any) => {
+    setCurrentPage(e.data);
+  }, []);
 
   if (!pages || pages.length === 0) {
     return (
@@ -35,6 +40,7 @@ export default function PageFlipViewer({
     <div className={"flex flex-col items-center " + className}>
       <div className="w-full max-w-sm mx-auto md:mx-0">
         <HTMLFlipBook
+          ref={book}
           width={width}
           height={height}
           size="stretch"
@@ -49,6 +55,7 @@ export default function PageFlipViewer({
           drawShadow={true}
           showPageCorners={true}
           clickEventForward={true}
+          onFlip={onFlip}
           className="shadow-xl border-2 border-triba-black rounded-sm overflow-hidden"
         >
           {pages.map((page, i) => (
@@ -58,6 +65,7 @@ export default function PageFlipViewer({
                 alt={page.alt || `Página ${i + 1}`}
                 className="w-full h-full object-cover select-none pointer-events-none"
                 draggable={false}
+                loading="lazy"
               />
             </div>
           ))}
@@ -73,8 +81,8 @@ export default function PageFlipViewer({
           <span className="text-xl font-heading text-triba-brown -mt-0.5">‹</span>
         </button>
 
-        <span className="font-sans text-xs text-triba-brown/60 select-none" id="page-indicator">
-          1 / {pages.length}
+        <span className="font-sans text-xs text-triba-brown/60 select-none">
+          {currentPage + 1} / {pages.length}
         </span>
 
         <button

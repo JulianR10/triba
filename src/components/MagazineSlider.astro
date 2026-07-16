@@ -1,0 +1,115 @@
+---
+export interface SliderItem {
+  id: number;
+  cover: string;
+  badge?: string | null;
+  title?: string;
+  description?: string;
+}
+
+export interface Props {
+  items: SliderItem[];
+  selectedId?: number;
+}
+
+const { items, selectedId } = Astro.props;
+---
+
+<div class="md:hidden" data-slider-root>
+  <div data-slider-scroll class="overflow-x-auto scrollbar-hide snap-x snap-mandatory py-2">
+    <div class="flex gap-4 px-5">
+      {items.map((item) => {
+        const isSelected = item.id === selectedId;
+        return (
+          <div
+            data-slider-item
+            data-edition-id={item.id}
+            data-cover={item.cover}
+            data-badge={item.badge || ''}
+            aria-selected={isSelected}
+            class="snap-center shrink-0 w-[58vw] max-w-[220px]"
+          >
+            <div class="relative aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-md">
+              <img
+                src={item.cover}
+                alt={item.title ? `Portada de ${item.title}` : "Portada"}
+                class="w-full h-full object-cover"
+                loading="lazy"
+              />
+              {item.badge && (
+                <span class="absolute -top-3 -right-3 bg-triba-red text-triba-white font-heading text-xs uppercase px-3 py-1 rounded-full border-2 border-triba-black shadow-[2px_2px_0_rgba(0,0,0,0.15)]">
+                  {item.badge}
+                </span>
+              )}
+            </div>
+            {item.title && (
+              <h3 class="font-heading text-base uppercase tracking-wide text-triba-black font-bold mt-3 text-center">
+                {item.title}
+              </h3>
+            )}
+            {item.description && (
+              <p class="font-sans text-triba-brown text-sm leading-relaxed mt-2 text-center">
+                {item.description}
+              </p>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  </div>
+  <div data-slider-dots class="flex justify-center gap-1.5 mt-4"></div>
+</div>
+
+<script>
+  (function () {
+    document.querySelectorAll("[data-slider-root]").forEach(function (root) {
+      const scroll = root.querySelector("[data-slider-scroll]");
+      const dotsEl = root.querySelector("[data-slider-dots]");
+      if (!scroll || !dotsEl) return;
+
+      const items = Array.from(scroll.querySelectorAll("[data-slider-item]"));
+      if (items.length === 0) return;
+
+      function updateActiveDot() {
+        const scrollLeft = scroll.scrollLeft;
+        const scrollWidth = scroll.clientWidth;
+        let active = 0;
+        let minDiff = Infinity;
+        items.forEach(function (item, i) {
+          const center = item.offsetLeft + item.offsetWidth / 2;
+          const viewportCenter = scrollLeft + scrollWidth / 2;
+          const diff = Math.abs(center - viewportCenter);
+          if (diff < minDiff) {
+            minDiff = diff;
+            active = i;
+          }
+        });
+        const dots = dotsEl.querySelectorAll("span");
+        dots.forEach(function (dot, i) {
+          if (i === active) {
+            dot.className = "w-3 h-3 rounded-full bg-triba-red transition-all duration-300";
+          } else {
+            dot.className = "w-2 h-2 rounded-full bg-triba-black/20 transition-all duration-300";
+          }
+        });
+      }
+
+      items.forEach(function (_, i) {
+        const dot = document.createElement("span");
+        dot.className = "w-2 h-2 rounded-full bg-triba-black/20 transition-all duration-300";
+        dot.addEventListener("click", function () {
+          items[i].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        });
+        dotsEl.appendChild(dot);
+      });
+
+      let scrollTimer;
+      scroll.addEventListener("scroll", function () {
+        clearTimeout(scrollTimer);
+        scrollTimer = setTimeout(updateActiveDot, 50);
+      });
+
+      updateActiveDot();
+    });
+  })();
+</script>

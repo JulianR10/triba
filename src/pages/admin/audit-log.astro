@@ -1,0 +1,80 @@
+---
+import AdminLayout from "../../components/admin/AdminLayout.astro";
+import { getAdminAuditLog, getAdminAuditLogCount } from "../../lib/admin";
+
+const page = Math.max(1, parseInt(Astro.url.searchParams.get("page") || "1", 10) || 1);
+const pageSize = 50;
+const [logs, total] = await Promise.all([
+  getAdminAuditLog(pageSize, (page - 1) * pageSize),
+  getAdminAuditLogCount(),
+]);
+const totalPages = Math.ceil(total / pageSize);
+
+const actionLabels: Record<string, string> = {
+  "edition.created": "Edición creada",
+  "edition.updated": "Edición actualizada",
+  "edition.deleted": "Edición eliminada",
+  "subscriber.canceled": "Sub cancelada",
+  "creator.approved": "Creator aprobado",
+  "creator.rejected": "Creator rechazado",
+};
+---
+
+<AdminLayout title="Actividad" active="audit-log">
+  <p class="font-sans text-sm text-triba-brown/70 mb-6">
+    Registro de acciones administrativas. {total} {total === 1 ? "entrada" : "entradas"} en total.
+  </p>
+
+  {
+    logs.length === 0 ? (
+      <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 text-center">
+        <p class="font-sans text-sm text-triba-brown">Todavía no hay actividad registrada.</p>
+      </div>
+    ) : (
+      <>
+        <div class="bg-triba-white rounded-xl border-2 border-triba-black overflow-x-auto">
+          <table class="w-full font-sans text-sm">
+            <thead class="bg-triba-bone border-b-2 border-triba-black">
+              <tr>
+                <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Fecha</th>
+                <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Admin</th>
+                <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Acción</th>
+                <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider hidden md:table-cell">Entidad</th>
+                <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider hidden md:table-cell">Detalle</th>
+              </tr>
+            </thead>
+            <tbody>
+              {logs.map((log) => (
+                <tr class="border-b border-triba-black/10 last:border-0 hover:bg-triba-bone/50">
+                  <td class="px-4 py-3 text-triba-brown/70 whitespace-nowrap">
+                    {new Date(log.created_at).toLocaleString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })}
+                  </td>
+                  <td class="px-4 py-3">{log.admin_email}</td>
+                  <td class="px-4 py-3">
+                    <span class="inline-block px-2 py-0.5 rounded-full font-heading text-[10px] uppercase tracking-wider bg-triba-light-cream text-triba-brown">
+                      {actionLabels[log.action] || log.action}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-triba-brown/70 hidden md:table-cell">{log.entity_type}{log.entity_id ? ` #${log.entity_id.slice(0, 8)}` : ""}</td>
+                  <td class="px-4 py-3 text-triba-brown/60 hidden md:table-cell max-w-[200px] truncate">{log.details ? JSON.stringify(log.details) : "—"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="flex items-center justify-between mt-4 gap-3 flex-wrap">
+          <p class="font-sans text-xs text-triba-brown/60">Página {page} de {totalPages}</p>
+          <div class="flex gap-2">
+            {page > 1 && (
+              <a href={`/admin/audit-log?page=${page - 1}`} class="rounded-button border-2 border-triba-black/20 bg-triba-white text-triba-brown px-4 py-1.5 font-heading text-xs uppercase tracking-wider hover:border-triba-black transition-all">Anterior</a>
+            )}
+            {page < totalPages && (
+              <a href={`/admin/audit-log?page=${page + 1}`} class="rounded-button border-2 border-triba-black/20 bg-triba-white text-triba-brown px-4 py-1.5 font-heading text-xs uppercase tracking-wider hover:border-triba-black transition-all">Siguiente</a>
+            )}
+          </div>
+        </div>
+      </>
+    )
+  }
+</AdminLayout>

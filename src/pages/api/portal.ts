@@ -32,8 +32,11 @@ export const POST: APIRoute = async ({ request }) => {
     if (sub.provider === "stripe") {
       if (!stripe) throw new Error("Stripe not configured");
 
+      const stripeSub = await stripe.subscriptions.retrieve(sub.provider_subscription_id);
+      const customerId = typeof stripeSub.customer === "string" ? stripeSub.customer : stripeSub.customer.id;
+
       const portal = await stripe.billingPortal.sessions.create({
-        customer: sub.provider_subscription_id,
+        customer: customerId,
         return_url: `${origin}/mi-cuenta`,
       });
 
@@ -45,7 +48,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     return new Response(
       JSON.stringify({
-        note: "Cancel or manage your subscription from your payment provider's dashboard.",
+        note: "Gestiona tu suscripción desde el dashboard de Mercado Pago.",
         provider: sub.provider,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } }
