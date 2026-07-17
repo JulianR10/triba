@@ -7,13 +7,14 @@ import PatchTitle from "../components/PatchTitle.astro";
 
 import { createSupabaseServerClient } from "../lib/supabase-server";
 import { getEditions, getFeaturedEdition, getEditionPages } from "../lib/editions";
+import type { Profile, Subscription } from "../lib/types";
 
 const supabase = createSupabaseServerClient(Astro.request);
 const { data: { session } } = await supabase.auth.getSession();
 const user = session?.user ?? null;
 
-let profile: any = null;
-let subscription: any = null;
+let profile: Profile | null = null;
+let subscription: Subscription | null = null;
 
 if (user) {
   const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).single();

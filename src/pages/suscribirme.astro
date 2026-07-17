@@ -132,6 +132,8 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 </Layout>
 
 <script>
+  import { setupNewsletterForm } from "../scripts/newsletter-handler";
+
   function setup() {
     var tabs = document.querySelectorAll("[data-currency]");
     var plans = document.querySelectorAll("[data-plan]");
@@ -161,38 +163,16 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
       });
     });
 
-    var nf = document.getElementById("newsletter-form-card");
-    var nm = document.getElementById("newsletter-card-msg");
-
     document.querySelectorAll("[data-dismiss-banner]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var banner = btn.closest("[data-banner]");
         if (banner) banner.style.display = "none";
       });
     });
-    if (nf) {
-      nf.addEventListener("submit", async function (e) {
-        e.preventDefault();
-        var email = nf.querySelector("input[type=email]").value;
-        var res = await fetch("/api/newsletter", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-        var data = await res.json();
-        if (data.ok) {
-          nm.textContent = "¡Gracias por suscribirte!";
-          nm.className = "font-sans text-xs text-center text-triba-green";
-          nf.querySelector("input[type=email]").value = "";
-        } else if (data.existing) {
-          nm.textContent = "Ya estás suscripta";
-          nm.className = "font-sans text-xs text-center text-triba-red";
-        } else {
-          nm.textContent = "Error al suscribirte. Intentalo de nuevo.";
-          nm.className = "font-sans text-xs text-center text-triba-red";
-        }
-      });
-    }
+
+    var nf = document.getElementById("newsletter-form-card") as HTMLFormElement | null;
+    var nm = document.getElementById("newsletter-card-msg");
+    if (nf && nm) setupNewsletterForm(nf, nm);
   }
 
   setup();

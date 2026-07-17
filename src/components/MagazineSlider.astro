@@ -84,19 +84,24 @@ const { items, selectedId } = Astro.props;
             active = i;
           }
         });
-        const dots = dotsEl.querySelectorAll("span");
+        const dots = dotsEl.querySelectorAll("button");
         dots.forEach(function (dot, i) {
           if (i === active) {
             dot.className = "w-3 h-3 rounded-full bg-triba-red transition-all duration-300";
+            dot.setAttribute("aria-current", "true");
           } else {
             dot.className = "w-2 h-2 rounded-full bg-triba-black/20 transition-all duration-300";
+            dot.removeAttribute("aria-current");
           }
         });
       }
 
       items.forEach(function (_, i) {
-        const dot = document.createElement("span");
+        const dot = document.createElement("button");
         dot.className = "w-2 h-2 rounded-full bg-triba-black/20 transition-all duration-300";
+        dot.setAttribute("aria-label", "Ir a edición " + (i + 1));
+        dot.setAttribute("aria-current", "false");
+        dot.setAttribute("tabindex", "0");
         dot.addEventListener("click", function () {
           items[i].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
         });

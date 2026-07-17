@@ -1,5 +1,5 @@
-import { useRef, useState, useCallback } from "react";
-import HTMLFlipBook from "react-pageflip";
+import { useRef, useState, useCallback, type RefObject } from "react";
+import HTMLFlipBook, { type IPageFlipEvent } from "react-pageflip";
 
 interface PageData {
   src: string;
@@ -19,10 +19,10 @@ export default function PageFlipViewer({
   height = 453,
   className = "",
 }: Props) {
-  const book = useRef<any>(null);
+  const book = useRef<HTMLDivElement>(null);
   const [currentPage, setCurrentPage] = useState(0);
 
-  const onFlip = useCallback((e: any) => {
+  const onFlip = useCallback((e: IPageFlipEvent) => {
     setCurrentPage(e.data);
   }, []);
 

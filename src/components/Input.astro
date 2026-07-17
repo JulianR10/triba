@@ -13,7 +13,7 @@ export interface Props {
   value?: string;
 }
 
-const { label, name, type = "text" as any, required = false, placeholder, rows = 4, isTextarea = false, pattern, minlength, validationMsg, value } = Astro.props;
+const { label, name, type = "text", required = false, placeholder, rows = 4, isTextarea = false, pattern, minlength, validationMsg, value } = Astro.props;
 
 const inputClasses = "w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors";
 const errorId = `${name}-error`;

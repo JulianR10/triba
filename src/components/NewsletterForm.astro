@@ -15,35 +15,11 @@ import Button from "./Button.astro";
 </form>
 
 <script>
-  const form = document.getElementById("newsletter-form");
-  const msg = document.getElementById("newsletter-msg");
+  import { setupNewsletterForm } from "../scripts/newsletter-handler";
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    const email = form.querySelector("[name=email]").value;
-
-    try {
-      const res = await fetch("/api/newsletter", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      });
-      const data = await res.json();
-
-      if (data.ok) {
-        msg.textContent = "¡Gracias por suscribirte!";
-        msg.className = "font-sans text-sm text-triba-green mt-2";
-        form.querySelector("[name=email]").value = "";
-      } else if (data.existing) {
-        msg.textContent = "Ya estás suscripta";
-        msg.className = "font-sans text-sm text-triba-red mt-2";
-      } else {
-        msg.textContent = "Error al suscribirte. Intentalo de nuevo.";
-        msg.className = "font-sans text-sm text-triba-red mt-2";
-      }
-    } catch {
-      msg.textContent = "Error de conexión. Intentalo de nuevo.";
-      msg.className = "font-sans text-sm text-triba-red mt-2";
-    }
+  document.addEventListener("astro:page-load", () => {
+    const form = document.getElementById("newsletter-form") as HTMLFormElement | null;
+    const msg = document.getElementById("newsletter-msg");
+    if (form && msg) setupNewsletterForm(form, msg);
   });
 </script>

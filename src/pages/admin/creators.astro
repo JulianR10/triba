@@ -7,12 +7,13 @@ const validFilters = ["all", "pending", "approved", "rejected"] as const;
 const filter = validFilters.includes(statusFilter) ? statusFilter : "all";
 
 const applications = await listCreatorApplicationsForAdmin(filter);
+const allApps = filter === "all" ? applications : await listCreatorApplicationsForAdmin("all");
 
 const counts = {
-  all: (await listCreatorApplicationsForAdmin("all")).length,
-  pending: (await listCreatorApplicationsForAdmin("pending")).length,
-  approved: (await listCreatorApplicationsForAdmin("approved")).length,
-  rejected: (await listCreatorApplicationsForAdmin("rejected")).length,
+  all: allApps.length,
+  pending: allApps.filter((a) => a.status === "pending").length,
+  approved: allApps.filter((a) => a.status === "approved").length,
+  rejected: allApps.filter((a) => a.status === "rejected").length,
 };
 ---
 
