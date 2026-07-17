@@ -8,7 +8,7 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 
 | Capa | Tecnología |
 |---|---|
-| Framework | **Astro 5** (server output con `@astrojs/node` standalone) |
+| Framework | **Astro 5** (server output con `@astrojs/vercel` serverless) |
 | Estilos | **Tailwind CSS 3** — mobile-first, colores/fuentes del branding |
 | BBDD / Auth / Storage | **Supabase** (PostgreSQL, auth, storage para PDFs/portadas) |
 | Pagos | **Stripe** + **Mercado Pago** (webhooks + Supabase) |
@@ -117,7 +117,8 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 | `/api/webhook/mercadopago` | POST | Notificaciones de pago MP. Verificación de firma HMAC-SHA256 activa (fail-closed, manifest aislado en `buildManifest`). Default `VERIFY_SIGNATURES=true`; override con `VERIFY_MP_SIGNATURES=false` en env. |
 | `/api/admin/editions` | POST | Crea una edición. Acepta `multipart/form-data` con cover/PDF opcionales (subidos a Supabase Storage). Promueve/demueve featured atómicamente. |
 | `/api/admin/editions/[id]` | PATCH / DELETE | Actualiza o elimina una edición. |
-| `/api/admin/creators/[id]/status` | PATCH | Aprueba/rechaza una postulación. Body: `{ status: 'approved' \| 'rejected' \| 'pending' }` |
+| `/api/admin/creators` | GET | Lista postulaciones. Query `?status=pending\|approved\|rejected\|all` |
+| `/api/admin/creators` | PATCH | Aprueba/rechaza postulación. Body: `{ id, status: 'approved' \| 'rejected' \| 'pending' }` |
 | `/api/admin/subscribers/[id]/cancel` | POST | Cancela la suscripción de cualquier user (usa RPC `cancel_subscription`). Admin-only. |
 
 ---
@@ -143,7 +144,7 @@ Patrón estándar:
 - Operaciones privilegiadas (webhooks, admin, rate limit): `supabaseAdmin` (service role).
 - Operaciones del usuario actual (con su permiso): `supabase` con el token.
 - Respuestas con helpers de `src/lib/response.ts`: `ok(data)` para 200, `error(msg, status)` para errores.
-- Rate limiting con `src/lib/rate-limit.ts`: `checkRateLimit(rateLimitKey(ip, endpoint), { maxRequests, windowMs })`.
+- Rate limiting con `src/lib/rate-limit.ts`: `await checkRateLimit(rateLimitKey(ip, endpoint), { maxRequests, windowMs })`.
 - Logging con Pino via `src/lib/logger.ts`: `logger.info({...}, "msg")`.
 - `Content-Type: application/json` siempre.
 - Body JSON: validar y sanear. `trim()` en strings, length check, tipos.
@@ -199,6 +200,9 @@ El visor de revista usa `client:visible` (carga cuando entra en viewport) porque
 
 ### `PUBLIC_*` vs `VITE_*` en Supabase
 Convención unificada: **siempre `PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY`**. No usar `VITE_*` (convención legacy que ya fue removida). El server lee las mismas vars que el cliente vía `import.meta.env`.
+
+### Rate limiting vía Supabase (serverless-safe)
+Con la migración a Vercel (serverless), el rate limiting in-memory con `Map` dejó de funcionar porque cada función serverless es efímera. Se reemplazó por la tabla `rate_limits` en Supabase (migración `007_rate_limits.sql`). `checkRateLimit` ahora es `async` y hace inserts/selects contra la DB. La tabla tiene auto-cleanup de registros > 10 minutos via `cleanup_rate_limits()`. No olvides ejecutar la migración después del deploy.
 
 ---
 
@@ -313,7 +317,7 @@ Admin y suscriptora comparten Supabase Auth y la página `/iniciar-sesion` (no h
 
 ```mermaid
 flowchart LR
-  U[Usuaria] -->|HTTP| AS[Astro Server<br/>@astrojs/node]
+  U[Usuaria] -->|HTTP| AS[Astro Server<br/>@astrojs/vercel]
   AS -->|View Transitions| AC[Astro Client]
   AS -->|SSR pages| SU[Supabase Auth]
   AS -->|API routes| SU

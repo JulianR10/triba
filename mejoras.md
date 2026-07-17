@@ -41,12 +41,10 @@ No hay analytics. No se sabe de dónde vienen los signups, dónde abandonan chec
 
 ---
 
-### 16. ✅ CI/CD
-Archivos en `.github/workflows/` listos:
-- `ci.yml` — build en cada PR
-- `deploy.yml` — build en push a main
-
-**Hostinger Git Deploy** pendiente de configurar desde hPanel.
+### 16. ✅ CI/CD + Deploy
+- `.github/workflows/ci.yml` — build en cada PR
+- `.github/workflows/deploy.yml` — build en push a main
+- **Vercel** auto-deploya desde `main` (connected via GitHub import)
 
 ---
 
@@ -100,6 +98,21 @@ Cosas que requieren acción manual antes o después del deploy.
 
 **Pasos:**
 1. Crear proyecto en Sentry (elegí "Astro" como framework)
-2. Copiar el DSN al `.env` del servidor
+2. Copiar el DSN al `.env` de Vercel (Environment Variables)
 3. (Opcional) Generar auth token y agregarlo para que suba source maps en el build
 4. Hacer un deploy → provocar un error a propósito → confirmar que aparece en Sentry
+
+### Supabase
+
+| Migración | Estado |
+|---|---|
+| `007_rate_limits.sql` | ⬜ Ejecutar en Supabase SQL Editor |
+
+### Webhooks
+
+Post-deploy, actualizar URLs en Stripe y MP:
+
+| Proveedor | URL |
+|---|---|
+| Stripe | `https://[vercel-domain]/api/webhook/stripe` |
+| Mercado Pago | `https://[vercel-domain]/api/webhook/mercadopago` |
