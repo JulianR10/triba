@@ -1,118 +1,49 @@
-# Mejoras pendientes
+# Mejoras — Triba
 
-> **Roles de docs:**
-> - `README.md` — onboarding, setup, deploy, scripts.
-> - `AGENTS.md` — arquitectura, componentes, convenciones, quirks, glosario.
-> - `mejoras.md` (este archivo) — trabajo pendiente con contexto, decisiones, tier. Ephemeral.
+Lista priorizada de tareas para dejar el código listo para producción.
 
 ---
 
-## 🔴 Crítico
+## 🚨 Críticas (producción)
 
-### 2. Tests + CI (Playwright E2E + GitHub Actions)
-Cero tests en un sitio de suscripción es un riesgo estructural.
+- [ ] **Corregir dominio:** `astro.config.mjs` usa `comunidadtriba.com`, pero todos los tags canónicos, JSON-LD, sitemap y `robots.txt` usan `triba.com`. Unificar.
+- [ ] **Sentry no funcional:** `SENTRY_DSN` no está en `.env`, source maps sin auth token. Errores silenciados en producción.
+- [ ] **Sin tests:** Playwright instalado pero cero tests. Sin test suite no hay seguridad en deploys.
 
-**Acción:**
-- **Playwright E2E** del happy path crítico: signup → confirmar email (o auto-login) → `/suscribirme` → click Stripe → mock del checkout → webhook fires → `mi-cuenta` muestra "Suscripción activa". Un test, 80% del valor.
-- **Unit tests** de los webhooks (`/api/webhook/stripe`, `/api/webhook/mercadopago`) con inputs reales de sandbox, mockeando Supabase.
-- **Unit/integration** de `/api/feedback` cubriendo el rate limit (2 seguidos → 429).
-- **GitHub Actions** que corra `npm ci` → `npm run build` → tests → lint en cada PR.
+## 🔴 Alta
 
----
+- [x] **Borrar `src/scripts/reveal.js`** — código muerto, el mismo IntersectionObserver está inline en `Layout.astro`.
+- [x] **Borrar `public/scripts/parallax-gallery.js`** — código muerto, la clase `.parallax-gallery` no existe.
+- [x] **Borrar `src/scripts/scroll-cards.js`** — copia obsoleta, la que carga `index.astro` es `public/scripts/scroll-cards.js`.
+- [ ] **MP webhook: `console.error` → `logger.error`** — 8 líneas en `mercadopago.ts` bypassan Pino/Sentry.
+- [ ] **Crear `404.astro`** — usuarios ven página default de Vercel sin branding.
+- [ ] **Agregar `<label>` al input newsletter en `suscribirme.astro`** — WCAG failure.
+- [ ] **Dots del slider sin keyboard support** — `MagazineSlider.astro` e `index.astro`. Agregar `role="button"`, `tabindex`, key listeners.
 
-### 3. ✅ Error tracking con Sentry
-SDK integrado (`@sentry/astro`), server + browser.
+## 🟡 Media
 
-**Pendiente en producción:**
-- `SENTRY_DSN` en `.env` con el DSN real de sentry.io
-- `SENTRY_AUTH_TOKEN` en `.env` para upload de source maps (opcional)
+- [x] **Limpiar `tailwind.config.mjs`** — remover 6 font-sizes sin uso (`hero`, `hero-mobile`, `section`, `section-mobile`, `body`, `body-mobile`) y el color `darkblue`.
+- [x] **Agregar `description` meta** a `privacidad.astro` y `terminos.astro` (usan default).
+- [x] **Eliminar entrada duplicada de `PageFlipViewer.tsx`** en tabla de componentes de `AGENTS.md`.
+- [ ] **Extraer `escapeHtml()` a utilidad compartida** — duplicado en `admin/suscriptoras.astro` y `admin/ediciones/[id].astro`.
+- [ ] **Newsletter form duplicado:** `suscribirme.astro` tiene su propio form inline en vez de reusar `NewsletterForm.astro`.
+- [ ] **Admin pages usan HTML crudo en vez de `<Button>`** — `AdminLayout`, admin pages repiten clases manualmente.
+- [ ] **Refactor `admin/creators.astro`:** 4 queries Supabase separadas → una sola con filtrado en memoria.
+- [ ] **Sincronizar tipos `Subscription`** — `database.types.ts` y `types.ts` divergieron (falta `updated_at`, `canceled_at`, `"paypal"`).
 
----
+## 🟢 Baja / Limpieza
 
-## 🟡 Importante
-
-### 13. Imágenes optimizadas con `<Image>` de Astro
-Todas las portadas se sirven como `<img>` crudo. Migrar a `<Image>` de Astro: AVIF/WebP responsive, `loading="lazy"`, `width`/`height` fijos.
-
----
-
-### 14. Analytics de producto (Plausible o Umami)
-No hay analytics. No se sabe de dónde vienen los signups, dónde abandonan checkout, qué portada miran más. Plausible o Umami son self-hosted/privacy-friendly.
-
----
-
-### 16. ✅ CI/CD + Deploy
-- `.github/workflows/ci.yml` — build en cada PR
-- `.github/workflows/deploy.yml` — build en push a main
-- **Vercel** auto-deploya desde `main` (connected via GitHub import)
+- [ ] **Reemplazar `any` por tipos reales** — `PageFlipViewer.tsx`, `mi-cuenta.astro`, `admin/suscriptoras.astro`, `Input.astro`.
+- [ ] **Agregar generic de Database a queries Supabase** — `supabase.from<Database["public"]["Tables"]...>("profiles")`.
+- [ ] **CSP headers: cachear strings de domains** — en `middleware.ts` se reconstruyen en cada request HTML.
+- [ ] **Preload fuente local Bootzy TM** — hay preconnect para Google Fonts pero no para la fuente de títulos.
+- [ ] **Verificar `fetchpriority="high"` en hero images** — las imágenes LCP no tienen prioridad.
+- [ ] **Botón "Gestionar suscripción" para MP** — actualmente solo muestra texto informativo, no redirige a MP.
 
 ---
 
-## 🟢 Media / Polish
+## Progreso
 
-### 19. Subscriber panel: sección "Mi perfil"
-Agregar email, fecha de registro, preferencias de newsletter, opción para darse de baja del newsletter gratuito.
-
-### 20. Subscriber panel: skeleton de carga
-Mientras SSR resuelve profile + subscription + editions, mostrar un skeleton minimal en lugar de blank page.
-
-### 21. Subscriber panel: "processing" polling suave
-Reemplazar el auto-reload brusco por fetch periódico a la sesión para detectar cuándo la sub se activa.
-
-### 24. ESLint + Prettier + pre-commit hooks (Husky)
-No hay lint config en el repo. ESLint flat config + Prettier + Husky + lint-staged.
-
-### 25. Idempotencia real en webhooks
-El `upsert` con `onConflict` ayuda, pero un evento procesado parcialmente que se reintenta puede dejar inconsistencia. Tabla `webhook_events` para dedup garantizado.
-
-### 26. Background jobs (Inngest / Trigger.dev)
-"Bienvenida 5 min después del signup", "recordatorio 3 días antes de renovación", "encuesta de churn". Esperar a emails transaccionales primero.
-
-### 27. Referral program / gift subscriptions
-"Invitá a una amiga, ambas reciben 1 mes gratis". Tabla `referrals`. Crecimiento orgánico para revista comunitaria.
-
-### 28. Emails transaccionales con Nodemailer
-Newsletter: confirmación, bienvenida post-suscripción, notificación de nueva edición. Postulación de creator → aviso a admin. Feedback nuevo → aviso a admin.
-
-### 29. A11y audit
-Pasar home y `/mi-cuenta` por axe DevTools. Focus rings, contraste, labels en iconos, modales con focus trap.
-
----
-
-## Menor (no bloqueante)
-
-- **Logo real y assets finales de la diseñadora** — reemplazar logo actual y SVGs placeholder por los definitivos.
-
----
-
-## Checklist producción
-
-Cosas que requieren acción manual antes o después del deploy.
-
-### Sentry
-
-| Variable | Dónde conseguirla |
+| Fecha | Cambio |
 |---|---|
-| `SENTRY_DSN` | [sentry.io](https://sentry.io) → Projects → Triba → Client Keys (DSN) |
-| `SENTRY_AUTH_TOKEN` | [sentry.io](https://sentry.io) → Settings → Auth Tokens → Create new token con scope `project:releases` y `org:read` |
-
-**Pasos:**
-1. Crear proyecto en Sentry (elegí "Astro" como framework)
-2. Copiar el DSN al `.env` de Vercel (Environment Variables)
-3. (Opcional) Generar auth token y agregarlo para que suba source maps en el build
-4. Hacer un deploy → provocar un error a propósito → confirmar que aparece en Sentry
-
-### Supabase
-
-| Migración | Estado |
-|---|---|
-| `007_rate_limits.sql` | ⬜ Ejecutar en Supabase SQL Editor |
-
-### Webhooks
-
-Post-deploy, actualizar URLs en Stripe y MP:
-
-| Proveedor | URL |
-|---|---|
-| Stripe | `https://[vercel-domain]/api/webhook/stripe` |
-| Mercado Pago | `https://[vercel-domain]/api/webhook/mercadopago` |
+| 2026-07-17 | Creado el archivo con hallazgos del architecture audit |

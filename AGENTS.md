@@ -1,6 +1,6 @@
 # TRIBA — Contexto de proyecto
 
-Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identidad. Modelo de suscripción con newsletter gratuito + suscripción paga (acceso a revista completa, archivo, descarga PDF).
+Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identidad. Newsletter gratuito + suscripción paga (acceso a revista completa, archivo, descarga PDF).
 
 ---
 
@@ -8,45 +8,21 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 
 | Capa | Tecnología |
 |---|---|
-| Framework | **Astro 5** (server output con `@astrojs/vercel` serverless) |
-| Estilos | **Tailwind CSS 3** — mobile-first, colores/fuentes del branding |
-| BBDD / Auth / Storage | **Supabase** (PostgreSQL, auth, storage para PDFs/portadas) |
-| Pagos | **Stripe** + **Mercado Pago** (webhooks + Supabase) |
+| Framework | **Astro 5** (server output, `@astrojs/vercel`) |
+| Estilos | **Tailwind CSS 3** — mobile-first, colores/fuentes branding |
+| BBDD / Auth / Storage | **Supabase** |
+| Pagos | **Stripe** + **Mercado Pago** (webhooks) |
 | Visor revista | **react-pageflip** (React island) |
-| JS | Mínimo. Solo islands interactivos y scripts puntuales. |
 
 ---
 
 ## Sistema visual
 
-### Colores
+**Colores:** `triba-red` `#E91A39` · `triba-pink` `#FFCCE4` · `triba-cream` `#FFF8EE` · `triba-light-cream` `#FDEDD5` · `triba-green` `#BCE85E` · `triba-blue` `#3BACFF` · `triba-darkblue` `#1800AD` · `triba-white` `#FFFFFF` · `triba-black` `#000000` · `triba-brown` `#35220A` · `triba-bone` `#f2f1eb`
 
-| Token | Hex | Uso |
-|---|---|---|
-| `triba-red` | `#E91A39` | Logo, CTAs, acentos |
-| `triba-pink` | `#FFCCE4` | Fondos de sección, highlights |
-| `triba-cream` | `#FFF8EE` | Fondo principal secciones |
-| `triba-light-cream` | `#FDEDD5` | Variante fondo |
-| `triba-green` | `#BCE85E` | Highlight "Hecho por y para mujeres" |
-| `triba-blue` | `#3BACFF` | Acentos secundarios |
-| `triba-darkblue` | `#1800AD` | Azul eléctrico |
-| `triba-white` | `#FFFFFF` | Fondos cards, botones |
-| `triba-black` | `#000000` | Texto principal |
-| `triba-brown` | `#35220A` | Texto sobre fondo claro |
-| `triba-bone` | `#f2f1eb` | Fondo general del sitio |
+**Tipografía:** Títulos → Bootzy TM / Helvetica · Cuerpo → Montserrat · Cursiva → Times New Roman itálica
 
-### Tipografía
-
-| Uso | Fuente |
-|---|---|
-| Logo | Lettering manual ilustrado → SVG/imagen |
-| Títulos | **Bootzy TM** → Helvetica / Arial |
-| Cuerpo | **Montserrat** → Helvetica / Arial |
-| Cursiva destacada | **Times New Roman** itálica |
-
-### Fondos decorativos
-
-`fondo-cielo.webp`, `fondo-1.png`, `fondo-3.png`
+**Fondos:** `fondo-cielo.webp`, `fondo-1.png`, `fondo-3.png`
 
 ---
 
@@ -54,7 +30,7 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 
 | Rol | Items |
 |---|---|
-| Público | INICIO · REVISTA · SUSCRIBIRME · TRIBA CREATORS · [INICIAR SESION] |
+| Público | INICIO · REVISTA · SUSCRIBIRME · TRIBA CREATORS · INICIAR SESION |
 | Suscriptora | Logo · MI CUENTA · REVISTA |
 
 ---
@@ -64,21 +40,21 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 | Ruta | Archivo | Qué hace |
 |---|---|---|
 | `/` | `index.astro` | Hero, galería parallax, cards, newsletter, CTA creators |
-| `/suscribirme` | `suscribirme.astro` | Pricing EUR/USD/ARS, 2 botones de pago (Stripe/MP), FAQ |
-| `/iniciar-sesion` | `iniciar-sesion.astro` | Login + signup + recuperación de contraseña con Supabase Auth. Toggle entre Login y Crear cuenta. `emailRedirectTo` preserva `redirect` para que tras confirmar email el usuario vuelva al destino original. |
+| `/suscribirme` | `suscribirme.astro` | Pricing EUR/USD/ARS, botones Stripe/MP, FAQ |
+| `/iniciar-sesion` | `iniciar-sesion.astro` | Login + signup + recuperación contraseña. Toggle login/crear cuenta. `emailRedirectTo` preserva `redirect`. |
 | `/revista` | `revista.astro` | Edición destacada, carrusel, visor page-flip |
 | `/mi-cuenta` | `mi-cuenta.astro` | Dashboard suscriptora, edición actual, carrusel, archivo, visor, feedback |
 | `/triba-creators` | `triba-creators.astro` | Info + formulario para creators |
 | `/revista/[slug]` | `[slug].astro` | Vista de edición con page-flip |
 | `/privacidad` | `privacidad.astro` | Política de privacidad |
+| `/terminos` | `terminos.astro` | Términos y condiciones |
 | `/admin` | `admin/index.astro` | Dashboard admin (contadores + acciones rápidas) |
-| `/admin/ediciones` | `admin/ediciones/index.astro` | Listado de ediciones con miniatura + estado |
-| `/admin/ediciones/nuevo` | `admin/ediciones/nuevo.astro` | Form de creación (subir cover + PDF, marcar featured) |
-| `/admin/ediciones/[id]` | `admin/ediciones/[id].astro` | Form de edición + preview de páginas |
-| `/admin/suscriptoras` | `admin/suscriptoras.astro` | Listado de suscriptoras con cancel manual |
-| `/admin/feedback` | `admin/feedback.astro` | Mensajes de feedback recibidos |
-| `/admin/creators` | `admin/creators.astro` | Postulaciones de Triba Creators con aprobar/rechazar |
-| `/terminos` | `terminos.astro` | Términos y condiciones legales |
+| `/admin/ediciones` | `admin/ediciones/index.astro` | Listado ediciones |
+| `/admin/ediciones/nuevo` | `admin/ediciones/nuevo.astro` | Crear edición (cover + PDF, featured) |
+| `/admin/ediciones/[id]` | `admin/ediciones/[id].astro` | Editar edición + preview páginas |
+| `/admin/suscriptoras` | `admin/suscriptoras.astro` | Listado suscriptoras con cancel manual |
+| `/admin/feedback` | `admin/feedback.astro` | Feedback recibido |
+| `/admin/creators` | `admin/creators.astro` | Postulaciones creators (aprobar/rechazar) |
 
 ---
 
@@ -86,19 +62,18 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 
 | Componente | Props clave |
 |---|---|
-| `Button.astro` | `variant` (primary/default/ghost), `size` (sm/md), `href`, `fullWidth`, `type` (button/submit/reset) |
+| `Button.astro` | `variant` (primary/default/ghost), `size` (sm/md), `href`, `fullWidth`, `type` |
 | `CheckoutButton.astro` | `provider` (stripe/mercadopago), `currency` (EUR/USD/ARS) |
 | `MagazineCard.astro` | `number`, `title`, `description`, `image`, `coverId` |
 | `MagazineCarousel.astro` | `editions`, `selectedId` |
-| `MagazineSlider.astro` | `items` (cover, badge?, title?, description?), `selectedId?`. Mobile-only (`md:hidden`), snap horizontal con dots, sin flechas. Reutilizado en index y revista. |
+| `MagazineSlider.astro` | `items` (cover, badge?, title?, description?), `selectedId?`. Mobile-only (`md:hidden`), snap horizontal con dots. |
 | `Navbar.astro` | `session` (SSR, variante logueada/anónima) |
 | `NewsletterForm.astro` | — |
 | `Input.astro` | `label`, `name`, `type`, `required`, `placeholder`, `isTextarea` |
 | `PatchTitle.astro` | `content`, `tag`, `lines`, `centered`, `class` |
 | `PageFlipViewer.tsx` | `pages`, `width`, `height` |
-| `admin/AdminLayout.astro` | `title`, `active` ("dashboard" / "ediciones" / "suscriptoras" / "feedback" / "creators"). Sidebar + header con logout. |
-| `admin/EditionForm.astro` | `mode` ("create" / "edit"), `edition?` (objeto `Edition` para prellenar). Form reusable para crear/editar. |
-| `PageFlipViewer.tsx` | `pages`, `width`, `height` |
+| `admin/AdminLayout.astro` | `title`, `active` ("dashboard" / "ediciones" / "suscriptoras" / "feedback" / "creators") |
+| `admin/EditionForm.astro` | `mode` ("create" / "edit"), `edition?` |
 | `Footer.astro` | — |
 
 ---
@@ -108,101 +83,42 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 | Ruta | Método | Propósito |
 |---|---|---|
 | `/api/create-checkout` | POST | Crea sesión Stripe o MP, devuelve URL |
-| `/api/portal` | POST | Redirige a Stripe Customer Portal. Usado desde `mi-cuenta.astro` (botón "Gestionar suscripción" para provider=stripe; MP muestra texto informativo). |
+| `/api/portal` | POST | Redirige a Stripe Customer Portal |
 | `/api/cancel-subscription` | POST | Cancela suscripción en proveedor + DB |
-| `/api/newsletter` | POST | Suscripción al newsletter gratuito. Rate limit 5/min por IP. |
-| `/api/subscription-status` | GET | Polling de estado de suscripción (usado desde mi-cuenta para auto-reload suave) |
-| `/api/feedback` | POST | Envía feedback de la edición. Auth + rate limit 60s server-side. Usado desde `mi-cuenta.astro`. |
-| `/api/webhook/stripe` | POST | Eventos de suscripción Stripe (con verificación de firma) |
-| `/api/webhook/mercadopago` | POST | Notificaciones de pago MP. Verificación de firma HMAC-SHA256 activa (fail-closed, manifest aislado en `buildManifest`). Default `VERIFY_SIGNATURES=true`; override con `VERIFY_MP_SIGNATURES=false` en env. |
-| `/api/admin/editions` | POST | Crea una edición. Acepta `multipart/form-data` con cover/PDF opcionales (subidos a Supabase Storage). Promueve/demueve featured atómicamente. |
-| `/api/admin/editions/[id]` | PATCH / DELETE | Actualiza o elimina una edición. |
-| `/api/admin/creators` | GET | Lista postulaciones. Query `?status=pending\|approved\|rejected\|all` |
-| `/api/admin/creators` | PATCH | Aprueba/rechaza postulación. Body: `{ id, status: 'approved' \| 'rejected' \| 'pending' }` |
-| `/api/admin/subscribers/[id]/cancel` | POST | Cancela la suscripción de cualquier user (usa RPC `cancel_subscription`). Admin-only. |
+| `/api/newsletter` | POST | Suscripción newsletter. Rate limit 5/min por IP. |
+| `/api/subscription-status` | GET | Polling estado suscripción |
+| `/api/feedback` | POST | Feedback de edición. Auth + rate limit 60s. |
+| `/api/webhook/stripe` | POST | Eventos suscripción Stripe (verificación firma) |
+| `/api/webhook/mercadopago` | POST | Notificaciones MP. HMAC-SHA256. Default `VERIFY_SIGNATURES=true`. |
+| `/api/admin/editions` | POST | Crea edición (`multipart/form-data`). Promueve/demueve featured atómicamente. |
+| `/api/admin/editions/[id]` | PATCH / DELETE | Actualiza o elimina edición |
+| `/api/admin/creators` | GET | Lista postulaciones (`?status=pending\|approved\|rejected\|all`) |
+| `/api/admin/creators` | PATCH | Aprueba/rechaza (`{ id, status }`) |
+| `/api/admin/subscribers/[id]/cancel` | POST | Cancela suscripción de cualquier user (admin-only) |
 
 ---
 
 ## Convenciones
 
-### Naming
-- Archivos: `kebab-case.astro` (páginas, componentes) o `kebab-case.ts` (scripts, endpoints).
-- Componentes: `PascalCase` en el nombre del archivo y de la clase/componente.
-- Variables, funciones, props: `camelCase`.
-- Tipos e interfaces: `PascalCase`.
-
-### Astro
-- Páginas en `src/pages/`: frontmatter con `Layout` wrapper, metadata SEO (`title`, `description`, `canonical`).
-- Componentes: `Props` interface exportada, destructuring en frontmatter.
-- Client-side JS: `<script>` al final del `.astro` (nunca inline en el HTML). Sigue el patrón de `astro:page-load` para View Transitions (ver quirks).
-- `data-*` attributes para hooks del DOM que el JS necesita (ej. `data-slider-root`, `data-banner`, `data-subscription-status`).
-
-### Server routes (`src/pages/api/`)
-Patrón estándar:
-- `export const POST: APIRoute = async ({ request }) => { ... }`.
-- Auth vía `requireUser(request)` → devuelve `{ user, token }` o `error("Unauthorized", 401)`. Para admin: `requireAdmin(locals)`.
-- Operaciones privilegiadas (webhooks, admin, rate limit): `supabaseAdmin` (service role).
-- Operaciones del usuario actual (con su permiso): `supabase` con el token.
-- Respuestas con helpers de `src/lib/response.ts`: `ok(data)` para 200, `error(msg, status)` para errores.
-- Rate limiting con `src/lib/rate-limit.ts`: `await checkRateLimit(rateLimitKey(ip, endpoint), { maxRequests, windowMs })`.
-- Logging con Pino via `src/lib/logger.ts`: `logger.info({...}, "msg")`.
-- `Content-Type: application/json` siempre.
-- Body JSON: validar y sanear. `trim()` en strings, length check, tipos.
-
-### Estilos
-- Tailwind utility-first. Mobile-first (`md:`, `lg:`, `xl:`, `2xl:` para breakpoints más grandes).
-- Colores y fuentes del branding via tokens de Tailwind (`bg-triba-red`, `font-heading`, etc.).
-- Estilos complejos scopeados en `<style>` block dentro del `.astro`.
-- Ver el quirk sobre `hidden md:block` vs `hidden md:grid`.
-
-### i18n
-- UI: español rioplatense con voseo ("iniciá sesión", "querés suscribirte", "suscribite").
-- Código, comentarios, mensajes de log, mensajes de error que solo ve el dev: inglés.
-- Mensajes de error que ve el usuario final: español.
-
-### Migraciones Supabase
-- `supabase/migrations/NNN_name.sql` con prefijo numérico secuencial (3 dígitos).
-- Aplicar en orden. No renumerar migraciones ya aplicadas.
-- Cada migración debe ser idempotente donde sea posible (`create table if not exists`, `create or replace function`, `drop policy if exists` antes de `create policy`).
-
-### Git
-- Mensajes de commit en presente, descriptivos ("Add signup UI", "Fix navbar glassmorphism"). Conventional Commits opcional.
-- No commitear `.env` ni secrets (verificar `.gitignore`).
+- **Naming:** archivos `kebab-case`, componentes `PascalCase`, vars `camelCase`, tipos `PascalCase`.
+- **Astro:** páginas con frontmatter → Layout + SEO. Scripts al final con patrón `astro:page-load`.
+- **Server routes:** `export const POST: APIRoute = async ({ request })`. Auth con `requireUser`/`requireAdmin`. Respuestas con helpers de `src/lib/response.ts`. Rate limiting con `src/lib/rate-limit.ts`. Logging con Pino.
+- **Estilos:** Tailwind utility-first, mobile-first. Colores vía tokens (`bg-triba-red`, `font-heading`).
+- **i18n:** UI en español rioplatense con voseo. Código/logs en inglés.
+- **Migraciones:** `supabase/migrations/NNN_name.sql`, secuencial, idempotentes.
+- **Git:** commits en presente, descriptivos.
 
 ---
 
 ## Known quirks
 
-Cosas que ya sabemos que tienen trampa. Si vas a tocar estas áreas, leé esto primero — te ahorrás tiempo y bugs.
-
-### `hidden md:block` pisa `display: grid`
-Tailwind cascadea las utilidades de `display` por orden en el CSS generado. `md:block` (`display: block`) **pisa** a `grid-cols-*` (`display: grid`) si están en el mismo elemento. Resultado: en desktop el grid se renderiza como block, los hijos se apilan verticalmente y se vuelven gigantes. **Fix:** usar `hidden md:grid` (o `hidden md:flex`) en vez de `hidden md:block` cuando el elemento usa grid/flex.
-
-### Navbar glassmorphism casi invisible sobre fondo bone
-El navbar desktop usa `bg-triba-bone/80 backdrop-blur-sm` y la mayoría de las páginas tienen `bg-triba-bone`. El `backdrop-filter: blur()` sobre un fondo mayormente uniforme devuelve el mismo color, así que el efecto glass apenas se nota. Solo se ve bien sobre la home donde el fondo es la imagen `fondo-cielo.webp` (alto contenido visual). Si querés glass visible en todas las páginas, hay que cambiar el tinte del navbar a un color con más contraste contra el fondo (o aumentar la opacidad del blur).
-
-### Mercado Pago usa PreApproval (suscripción real)
-A partir del refactor, MP usa `PreApproval` (suscripción recurrente real con billing automático), no pagos únicos como antes. `create-checkout` llama a `preApproval.create()`, el webhook escucha `subscription_preapproval` y `subscription_authorized_payment`. `cancel-subscription` pasa el `preapproval_id` correcto. El quirk del pago único ya no aplica.
-
-### `--nav-height` la setea el Navbar
-El Navbar usa un `ResizeObserver` para publicar su altura real en `document.documentElement.style.setProperty('--nav-height', nav.offsetHeight + 'px')`. Las secciones con contenido debajo del navbar fixed usan `padding-top: max(1rem, var(--nav-height, 64px))` para no quedar tapadas. Si agregás una nueva sección full-width debajo del navbar, usá este patrón. Para scroll a un anchor dentro de una sección, agregá `scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)` al target (ej. el `PageFlipViewer` ya lo tiene).
-
-### Astro View Transitions re-ejecutan scripts
-El proyecto usa `<ClientRouter />` para View Transitions. Los `<script>` de las páginas se re-ejecutan en cada navegación. Por eso los handlers de setup se llaman dentro de un listener de `astro:page-load`. Patrón obligatorio:
-```js
-setupNav();
-document.addEventListener("astro:page-load", setupNav);
-```
-Si agregás un nuevo script de setup, seguí este patrón. Si no, el JS no se re-engancha al navegar con View Transitions.
-
-### `client:visible` en el PageFlipViewer
-El visor de revista usa `client:visible` (carga cuando entra en viewport) porque pesa ~48kB. Si lo cambiás a `client:load` o `client:idle`, impactás el LCP de las páginas que lo contienen (`mi-cuenta` y `revista`).
-
-### `PUBLIC_*` vs `VITE_*` en Supabase
-Convención unificada: **siempre `PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY`**. No usar `VITE_*` (convención legacy que ya fue removida). El server lee las mismas vars que el cliente vía `import.meta.env`.
-
-### Rate limiting vía Supabase (serverless-safe)
-Con la migración a Vercel (serverless), el rate limiting in-memory con `Map` dejó de funcionar porque cada función serverless es efímera. Se reemplazó por la tabla `rate_limits` en Supabase (migración `007_rate_limits.sql`). `checkRateLimit` ahora es `async` y hace inserts/selects contra la DB. La tabla tiene auto-cleanup de registros > 10 minutos via `cleanup_rate_limits()`. No olvides ejecutar la migración después del deploy.
+- **`hidden md:block` pisa `display: grid`:** Usar `hidden md:grid` en vez de `hidden md:block` cuando el elemento usa grid/flex.
+- **Navbar glassmorphism:** `bg-triba-bone/80 backdrop-blur-sm` es casi invisible sobre fondo bone. Solo se ve sobre `fondo-cielo.webp`.
+- **MP usa PreApproval:** Suscripción recurrente real. Webhook escucha `subscription_preapproval` y `subscription_authorized_payment`.
+- **`--nav-height`:** Lo setea el Navbar con `ResizeObserver`. Secciones debajo usan `padding-top: max(1rem, var(--nav-height, 64px))`.
+- **View Transitions:** Scripts se re-ejecutan en cada navegación. Usar patrón `setup(); document.addEventListener("astro:page-load", setup)`.
+- **`client:visible` en PageFlipViewer:** Pesa ~48kB. No cambiar a `client:load` o impacta LCP.
+- **Rate limiting serverless:** Usa tabla `rate_limits` en Supabase (no Map en memoria).
 
 ---
 
@@ -210,106 +126,48 @@ Con la migración a Vercel (serverless), el rate limiting in-memory con `Map` de
 
 | Término | Significado |
 |---|---|
-| **Tomo** | Cada edición numerada de la revista (Tomo 1, Tomo 2, ...). Equivale a "edición". |
-| **Triba Creator** | Colaboradora que escribe, diseña, ilustra, fotografía o aporta contenido a la revista. Onboarding en `/triba-creators`. |
-| **Newsletter gratuito** | Suscripción gratuita al newsletter por email. 2 artículos periodísticos + 1 artículo de muestra de la revista por mes. **NO** incluye acceso a la revista completa. |
-| **Suscripción paga / Suscripción Triba** | Acceso completo a la revista del mes, archivo histórico y descarga PDF con nombre. Vía Stripe (tarjeta) o Mercado Pago. |
-| **Edición destacada (`featured = true`)** | La edición del mes en curso. Marcada con `featured = true` en la tabla `editions`. Lleva badge "Última edición" en la portada. Solo puede haber una a la vez. |
-| **Comunidad Triba** | Audiencia general de la revista. |
-| **PatchTitle** | Componente de título estilizado tipo "recortes de revista" (palabras como patches rotados con colores). Ver `src/components/PatchTitle.astro`. |
-| **MagazineSlider** | Componente mobile-only (`md:hidden`) con snap-scroll horizontal y dots (sin flechas). Usado en index y revista para mostrar 3 portadas en mobile. |
-| **handle_new_user** | Trigger de Supabase (`001_init.sql`) que crea automáticamente un `profile` cuando se inserta en `auth.users`. |
-| **cancel_subscription** | RPC de Supabase (`004_cancel_subscription.sql`) que cancela la suscripción activa de un user en la DB local. |
+| **Tomo** | Cada edición numerada de la revista |
+| **Triba Creator** | Colaboradora que aporta contenido |
+| **Newsletter gratuito** | 2 artículos + 1 muestra por mes (sin revista completa) |
+| **Suscripción Triba** | Acceso completo + archivo + PDF. Stripe o MP. |
+| **Edición destacada** | La del mes (`featured = true`). Solo una a la vez. |
+| **PatchTitle** | Título tipo recortes de revista (palabras rotadas con colores) |
+| **MagazineSlider** | Componente mobile-only con snap-scroll y dots |
+| **handle_new_user** | Trigger que crea profile al insertar en `auth.users` |
+| **cancel_subscription** | RPC que cancela suscripción activa en DB local |
 
 ---
 
 ## Admin
 
-Ruta `/admin/*` protegida por `role === 'admin'` (chequeado en `src/middleware.ts:34-58`). El middleware lee la sesión con `createSupabaseServerClient`, carga el profile con `supabaseAdmin`, y redirige a `/iniciar-sesion` si no hay sesión o a `/` si el role no es admin. Para endpoints bajo `/api/admin/*` devuelve 401/403 JSON en vez de redirect.
+Ruta `/admin/*` protegida por `role === 'admin'` (`src/middleware.ts`). Middleware lee sesión, carga profile, redirige si no es admin. API routes devuelven 401/403 JSON.
 
-### Promover al primer admin
+**Promover admin:** `update public.profiles set role = 'admin' where email = 'tu@email.com';`
 
-El trigger `handle_new_user` crea profiles con `role='free'`. Para promover un user existente:
+**Script fix-admin.mjs:** `node --env-file=.env scripts/fix-admin.mjs <email> '<password>'`. Resetea password, fuerza email_confirm, promueve a admin. Requiere `PUBLIC_SUPABASE_URL` + `SUPABASE_SERVICE_ROLE_KEY`.
 
-```sql
-update public.profiles set role = 'admin' where email = 'tu@email.com';
-```
+**Runbook: nueva edición**
+1. Login admin → `/admin/ediciones/nuevo`
+2. Número, título, descripción, portada (≤5MB), PDF opcional (≤80MB), badge, destacada
+3. Crear → se sube a Storage bucket `editions`, se promueve/demueve featured
 
-Ver migración `005_admin_support.sql` para más detalle.
+**Runbook: cancelar suscripción manual**
+`/admin/suscriptoras` → Cancelar. Llama RPC `cancel_subscription(user_id)`. Solo DB local (no toca proveedor).
 
-### Script operativo: reset password + promote admin
+**Runbook: aprobar creator**
+`/admin/creators?status=pending` → Aprobar/Rechazar. Cambia `creator_applications.status`.
 
-`scripts/fix-admin.mjs` automatiza el setup inicial y la recuperación de un admin (resetea la password vía Admin API, fuerza `email_confirm`, promueve a `role='admin'`, e imprime el estado final). Útil cuando:
-
-- El primer admin todavía no tiene acceso.
-- Se olvidó la password y no se puede usar el flow de "olvidé mi contraseña" (ej. email caído).
-- Hay que re-promover un user después de un rollback de la DB.
-
-```bash
-node --env-file=.env scripts/fix-admin.mjs <email> '<new-password>'
-```
-
-Ejemplo: `node --env-file=.env scripts/fix-admin.mjs admin@triba.com 'Triba2026Admin!'`
-
-Requiere `PUBLIC_SUPABASE_URL` y `SUPABASE_SERVICE_ROLE_KEY` en `.env`. La `SUPABASE_SERVICE_ROLE_KEY` NUNCA debe exponerse al cliente.
-
-### Runbook: cómo agregar una nueva edición
-
-1. **Loguearte** con un user admin (ir a `/iniciar-sesion`).
-2. **Ir a `/admin`** → click en **"+ Nueva edición"** (o `/admin/ediciones/nuevo` directo).
-3. **Completar el form**:
-   - **Número**: se sugiere el siguiente al último. Cambialo si es retroactivo.
-   - **Título**: ej. "Tomo 3 — Territorios".
-   - **Descripción**: 2-3 líneas sobre la edición. Se muestra en la home y en la portada del PDF.
-   - **Portada**: subir JPG/PNG/WebP/AVIF (máx 5 MB). Se sube a Supabase Storage bucket `editions/covers/`.
-   - **PDF** (opcional): subir PDF (máx 80 MB). Va a `editions/pdfs/`. Si no se sube, el botón "Descargar PDF" queda como `#`.
-   - **Badge** (opcional): ej. "Última edición", "Temporada X".
-   - **Destacada**: marcar si es la del mes. Solo una puede estar destacada a la vez (índice único parcial `one_featured_edition` en la DB).
-4. **Crear** → vuelve a `/admin/ediciones` y muestra el listado.
-5. **Verificar en la home** (`/`) y en `/revista`: la edición destacada aparece con el badge.
-6. **Visor**: las páginas de la edición (`edition_pages`) se manejan por separado. Por ahora hay que insertarlas en la DB (próximamente desde el admin). Ver schema en `supabase/migrations/003_editions.sql`.
-
-### Runbook: cancelar una suscripción manualmente
-
-`/admin/suscriptoras` → click en "Cancelar" junto a la suscriptora. Esto llama a la RPC `cancel_subscription(user_id)` que setea `status='canceled'`, `canceled_at=now()`, y resetea `profile.role='free'`. La cancelación **no toca el proveedor** (Stripe/MP) — solo la DB local. Si necesitás cancelar también en el proveedor, hay que hacerlo desde el dashboard de Stripe/MP. Próxima mejora: integración con Stripe `subscriptions.cancel`.
-
-### Runbook: aprobar/rechazar una postulación de creator
-
-`/admin/creators?status=pending` → click en "Aprobar" o "Rechazar". Cambia `creator_applications.status` y queda registrado el timestamp de la decisión.
-
-### Supabase Storage bucket
-
-El admin sube cover y PDF al bucket `editions` de Supabase Storage. Hay que crearlo manualmente (dashboard → Storage → New bucket → name: `editions` → public: ON para que las portadas sean accesibles públicamente vía URL). El helper `src/lib/storage.ts:uploadEditionFile` valida tipo MIME y tamaño antes de subir.
+**Storage bucket:** `editions` en Supabase Storage (público). Helper `src/lib/storage.ts:uploadEditionFile`.
 
 ---
 
-## Flujo de auth: admin vs suscriptora
+## Flujo de auth
 
-Admin y suscriptora comparten Supabase Auth y la página `/iniciar-sesion` (no hay login separado). El middleware (`src/middleware.ts:34-58`) es la **única fuente de verdad** para decidir quién es admin.
-
-**Decisión de redirect post-login** (`src/pages/iniciar-sesion.astro:172-202`):
-- Si hay `?redirect=` explícito en la URL → respeta el redirect.
-- Si no hay → query a `profiles.role` y: `admin` → `/admin`, cualquier otro → `/mi-cuenta`.
-- Si el query a profiles falla → fallback a `/mi-cuenta` con log a consola.
-
-**Middleware** (`src/middleware.ts`):
-- Carga la sesión en cada request (necesario para saber si el user es admin).
-- Carga `profiles` **solo cuando el path es `/admin*` o `/api/admin*`** (lazy query). Para el resto de páginas, `Astro.locals.profile` queda en `null` y cada página hace su propio query si lo necesita.
-- Esto evita un SELECT extra por cada GET a la home, revista, etc.
-
-**Acceso a `/admin`**:
-- El navbar **no tiene** link a `/admin` (por requerimiento: solo el admin debe saber que existe).
-- El único entry point desde la UI para admins es el **banner verde en `/mi-cuenta`** (visible solo si `profile.role === 'admin'`).
-- Cualquier user puede escribir `/admin` en la URL. Si no es admin → redirect a `/` (no se filtra información). API routes devuelven `401`/`403` JSON.
-
-**Cookies de sesión** (`src/lib/supabase-server.ts:32-46`):
-- El SSR helper setea cookies con defaults seguros: `HttpOnly`, `SameSite=Lax`, `Secure` en prod, `Path=/`.
-- Si `@supabase/ssr` pasa flags explícitos en `options`, se respetan.
-
-**`/mi-cuenta` para admins** (`src/pages/mi-cuenta.astro:71-86`):
-- Un admin que entra a `/mi-cuenta` ve un banner verde con CTA a `/admin` en lugar del card de suscripción.
-- El admin nunca se "subscribe" a su propia revista.
-- El resto de la página (carrusel, archivo) se mantiene — el admin también puede leer la revista.
+- Admin y suscriptora comparten Supabase Auth y página `/iniciar-sesion`.
+- Decisión post-login: `?redirect=` explícito → respeta. Sino: query a `profiles.role`. Admin → `/admin`, otro → `/mi-cuenta`.
+- Middleware carga `profiles` solo para path `/admin*` (lazy). Para el resto, `Astro.locals.profile` es `null`.
+- Navbar no tiene link a `/admin`. Entry point: banner verde en `/mi-cuenta` si `role === 'admin'`.
+- Cualquier user puede escribir `/admin` en URL. Si no es admin → redirect a `/` (no filtra información).
 
 ---
 
@@ -337,77 +195,17 @@ flowchart LR
 
 ```
 triba/
-├── public/                     # Estáticos (portadas, fondos, logo)
-├── supabase/migrations/        # SQL: profiles + subscriptions
+├── public/                     # Estáticos
+├── supabase/migrations/        # SQL
 ├── src/
-│   ├── components/             # Componentes Astro/React
-│   │   ├── Button.astro
-│   │   ├── CheckoutButton.astro
-│   │   ├── Footer.astro
-│   │   ├── Input.astro
-│   │   ├── MagazineCard.astro
-│   │   ├── MagazineCarousel.astro
-│   │   ├── MagazineSlider.astro
-│   │   ├── Navbar.astro
-│   │   ├── NewsletterForm.astro
-│   │   ├── PageFlipViewer.tsx
-│   │   └── PatchTitle.astro
-│   ├── layouts/
-│   │   ├── Layout.astro
-│   │   └── global.css
-│   ├── lib/                    # Clients y config de servicios
-│   │   ├── admin/
-│   │   │   ├── audit.ts
-│   │   │   ├── creators.ts
-│   │   │   ├── editions.ts
-│   │   │   ├── feedback.ts
-│   │   │   ├── index.ts
-│   │   │   └── subscribers.ts
-│   │   ├── auth.ts
-│   │   ├── database.types.ts
-│   │   ├── editions.ts
-│   │   ├── logger.ts
-│   │   ├── mercadopago.ts
-│   │   ├── payment-provider.ts
-│   │   ├── pricing.ts
-│   │   ├── rate-limit.ts
-│   │   ├── response.ts
-│   │   ├── storage.ts
-│   │   ├── stripe.ts
-│   │   ├── supabase-admin.ts
-│   │   ├── supabase-server.ts
-│   │   ├── supabase.ts
-│   │   └── types.ts
+│   ├── components/             # Astro + PageFlipViewer.tsx (React)
+│   ├── layouts/                # Layout.astro + global.css
+│   ├── lib/                    # Clients y config (supabase, stripe, mp, etc.)
+│   │   └── admin/              # Admin helpers
 │   ├── middleware.ts
-│   ├── pages/
-│   │   ├── api/
-│   │   │   ├── create-checkout.ts
-│   │   │   ├── cancel-subscription.ts
-│   │   │   ├── portal.ts
-│   │   │   ├── newsletter.ts
-│   │   │   ├── feedback.ts
-│   │   │   ├── subscription-status.ts
-│   │   │   └── webhook/
-│   │   │       ├── stripe.ts
-│   │   │       └── mercadopago.ts
-│   │   ├── index.astro
-│   │   ├── suscribirme.astro
-│   │   ├── iniciar-sesion.astro
-│   │   ├── mi-cuenta.astro
-│   │   ├── privacidad.astro
-│   │   ├── revista.astro
-│   │   ├── triba-creators.astro
-│   │   ├── terminos.astro
-│   │   └── revista/
-│   │       └── [slug].astro
-│   └── scripts/
-│       ├── scroll-cards.js
-│       └── magnetic.js
+│   ├── pages/                  # Rutas (.astro) + api/
+│   └── scripts/                # Vanilla JS
 ├── astro.config.mjs
 ├── tailwind.config.mjs
-├── tsconfig.json
-├── .env.example
-├── package.json
-└── AGENTS.md
+└── package.json
 ```
-pwrd supabase: azultriba2027

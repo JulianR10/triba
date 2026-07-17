@@ -15,14 +15,14 @@ function verifyMercadoPagoSignature(request: Request, body: any): boolean {
 
   const webhookSecret = import.meta.env.MP_WEBHOOK_SECRET || "";
   if (!webhookSecret) {
-    console.error("[MP webhook] MP_WEBHOOK_SECRET not configured — rejecting");
+    logger.error("[MP webhook] MP_WEBHOOK_SECRET not configured — rejecting");
     return false;
   }
 
   const xSignature = request.headers.get("x-signature");
   const xRequestId = request.headers.get("x-request-id");
   if (!xSignature || !xRequestId) {
-    console.error("[MP webhook] Missing x-signature or x-request-id headers");
+    logger.error("[MP webhook] Missing x-signature or x-request-id headers");
     return false;
   }
 
@@ -34,20 +34,20 @@ function verifyMercadoPagoSignature(request: Request, body: any): boolean {
   const ts = parsed.ts;
   const v1 = parsed.v1;
   if (!ts || !v1) {
-    console.error("[MP webhook] Malformed x-signature header");
+    logger.error("[MP webhook] Malformed x-signature header");
     return false;
   }
 
   const tsNum = Number(ts);
   if (!Number.isFinite(tsNum) || Math.abs(Date.now() / 1000 - tsNum) > 300) {
-    console.error(`[MP webhook] Timestamp out of window (ts=${ts})`);
+    logger.error(`[MP webhook] Timestamp out of window (ts=${ts})`);
     return false;
   }
 
   const dataId = body?.data?.id;
   const userId = body?.user_id;
   if (!dataId || !userId) {
-    console.error("[MP webhook] Missing data.id or user_id in body");
+    logger.error("[MP webhook] Missing data.id or user_id in body");
     return false;
   }
 
@@ -57,11 +57,11 @@ function verifyMercadoPagoSignature(request: Request, body: any): boolean {
   const a = Buffer.from(expected, "hex");
   const b = Buffer.from(v1, "hex");
   if (a.length !== b.length) {
-    console.error(`[MP webhook] HMAC length mismatch. dataId=${dataId}`);
+    logger.error(`[MP webhook] HMAC length mismatch. dataId=${dataId}`);
     return false;
   }
   if (!timingSafeEqual(a, b)) {
-    console.error(`[MP webhook] HMAC mismatch. dataId=${dataId}`);
+    logger.error(`[MP webhook] HMAC mismatch. dataId=${dataId}`);
     return false;
   }
 
@@ -143,7 +143,7 @@ async function handleAuthorizedPaymentEvent(
 export const POST: APIRoute = async ({ request }) => {
   const webhookSecret = import.meta.env.MP_WEBHOOK_SECRET || "";
   if (isSignatureVerificationEnabled && !webhookSecret) {
-    console.error("[MP webhook] MP_WEBHOOK_SECRET not configured");
+    logger.error("[MP webhook] MP_WEBHOOK_SECRET not configured");
     return error("Webhook misconfigured", 500);
   }
 

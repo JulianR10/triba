@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /api
 Disallow: /iniciar-sesion
 
-Sitemap: https://triba.com/sitemap.xml
+Sitemap: https://comunidadtriba.com/sitemap.xml

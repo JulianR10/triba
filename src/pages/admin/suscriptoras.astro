@@ -73,6 +73,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
 </AdminLayout>
 
 <script>
+  import { escapeHtml } from "../../lib/escape";
   let currentPage = 1;
   let currentFilter = "all";
   let currentSearch = "";
@@ -187,12 +188,6 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
         }
       });
     });
-  }
-
-  function escapeHtml(str: string) {
-    const div = document.createElement("div");
-    div.textContent = str;
-    return div.innerHTML;
   }
 
   function initSubscribers() {

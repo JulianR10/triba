@@ -1,0 +1,16 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+---
+
+<Layout title="Página no encontrada" canonical="/404">
+  <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
+    <div class="max-w-lg mx-auto text-center pt-12 md:pt-24">
+      <h1 class="font-heading text-6xl md:text-8xl text-triba-red mb-4">404</h1>
+      <p class="font-sans text-lg text-triba-brown mb-8">
+        Esta página no existe o fue removida.
+      </p>
+      <Button variant="primary" href="/">Volver al inicio</Button>
+    </div>
+  </section>
+</Layout>

@@ -66,6 +66,7 @@ const { edition, pages } = data;
 </AdminLayout>
 
 <script>
+  import { escapeHtml } from "../../../lib/escape";
   function setupPagesManagement() {
     const editionId = new URL(window.location.href).pathname.match(/\/ediciones\/(\d+)/)?.[1];
     if (!editionId) return;
@@ -198,12 +199,6 @@ const { edition, pages } = data;
           }
         });
       });
-    }
-
-    function escapeHtml(str: string) {
-      const div = document.createElement("div");
-      div.textContent = str;
-      return div.innerHTML;
     }
 
     bindPageActions();

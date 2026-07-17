@@ -13,8 +13,7 @@ export default {
           white: "#FFFFFF",
           black: "#000000",
           brown: "#35220A",
-          darkblue: "#1800AD",
-          "light-cream": "#FDEDD5",
+        "light-cream": "#FDEDD5",
           bone: "#f2f1eb",
         },
       },
@@ -26,14 +25,7 @@ export default {
       borderRadius: {
         button: "10px",
       },
-      fontSize: {
-        hero: "50px",
-        "hero-mobile": "40px",
-        section: "50px",
-        "section-mobile": "40px",
-        body: "30px",
-        "body-mobile": "20px",
-      },
+
     },
   },
   plugins: [],

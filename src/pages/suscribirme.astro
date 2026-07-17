@@ -40,88 +40,90 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
         <PatchTitle content="Nuestra suscripción" tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
       </div>
 
-      <!-- Card principal: Suscripción Triba -->
-      <div class="max-w-lg mx-auto mb-8 reveal-stagger" data-reveal>
-        <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-8 text-center">
-          <div class="inline-block bg-triba-red text-triba-white font-heading text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-triba-black mb-3 shadow-[1px_1px_0_rgba(0,0,0,0.15)]">Recomendado</div>
-          <h3 class="font-heading text-lg font-bold text-triba-brown mb-4 uppercase tracking-wider">Suscripción Triba</h3>
-          <ul class="space-y-2 font-sans text-sm text-triba-brown mb-4">
-            <li class="flex justify-center gap-2">✦ NEWSLETTER INCLUIDO</li>
-            <li class="flex justify-center gap-2">✦ REVISTA COMPLETA (+15 ARTÍCULOS)</li>
-            <li class="flex justify-center gap-2">✦ ACCESO AL ARCHIVO DE TODAS LAS EDICIONES</li>
-            <li class="flex justify-center gap-2">✦ DESCARGA LA REVISTA CON TU NOMBRE</li>
-          </ul>
-          <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">Accedés a través de tu perfil de usuario en nuestro sitio web</p>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+        <!-- Col izq: Suscripción Triba -->
+        <div class="reveal-stagger" data-reveal>
+          <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-8 text-center h-full">
+            <div class="inline-block bg-triba-red text-triba-white font-heading text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-triba-black mb-3 shadow-[1px_1px_0_rgba(0,0,0,0.15)]">Recomendado</div>
+            <h3 class="font-heading text-lg font-bold text-triba-brown mb-4 uppercase tracking-wider">Suscripción Triba</h3>
+            <ul class="space-y-2 font-sans text-sm text-triba-brown mb-4">
+              <li class="flex justify-center gap-2">✦ NEWSLETTER INCLUIDO</li>
+              <li class="flex justify-center gap-2">✦ REVISTA COMPLETA (+15 ARTÍCULOS)</li>
+              <li class="flex justify-center gap-2">✦ ACCESO AL ARCHIVO DE TODAS LAS EDICIONES</li>
+              <li class="flex justify-center gap-2">✦ DESCARGA LA REVISTA CON TU NOMBRE</li>
+            </ul>
+            <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">Accedés a través de tu perfil de usuario en nuestro sitio web</p>
 
-          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8">
-            <div class="flex border-2 border-triba-black rounded-full overflow-hidden mb-6 w-full max-w-xs mx-auto" id="currency-segments">
-              {plans.map((p, i) => (
-                <button
-                  data-currency={p.moneda}
-                  class={"flex-1 py-4 font-heading text-sm uppercase tracking-wider transition-all " + (i < plans.length - 1 ? "border-r-2 border-triba-black " : "") + (p.moneda === "EUR" ? "bg-triba-red text-triba-white" : "bg-triba-white text-triba-brown hover:bg-triba-cream")}
-                >
-                  {p.moneda}
-                </button>
+            <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8">
+              <div class="flex border-2 border-triba-black rounded-full overflow-hidden mb-6 w-full max-w-xs mx-auto" id="currency-segments">
+                {plans.map((p, i) => (
+                  <button
+                    data-currency={p.moneda}
+                    class={"flex-1 py-4 font-heading text-sm uppercase tracking-wider transition-all " + (i < plans.length - 1 ? "border-r-2 border-triba-black " : "") + (p.moneda === "EUR" ? "bg-triba-red text-triba-white" : "bg-triba-white text-triba-brown hover:bg-triba-cream")}
+                  >
+                    {p.moneda}
+                  </button>
+                ))}
+              </div>
+
+              {plans.map((p) => (
+                <div data-plan={p.moneda} class={p.moneda === "EUR" ? "" : "hidden"}>
+                  <p class="font-heading text-4xl md:text-6xl font-bold text-triba-red mb-1">{p.simbolo}{p.precio}</p>
+                  <p class="font-sans text-sm text-triba-brown/60 mb-6">{p.periodo}</p>
+
+                  <div class="space-y-3 mb-4">
+                    <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth />
+                    <CheckoutButton provider="mercadopago" currency={p.moneda} variant="default" fullWidth />
+                  </div>
+
+                  <p class="font-sans text-[11px] text-triba-brown/50">Suscripción mensual. Cancelá cuando quieras.</p>
+                </div>
               ))}
             </div>
-
-            {plans.map((p) => (
-              <div data-plan={p.moneda} class={p.moneda === "EUR" ? "" : "hidden"}>
-                <p class="font-heading text-4xl md:text-6xl font-bold text-triba-red mb-1">{p.simbolo}{p.precio}</p>
-                <p class="font-sans text-sm text-triba-brown/60 mb-6">{p.periodo}</p>
-
-                <div class="space-y-3 mb-4">
-                  <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth />
-                  <CheckoutButton provider="mercadopago" currency={p.moneda} variant="default" fullWidth />
-                </div>
-
-                <p class="font-sans text-[11px] text-triba-brown/50">Suscripción mensual. Cancelá cuando quieras.</p>
-              </div>
-            ))}
           </div>
         </div>
-      </div>
 
-      <!-- Card secundaria: Newsletter gratuito -->
-      <div class="max-w-sm mx-auto mb-12 reveal" data-reveal>
-        <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 text-center">
-          <h3 class="font-heading text-base font-bold text-triba-brown mb-3 uppercase tracking-wider">Newsletter gratuito</h3>
-          <ul class="space-y-2 font-sans text-sm text-triba-brown">
-            <li class="flex justify-center gap-2">✦ 2 ARTÍCULOS PERIODÍSTICOS POR MES</li>
-            <li class="flex justify-center gap-2">✦ 1 ARTÍCULO SELECTO DE NUESTRA REVISTA</li>
-          </ul>
-          <p class="font-sans text-xs text-triba-brown/70 mt-4 leading-relaxed text-balance">Te llega a tu correo todos los meses, como un blog de noticias</p>
-          <form class="mt-4 space-y-4" id="newsletter-form-card">
-            <input type="email" name="email" required placeholder="tu@email.com" class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors text-center" />
-            <Button variant="ghost" size="md" type="submit">Quiero el newsletter</Button>
-            <p id="newsletter-card-msg" class="font-sans text-xs text-center"></p>
-          </form>
-        </div>
-      </div>
+        <!-- Col der: Newsletter gratuito + Social proof -->
+        <div class="reveal" data-reveal>
+          <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 text-center mb-8">
+            <h3 class="font-heading text-base font-bold text-triba-brown mb-3 uppercase tracking-wider">Newsletter gratuito</h3>
+            <ul class="space-y-2 font-sans text-sm text-triba-brown">
+              <li class="flex justify-center gap-2">✦ 2 ARTÍCULOS PERIODÍSTICOS POR MES</li>
+              <li class="flex justify-center gap-2">✦ 1 ARTÍCULO SELECTO DE NUESTRA REVISTA</li>
+            </ul>
+            <p class="font-sans text-xs text-triba-brown/70 mt-4 leading-relaxed text-balance">Te llega a tu correo todos los meses, como un blog de noticias</p>
+            <form class="mt-4 space-y-4" id="newsletter-form-card">
+              <label for="newsletter-email" class="sr-only">Correo electrónico</label>
+              <input id="newsletter-email" type="email" name="email" required placeholder="tu@email.com" class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors text-center" />
+              <Button variant="ghost" size="md" type="submit">Quiero el newsletter</Button>
+              <p id="newsletter-card-msg" class="font-sans text-xs text-center"></p>
+            </form>
+          </div>
 
-      <!-- Social proof -->
-      <div class="text-center mb-16 reveal" data-reveal>
-        <p class="font-serif italic text-base text-triba-brown/70 max-w-lg mx-auto">
-          "Somos una comunidad de mujeres que escriben para mujeres. Cada suscripción nos ayuda a seguir creciendo."
-        </p>
-        <p class="font-heading text-xs uppercase tracking-wider text-triba-red mt-2">— Equipo Triba</p>
-      </div>
+          <div class="text-center reveal" data-reveal>
+            <p class="font-serif italic text-base text-triba-brown/70 max-w-lg mx-auto">
+              "Somos una comunidad de mujeres que escriben para mujeres. Cada suscripción nos ayuda a seguir creciendo."
+            </p>
+            <p class="font-heading text-xs uppercase tracking-wider text-triba-red mt-2">— Equipo Triba</p>
+          </div>
 
-      <!-- FAQ -->
-      <div class="reveal" data-reveal>
-        <h2 class="font-heading text-xl uppercase tracking-wide text-triba-brown mb-8 text-center">Preguntas frecuentes</h2>
-        <div class="space-y-4 max-w-2xl mx-auto reveal-stagger" data-reveal>
-          {faqs.map((faq) => (
-            <details class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group transition-all duration-300 hover:shadow-md">
-              <summary class="px-5 py-4 font-heading text-sm font-medium uppercase tracking-wider text-triba-brown cursor-pointer list-none flex items-center justify-between">
-                {faq.q}
-                <span class="text-triba-red text-lg transition-transform duration-300 group-open:rotate-45 shrink-0 ml-3">+</span>
-              </summary>
-              <div class="px-5 pb-4 font-sans text-sm text-triba-brown leading-relaxed">
-                {faq.a}
-              </div>
-            </details>
-          ))}
+          <!-- FAQ -->
+          <div class="reveal mt-12" data-reveal>
+            <h2 class="font-heading text-xl uppercase tracking-wide text-triba-brown mb-8 text-center">Preguntas frecuentes</h2>
+            <div class="space-y-4 reveal-stagger" data-reveal>
+              {faqs.map((faq) => (
+                <details class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group transition-all duration-300 hover:shadow-md">
+                  <summary class="px-5 py-4 font-heading text-sm font-medium uppercase tracking-wider text-triba-brown cursor-pointer list-none flex items-center justify-between">
+                    {faq.q}
+                    <span class="text-triba-red text-lg transition-transform duration-300 group-open:rotate-45 shrink-0 ml-3">+</span>
+                  </summary>
+                  <div class="px-5 pb-4 font-sans text-sm text-triba-brown leading-relaxed">
+                    {faq.a}
+                  </div>
+                </details>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
