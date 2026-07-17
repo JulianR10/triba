@@ -1,18 +1,14 @@
 import type { APIRoute } from "astro";
+import { requireUser } from "../../lib/auth";
+import { ok, error } from "../../lib/response";
 import { supabaseAdmin } from "../../lib/supabase-admin";
+import { getPaymentProvider } from "../../lib/payment-provider";
+import { logger } from "../../lib/logger";
 
 export const POST: APIRoute = async ({ request }) => {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-  }
-
-  const token = authHeader.slice(7);
-  const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-  if (authError || !user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-  }
+  const auth = await requireUser(request, { useAdmin: true });
+  if (auth instanceof Response) return auth;
+  const user = auth.user;
 
   try {
     const { data: subscription, error: subError } = await supabaseAdmin
@@ -23,41 +19,16 @@ export const POST: APIRoute = async ({ request }) => {
       .single();
 
     if (subError || !subscription) {
-      return new Response(
-        JSON.stringify({ error: "No active subscription found" }),
-        { status: 404, headers: { "Content-Type": "application/json" } }
-      );
+      return error("No active subscription found", 404);
     }
 
-    const providerErrors: string[] = [];
+    const provider = getPaymentProvider(subscription.provider);
+    const providerWarnings: string[] = [];
 
     try {
-      switch (subscription.provider) {
-        case "stripe": {
-          const { stripe } = await import("../../lib/stripe");
-          if (stripe) {
-            await stripe.subscriptions.cancel(subscription.provider_subscription_id);
-          }
-          break;
-        }
-        case "mercadopago": {
-          const { mpClient } = await import("../../lib/mercadopago");
-          if (mpClient) {
-            const { MercadoPagoConfig, PreApproval } = await import("mercadopago");
-            const localClient = new MercadoPagoConfig({
-              accessToken: process.env.MP_ACCESS_TOKEN || "",
-            });
-            const preApproval = new PreApproval(localClient);
-            await preApproval.update({
-              id: subscription.provider_subscription_id,
-              body: { status: "cancelled" },
-            });
-          }
-          break;
-        }
-      }
+      await provider.cancelSubscription(subscription.provider_subscription_id);
     } catch (err: any) {
-      providerErrors.push(err.message || "Provider cancel failed");
+      providerWarnings.push(err.message || "Provider cancel failed");
     }
 
     const { error: dbError } = await supabaseAdmin.rpc("cancel_subscription", {
@@ -65,25 +36,15 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     if (dbError) {
-      return new Response(
-        JSON.stringify({ error: "Failed to update subscription" }),
-        { status: 500, headers: { "Content-Type": "application/json" } }
-      );
+      return error("Failed to update subscription", 500);
     }
 
-    return new Response(
-      JSON.stringify({
-        ok: true,
-        message: "Suscripción cancelada correctamente",
-        providerWarnings: providerErrors.length > 0 ? providerErrors : undefined,
-      }),
-      { status: 200, headers: { "Content-Type": "application/json" } }
-    );
+    return ok({
+      message: "Suscripción cancelada correctamente",
+      providerWarnings: providerWarnings.length > 0 ? providerWarnings : undefined,
+    });
   } catch (err: any) {
-    console.error("cancel-subscription error:", err);
-    return new Response(
-      JSON.stringify({ error: "Internal server error" }),
-      { status: 500, headers: { "Content-Type": "application/json" } }
-    );
+    logger.error({ err, userId: user.id }, "cancel-subscription error");
+    return error("Internal server error", 500);
   }
 };

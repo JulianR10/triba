@@ -1,16 +1,17 @@
 import type { APIRoute } from "astro";
+import { requireAdmin } from "../../../../../lib/auth";
+import { ok, error } from "../../../../../lib/response";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
-import { logAdminAction } from "../../../../../lib/admin";
+import { logAdminAction } from "../../../../../lib/admin/audit";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ params, locals }) => {
-  if (!locals.user || locals.profile?.role !== "admin") {
-    return json({ error: "Forbidden" }, 403);
-  }
+  const admin = requireAdmin(locals);
+  if (admin instanceof Response) return admin;
 
   const userId = params.id;
-  if (!userId) return json({ error: "user_id inválido" }, 400);
+  if (!userId) return error("user_id inválido", 400);
 
   const { data: profile, error: profileErr } = await supabaseAdmin
     .from("profiles")
@@ -19,10 +20,10 @@ export const POST: APIRoute = async ({ params, locals }) => {
     .single();
 
   if (profileErr || !profile) {
-    return json({ error: "Usuario no encontrado" }, 404);
+    return error("Usuario no encontrado", 404);
   }
   if (!profile.subscription_id) {
-    return json({ error: "Este usuario no tiene una suscripción activa" }, 400);
+    return error("Este usuario no tiene una suscripción activa", 400);
   }
 
   const { error: rpcErr } = await supabaseAdmin.rpc("cancel_subscription", {
@@ -30,24 +31,17 @@ export const POST: APIRoute = async ({ params, locals }) => {
   });
 
   if (rpcErr) {
-    return json({ error: rpcErr.message }, 500);
+    return error(rpcErr.message, 500);
   }
 
   logAdminAction(
-    locals.user!.id,
-    locals.profile!.email,
+    admin.user.id,
+    admin.profile.email,
     "subscriber.canceled",
     "subscriber",
     userId,
     { canceled_email: profile.email }
   );
 
-  return json({ ok: true });
+  return ok();
 };
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}

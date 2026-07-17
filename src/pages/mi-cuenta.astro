@@ -11,7 +11,6 @@ import { getEditions, getFeaturedEdition, getEditionPages } from "../lib/edition
 const supabase = createSupabaseServerClient(Astro.request);
 const { data: { session } } = await supabase.auth.getSession();
 const user = session?.user ?? null;
-const preview = false;
 
 let profile: any = null;
 let subscription: any = null;
@@ -57,16 +56,6 @@ const blogPosts = allEditions.map((e) => ({
 }));
 
 const checkoutStatus = Astro.url.searchParams.get("checkout");
-
-const subscriptionStatusKey = !user
-  ? "guest"
-  : checkoutStatus === "success" && (!subscription || subscription.status !== "active")
-    ? "processing"
-    : subscription?.status === "active"
-      ? "active"
-      : subscription?.status === "canceled"
-        ? "canceled"
-        : "none";
 ---
 
 <Layout>
@@ -88,85 +77,41 @@ const subscriptionStatusKey = !user
         Bienvenido/a, <span class="font-bold text-triba-red">{user?.email?.split("@")[0] || "lectora"}</span>
       </p>
 
-      <!-- 1b. Estado de suscripción / banner admin -->
-      {
-        isAdmin ? (
-          <div class="max-w-lg mx-auto mb-10 reveal" data-reveal>
-            <div class="bg-triba-green/30 rounded-xl border-2 border-triba-black p-6 text-center">
-              <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Sesión de administración</p>
-              <p class="font-sans text-sm text-triba-brown mb-4 text-balance">Estás logueada como <span class="font-bold">admin</span>. El panel de gestión está disponible desde acá.</p>
-              <Button variant="primary" href="/admin">Ir al panel de administración</Button>
-            </div>
+      <!-- Admin banner -->
+      {isAdmin && (
+        <div class="max-w-lg mx-auto mb-10 reveal" data-reveal>
+          <div class="bg-triba-green/30 rounded-xl border-2 border-triba-black p-6 text-center">
+            <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Sesión de administración</p>
+            <p class="font-sans text-sm text-triba-brown mb-4 text-balance">Estás logueada como <span class="font-bold">admin</span>. El panel de gestión está disponible desde acá.</p>
+            <Button variant="primary" href="/admin">Ir al panel de administración</Button>
           </div>
-        ) : (
-          <div class="max-w-lg mx-auto mb-10 reveal" data-subscription-status={subscriptionStatusKey} data-reveal>
-            {
-              !user ? (
-                <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 text-center">
-                  <p class="font-sans text-sm text-triba-brown mb-4">Iniciá sesión para ver tu suscripción.</p>
-                  <Button variant="primary" href="/iniciar-sesion">Iniciar sesión</Button>
-                </div>
-              ) : subscriptionStatusKey === "processing" ? (
-                <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 text-center">
-                  <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 mb-1">Procesando tu suscripción</p>
-                  <p class="font-sans text-sm text-triba-brown">Estamos confirmando tu pago. Te avisaremos por email cuando esté activa.</p>
-                </div>
-              ) : subscription?.status === "active" ? (
-                <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 text-center">
-                  <p class="font-heading text-xs uppercase tracking-wider text-triba-green mb-1">Suscripción activa</p>
-                  <p class="font-sans text-sm text-triba-brown">
-                    Plan <span class="font-bold">{subscription.plan_currency}</span> vía <span class="font-bold capitalize">{subscription.provider}</span>
-                  </p>
-                  <div class="mt-4 flex flex-col items-center gap-2">
-                    {subscription.provider === "stripe" ? (
-                      <>
-                        <button id="manage-sub-btn" class="font-sans text-xs text-triba-brown hover:text-triba-red hover:underline">Gestionar suscripción</button>
-                        <button id="cancel-sub-btn" class="font-sans text-xs text-triba-red hover:underline">Cancelar suscripción</button>
-                      </>
-                    ) : (
-                      <>
-                        <p class="font-sans text-xs text-triba-brown/70">Gestioná tu suscripción desde tu cuenta de Mercado Pago.</p>
-                        <button id="cancel-sub-btn" class="font-sans text-xs text-triba-red hover:underline">Cancelar suscripción</button>
-                      </>
-                    )}
-                  </div>
-                  <p id="manage-msg" class="font-sans text-xs text-center mt-2 hidden"></p>
-                </div>
-              ) : subscription?.status === "canceled" ? (
-                <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 text-center">
-                  <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 mb-1">Suscripción cancelada</p>
-                  <p class="font-sans text-xs text-triba-brown/60 mb-4">Ya no tenés acceso a la revista. Si querés volver,</p>
-                  <Button variant="primary" href="/suscribirme">Suscribirme de nuevo</Button>
-                </div>
-              ) : (
-                <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 text-center">
-                  <p class="font-sans text-sm text-triba-brown mb-4">Aún no estás suscripta.</p>
-                  <Button variant="primary" href="/suscribirme">Suscribirme</Button>
-                </div>
-              )
-            }
-          </div>
-        )
-      }
-
-      <!-- Modal de confirmación cancelación -->
-      <div id="cancel-modal" class="fixed inset-0 z-50 flex items-center justify-center hidden">
-        <div class="absolute inset-0 bg-black/40" id="cancel-modal-bg"></div>
-        <div class="relative bg-triba-white rounded-xl border-2 border-triba-black p-8 max-w-sm mx-4 text-center">
-          <p class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-3">Cancelar suscripción</p>
-          <p class="font-sans text-sm text-triba-brown mb-6">¿Estás segura? Perderás el acceso a la revista al final del período actual.</p>
-          <div class="flex gap-3 justify-center">
-            <button id="cancel-modal-confirm" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-6 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Sí, cancelar</button>
-            <button id="cancel-modal-close" class="rounded-button bg-triba-bone text-triba-brown border-2 border-triba-black px-6 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">No, volver</button>
-          </div>
-          <p id="cancel-msg" class="font-sans text-xs text-center mt-4 hidden"></p>
         </div>
-      </div>
+      )}
 
       {
         (subscription?.status === "active") && (
           <>
-      <!-- 2. Edición actual -->
+      <!-- 2. Estado de suscripción -->
+      <div class="max-w-lg mx-auto mb-10 reveal" data-reveal>
+        <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6">
+          <div class="flex items-center gap-2 mb-4">
+            <span class="w-2.5 h-2.5 rounded-full bg-triba-green inline-block"></span>
+            <span class="font-heading text-xs uppercase tracking-wider text-triba-brown">Suscripción activa</span>
+          </div>
+          <div class="grid grid-cols-2 gap-4 font-sans text-sm text-triba-brown">
+            <div>
+              <p class="text-triba-brown/60 text-xs mb-0.5">Suscriptora desde</p>
+              <p class="font-medium">{subscription.created_at ? new Date(subscription.created_at).toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" }) : "—"}</p>
+            </div>
+            <div>
+              <p class="text-triba-brown/60 text-xs mb-0.5">Vencimiento</p>
+              <p class="font-medium">{subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" }) : "—"}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 3. Edición actual -->
       <div class="flex flex-col md:flex-row gap-6 md:gap-12 lg:gap-16 mb-12 md:mb-20 reveal-stagger" data-reveal>
         <div class="flex-1 flex flex-col justify-center">
           <h2 class="font-heading text-2xl md:text-3xl uppercase tracking-wide text-triba-brown mb-4">
@@ -177,8 +122,12 @@ const subscriptionStatusKey = !user
             {featured.description}
           </p>
           <div class="flex flex-wrap gap-4">
-            <Button variant="primary" size="md" href="#visor-revista">Leer aquí</Button>
-            <Button variant="default" size="md" href={featured.pdf}>Descargar PDF</Button>
+            {featuredPages.length > 0 && (
+              <Button variant="primary" size="md" href="#visor-revista">Leer aquí</Button>
+            )}
+            {featuredEdition?.pdf_url && (
+              <Button variant="default" size="md" href={featured.pdf}>Descargar PDF</Button>
+            )}
           </div>
         </div>
         <div class="flex-1">
@@ -218,17 +167,19 @@ const subscriptionStatusKey = !user
           </div>
 
           <div class="text-center">
-            <Button variant="default" size="md">Ver más</Button>
+            <Button variant="default" size="md" href="/revista">Ver más</Button>
           </div>
         </div>
       </div>
 
       <!-- 5. Visor de revista -->
+      {previewPages.length > 0 && (
       <div id="visor-revista" class="mb-12 md:mb-20 reveal" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" data-reveal>
         <PatchTitle content={`${featured.edition} ${featured.title}`} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
         <PageFlipViewer pages={previewPages} client:visible />
       </div>
+      )}
 
       <!-- 6. Feedback -->
       <div class="mb-10 reveal" data-reveal>
@@ -240,8 +191,10 @@ const subscriptionStatusKey = !user
               name="feedback"
               rows="5"
               placeholder="Contanos qué te pareció esta edición..."
-              class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none mb-4"
+              maxlength="2000"
+              class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none mb-2"
             ></textarea>
+            <span id="feedback-counter" class="font-sans text-xs text-triba-brown/60 text-right block mb-2">0 / 2000</span>
             <p id="feedback-msg" class="font-sans text-sm text-center hidden mb-4"></p>
             <div class="text-center">
               <Button variant="primary" type="submit">Enviar</Button>
@@ -261,9 +214,29 @@ const subscriptionStatusKey = !user
 <script>
   import { supabase } from "../lib/supabase";
 
+  function setup() {
+
   // --- Feedback form ---
   const fbForm = document.getElementById("feedback-form");
   const fbMsg = document.getElementById("feedback-msg");
+  const fbTextarea = fbForm?.querySelector("textarea[name=feedback]") as HTMLTextAreaElement | null;
+  const fbCounter = document.getElementById("feedback-counter");
+  const fbBtn = fbForm?.querySelector("button[type=submit]") as HTMLButtonElement | null;
+
+  const updateCounter = () => {
+    if (!fbTextarea || !fbCounter) return;
+    const len = fbTextarea.value.length;
+    fbCounter.textContent = `${len} / 2000`;
+    fbCounter.className = len > 2000
+      ? "font-sans text-xs text-triba-red text-right block mb-2"
+      : "font-sans text-xs text-triba-brown/60 text-right block mb-2";
+    if (fbBtn) fbBtn.disabled = len === 0 || len > 2000;
+  };
+
+  if (fbTextarea && fbCounter) {
+    fbTextarea.addEventListener("input", updateCounter);
+    updateCounter();
+  }
 
   if (fbForm) {
     fbForm.addEventListener("submit", async (e) => {
@@ -279,11 +252,10 @@ const subscriptionStatusKey = !user
         return;
       }
 
-      const mensaje = fbForm.querySelector("textarea[name=feedback]").value;
-      const submitBtn = fbForm.querySelector("button[type=submit]") as HTMLButtonElement | null;
-      if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.textContent = "Enviando...";
+      const mensaje = fbTextarea?.value;
+      if (fbBtn) {
+        fbBtn.disabled = true;
+        fbBtn.textContent = "Enviando...";
       }
 
       try {
@@ -307,162 +279,21 @@ const subscriptionStatusKey = !user
         } else {
           fbMsg.textContent = "¡Gracias por tu feedback!";
           fbMsg.className = "font-sans text-sm text-center text-triba-green mb-4";
-          fbForm.querySelector("textarea[name=feedback]").value = "";
+          if (fbTextarea) fbTextarea.value = "";
+          updateCounter();
         }
       } catch (err) {
         fbMsg.textContent = "Error de conexión. Intentalo de nuevo.";
         fbMsg.className = "font-sans text-sm text-center text-triba-red mb-4";
       } finally {
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = "Enviar";
+        if (fbBtn) {
+          fbBtn.disabled = false;
+          fbBtn.textContent = "Enviar";
         }
         fbMsg.classList.remove("hidden");
       }
     });
   }
-
-  // --- Manage subscription (Stripe Customer Portal) ---
-  const manageBtn = document.getElementById("manage-sub-btn") as HTMLButtonElement | null;
-  const manageMsg = document.getElementById("manage-msg");
-  if (manageBtn) {
-    manageBtn.addEventListener("click", async () => {
-      manageMsg?.classList.add("hidden");
-      manageMsg.textContent = "";
-      const originalText = manageBtn.textContent;
-      manageBtn.disabled = true;
-      manageBtn.textContent = "Abriendo...";
-
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        manageBtn.disabled = false;
-        manageBtn.textContent = originalText;
-        if (manageMsg) {
-          manageMsg.textContent = "Debés iniciar sesión.";
-          manageMsg.className = "font-sans text-xs text-center text-triba-red";
-          manageMsg.classList.remove("hidden");
-        }
-        return;
-      }
-
-      try {
-        const res = await fetch("/api/portal", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-        });
-        const data = await res.json();
-        if (data.url) {
-          window.location.href = data.url;
-          return;
-        }
-        throw new Error(data.error || "Error abriendo el portal");
-      } catch (err: any) {
-        manageBtn.disabled = false;
-        manageBtn.textContent = originalText;
-        if (manageMsg) {
-          manageMsg.textContent = err?.message || "Error al abrir el portal. Intentalo de nuevo.";
-          manageMsg.className = "font-sans text-xs text-center text-triba-red";
-          manageMsg.classList.remove("hidden");
-        }
-      }
-    });
-  }
-
-  // --- Cancel subscription ---
-  const cancelBtn = document.getElementById("cancel-sub-btn");
-  const modal = document.getElementById("cancel-modal");
-  const modalBg = document.getElementById("cancel-modal-bg");
-  const modalConfirm = document.getElementById("cancel-modal-confirm");
-  const modalClose = document.getElementById("cancel-modal-close");
-  const cancelMsg = document.getElementById("cancel-msg");
-
-  if (cancelBtn && modal) {
-    function openModal() {
-      modal.classList.remove("hidden");
-      document.body.style.overflow = "hidden";
-      if (cancelMsg) {
-        cancelMsg.classList.add("hidden");
-        cancelMsg.textContent = "";
-      }
-    }
-
-    function closeModal() {
-      modal.classList.add("hidden");
-      document.body.style.overflow = "";
-    }
-
-    cancelBtn.addEventListener("click", openModal);
-    if (modalBg) modalBg.addEventListener("click", closeModal);
-    if (modalClose) modalClose.addEventListener("click", closeModal);
-
-    if (modalConfirm) {
-      modalConfirm.addEventListener("click", async () => {
-        modalConfirm.disabled = true;
-        modalConfirm.textContent = "Cancelando...";
-
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          if (cancelMsg) {
-            cancelMsg.textContent = "Debés iniciar sesión.";
-            cancelMsg.className = "font-sans text-xs text-center text-triba-red";
-            cancelMsg.classList.remove("hidden");
-          }
-          modalConfirm.disabled = false;
-          modalConfirm.textContent = "Sí, cancelar";
-          return;
-        }
-
-        try {
-          const res = await fetch("/api/cancel-subscription", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${session.access_token}`,
-            },
-          });
-
-          const data = await res.json();
-          if (data.ok) {
-            if (cancelMsg) {
-              cancelMsg.textContent = "Suscripción cancelada. Redirigiendo...";
-              cancelMsg.className = "font-sans text-xs text-center text-triba-green";
-              cancelMsg.classList.remove("hidden");
-            }
-            setTimeout(() => window.location.reload(), 1500);
-          } else {
-            if (cancelMsg) {
-              cancelMsg.textContent = data.error || "Error al cancelar.";
-              cancelMsg.className = "font-sans text-xs text-center text-triba-red";
-              cancelMsg.classList.remove("hidden");
-            }
-            modalConfirm.disabled = false;
-            modalConfirm.textContent = "Sí, cancelar";
-          }
-        } catch (err) {
-          if (cancelMsg) {
-            cancelMsg.textContent = "Error de conexión. Intentalo de nuevo.";
-            cancelMsg.className = "font-sans text-xs text-center text-triba-red";
-            cancelMsg.classList.remove("hidden");
-          }
-          modalConfirm.disabled = false;
-          modalConfirm.textContent = "Sí, cancelar";
-        }
-      });
-    }
-  }
-
-  // Auto-reload on checkout success to pick up webhook (race condition fix)
-  (function () {
-    const params = new URLSearchParams(window.location.search);
-    if (params.get("checkout") !== "success") return;
-    const statusEl = document.querySelector("[data-subscription-status]");
-    if (statusEl && statusEl.dataset.subscriptionStatus !== "active") {
-      setTimeout(() => window.location.reload(), 3500);
-    }
-  })();
 
   // Banner dismiss
   document.querySelectorAll("[data-dismiss-banner]").forEach((btn) => {
@@ -471,4 +302,9 @@ const subscriptionStatusKey = !user
       if (banner) banner.style.display = "none";
     });
   });
+
+  }
+
+  setup();
+  document.addEventListener("astro:page-load", setup);
 </script>

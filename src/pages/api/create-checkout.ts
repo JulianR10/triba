@@ -1,104 +1,58 @@
 import type { APIRoute } from "astro";
-import { supabase } from "../../lib/supabase";
-import { stripe, STRIPE_PRICE_IDS } from "../../lib/stripe";
-import { mpPreference } from "../../lib/mercadopago";
-import { plans, MONTHLY_PRICE_CENTS } from "../../lib/pricing";
+import { requireUser } from "../../lib/auth";
+import { ok, error } from "../../lib/response";
+import { getPaymentProvider } from "../../lib/payment-provider";
+import { checkRateLimit, rateLimitKey } from "../../lib/rate-limit";
+import { logger } from "../../lib/logger";
+
+const validProviders = ["stripe", "mercadopago"] as const;
+const validCurrencies = ["EUR", "USD", "ARS"] as const;
 
 export const POST: APIRoute = async ({ request }) => {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("cf-connecting-ip") ||
+    "unknown";
+  const rl = checkRateLimit(rateLimitKey(ip, "create-checkout"), {
+    maxRequests: 10,
+    windowMs: 60_000,
+  });
+  if (!rl.allowed) {
+    return error("Demasiados intentos. Esperá un momento.", 429);
   }
 
-  const token = authHeader.slice(7);
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-  if (authError || !user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth instanceof Response) return auth;
+  const user = auth.user;
 
   let body: { provider: string; currency: string };
   try {
     body = await request.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid body" }), { status: 400 });
+    return error("Invalid body", 400);
+  }
+
+  if (!validProviders.includes(body.provider as any)) {
+    return error("Invalid provider", 400);
+  }
+  if (!validCurrencies.includes(body.currency as any)) {
+    return error("Invalid currency", 400);
   }
 
   const { provider, currency } = body;
 
-  if (!["stripe", "mercadopago"].includes(provider)) {
-    return new Response(JSON.stringify({ error: "Invalid provider" }), { status: 400 });
-  }
-
-  if (!["EUR", "USD", "ARS"].includes(currency)) {
-    return new Response(JSON.stringify({ error: "Invalid currency" }), { status: 400 });
-  }
-
-  const plan = plans.find((p) => p.moneda === currency);
-  const origin = new URL(request.url).origin;
-
   try {
-    switch (provider) {
-      case "stripe": {
-        if (!stripe) throw new Error("Stripe not configured");
-
-        const priceId = STRIPE_PRICE_IDS[currency as keyof typeof STRIPE_PRICE_IDS];
-        if (!priceId) throw new Error(`No Stripe price ID for ${currency}`);
-
-        const session = await stripe.checkout.sessions.create({
-          mode: "subscription",
-          payment_method_types: ["card"],
-          line_items: [{ price: priceId, quantity: 1 }],
-          customer_email: user.email,
-          client_reference_id: user.id,
-          success_url: `${origin}/mi-cuenta?checkout=success`,
-          cancel_url: `${origin}/suscribirme?checkout=canceled`,
-          metadata: { user_id: user.id, currency },
-        });
-
-        return new Response(JSON.stringify({ url: session.url }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      case "mercadopago": {
-        if (!mpPreference) throw new Error("Mercado Pago not configured");
-
-        const preference = await mpPreference.create({
-          body: {
-            items: [{
-              id: `subscription-${currency}`,
-              title: `Suscripción Triba (${currency})`,
-              quantity: 1,
-              unit_price: currency === "ARS" ? MONTHLY_PRICE_CENTS[currency] : MONTHLY_PRICE_CENTS[currency] / 100,
-              currency_id: currency === "ARS" ? "ARS" : currency,
-            }],
-            payer: { email: user.email },
-            back_urls: {
-              success: `${origin}/mi-cuenta?checkout=success`,
-              failure: `${origin}/suscribirme?checkout=canceled`,
-              pending: `${origin}/suscribirme?checkout=pending`,
-            },
-            auto_return: "approved",
-            external_reference: user.id,
-          },
-        });
-
-        return new Response(JSON.stringify({ url: preference.init_point }), {
-          status: 200,
-          headers: { "Content-Type": "application/json" },
-        });
-      }
-
-      default:
-        return new Response(JSON.stringify({ error: "Unsupported provider" }), { status: 400 });
-    }
-  } catch (err: any) {
-    console.error("create-checkout error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
+    const paymentProvider = getPaymentProvider(provider);
+    const origin = new URL(request.url).origin;
+    const result = await paymentProvider.createCheckout({
+      userId: user.id,
+      userEmail: user.email,
+      currency: currency,
+      origin,
     });
+    return ok(result);
+  } catch (err: any) {
+    logger.error({ err, userId: user.id, provider, currency }, "create-checkout error");
+    return error(err.message || "Internal server error", 500);
   }
 };

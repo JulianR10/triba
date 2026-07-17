@@ -27,11 +27,13 @@ alter table public.editions enable row level security;
 alter table public.edition_pages enable row level security;
 
 -- Anyone can read editions
+drop policy if exists "Anyone can read editions" on public.editions;
 create policy "Anyone can read editions"
   on public.editions for select
   using (true);
 
 -- Anyone can read edition pages
+drop policy if exists "Anyone can read edition pages" on public.edition_pages;
 create policy "Anyone can read edition pages"
   on public.edition_pages for select
   using (true);
@@ -41,5 +43,23 @@ grant all on public.editions to service_role, anon, authenticated;
 grant all on public.edition_pages to service_role, anon, authenticated;
 
 -- Expose to API
-alter publication supabase_realtime add table public.editions;
-alter publication supabase_realtime add table public.edition_pages;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'editions'
+  ) then
+    alter publication supabase_realtime add table public.editions;
+  end if;
+end
+$$;
+do $$
+begin
+  if not exists (
+    select 1 from pg_publication_tables
+    where pubname = 'supabase_realtime' and schemaname = 'public' and tablename = 'edition_pages'
+  ) then
+    alter publication supabase_realtime add table public.edition_pages;
+  end if;
+end
+$$;

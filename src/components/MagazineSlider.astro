@@ -61,7 +61,7 @@ const { items, selectedId } = Astro.props;
 </div>
 
 <script>
-  (function () {
+  function setup() {
     document.querySelectorAll("[data-slider-root]").forEach(function (root) {
       const scroll = root.querySelector("[data-slider-scroll]");
       const dotsEl = root.querySelector("[data-slider-dots]");
@@ -111,5 +111,8 @@ const { items, selectedId } = Astro.props;
 
       updateActiveDot();
     });
-  })();
+  }
+
+  setup();
+  document.addEventListener("astro:page-load", setup);
 </script>

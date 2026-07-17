@@ -1,27 +1,28 @@
 import type { APIRoute } from "astro";
+import { requireAdmin } from "../../../../../lib/auth";
+import { ok, error } from "../../../../../lib/response";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
-import { logAdminAction } from "../../../../../lib/admin";
+import { logAdminAction } from "../../../../../lib/admin/audit";
 
 export const prerender = false;
 
 export const PATCH: APIRoute = async ({ request, params, locals }) => {
-  if (!locals.user || locals.profile?.role !== "admin") {
-    return json({ error: "Forbidden" }, 403);
-  }
+  const admin = requireAdmin(locals);
+  if (admin instanceof Response) return admin;
 
   const id = params.id;
-  if (!id) return json({ error: "ID inválido" }, 400);
+  if (!id) return error("ID inválido", 400);
 
   let body: any;
   try {
     body = await request.json();
   } catch {
-    return json({ error: "JSON inválido" }, 400);
+    return error("JSON inválido", 400);
   }
 
   const status = body?.status;
   if (status !== "pending" && status !== "approved" && status !== "rejected") {
-    return json({ error: "status debe ser 'pending', 'approved' o 'rejected'" }, 400);
+    return error("status debe ser 'pending', 'approved' o 'rejected'", 400);
   }
 
   const update: Record<string, any> = { status };
@@ -29,30 +30,23 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     update.admin_notes = body.admin_notes.trim() || null;
   }
 
-  const { error } = await supabaseAdmin
+  const { error: updateError } = await supabaseAdmin
     .from("creator_applications")
     .update(update)
     .eq("id", id);
 
-  if (error) {
-    return json({ error: error.message }, 500);
+  if (updateError) {
+    return error(updateError.message, 500);
   }
 
   logAdminAction(
-    locals.user!.id,
-    locals.profile!.email,
+    admin.user.id,
+    admin.profile.email,
     `creator.${status}`,
     "creator",
     id,
     { status }
   );
 
-  return json({ ok: true });
+  return ok();
 };
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}

@@ -53,7 +53,7 @@ const { editions, selectedId } = Astro.props;
 </div>
 
 <script>
-  (function () {
+  function setup() {
     var carousel = document.querySelector("[data-carousel]");
     if (!carousel) return;
 
@@ -101,5 +101,8 @@ const { editions, selectedId } = Astro.props;
         }
       }
     });
-  })();
+  }
+
+  setup();
+  document.addEventListener("astro:page-load", setup);
 </script>

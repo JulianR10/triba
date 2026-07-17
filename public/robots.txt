@@ -1,4 +1,7 @@
 User-agent: *
 Allow: /
+Disallow: /admin
+Disallow: /api
+Disallow: /iniciar-sesion
 
 Sitemap: https://triba.com/sitemap.xml

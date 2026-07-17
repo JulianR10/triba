@@ -1,7 +1,7 @@
 ---
 import AdminLayout from "../../../components/admin/AdminLayout.astro";
 import EditionForm from "../../../components/admin/EditionForm.astro";
-import { getEditionForAdmin } from "../../../lib/admin";
+import { getEditionForAdmin } from "../../../lib/admin/editions";
 
 const { id } = Astro.params;
 const editionId = Number(id);

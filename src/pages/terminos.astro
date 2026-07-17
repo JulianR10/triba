@@ -1,0 +1,73 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PatchTitle from "../components/PatchTitle.astro";
+---
+
+<Layout title="Terminos y condiciones" canonical="/terminos">
+  <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
+    <div class="max-w-3xl mx-auto">
+
+      <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content="Terminos y condiciones" tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
+      </div>
+
+      <div class="space-y-6 font-sans text-sm text-triba-brown leading-relaxed reveal-stagger" data-reveal>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">1. Aceptacion de los terminos</h2>
+          <p>Al acceder a Triba y utilizar cualquiera de nuestros servicios, aceptas estos terminos y condiciones. Si no estas de acuerdo, no uses el sitio.</p>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">2. Descripcion del servicio</h2>
+          <p>Triba es una revista digital mensual escrita por y para mujeres. Ofrecemos:</p>
+          <ul class="list-disc pl-5 space-y-1 mt-2">
+            <li>Newsletter gratuito mensual con contenido seleccionado.</li>
+            <li>Suscripcion paga con acceso a la revista completa, archivo historico y descarga PDF.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">3. Suscripcion y pagos</h2>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>La suscripcion se renueva automaticamente cada mes segun el plan elegido.</li>
+            <li>Los precios se muestran en la moneda correspondiente (EUR, USD o ARS) e incluyen impuestos cuando corresponda.</li>
+            <li>Los pagos son procesados por Stripe y Mercado Pago. No almacenamos datos de tarjetas.</li>
+            <li>Podes cancelar tu suscripcion en cualquier momento desde tu cuenta. La cancelacion se hace efectiva al final del periodo en curso.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">4. Uso del contenido</h2>
+          <p>Todos los contenidos publicados en Triba (articulos, ilustraciones, fotografias, disenos) estan protegidos por derechos de autor. No podes reproducir, distribuir ni modificar el contenido sin autorizacion expresa.</p>
+          <p class="mt-2">Las suscriptoras pueden descargar el PDF de cada edicion para uso personal. No esta permitida su redistribucion.</p>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">5. Cuenta de usuario</h2>
+          <ul class="list-disc pl-5 space-y-1">
+            <li>Sos responsable de mantener la confidencialidad de tu contraseña.</li>
+            <li>No podes compartir tu cuenta ni tu acceso con terceros.</li>
+            <li>Nos reservamos el derecho de suspender cuentas que violen estos terminos.</li>
+          </ul>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">6. Reembolsos</h2>
+          <p>No ofrecemos reembolsos por periodos parciales. Si consideras que hay un error en un cobro, escribinos a <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a> y lo revisamos.</p>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">7. Modificaciones</h2>
+          <p>Podemos actualizar estos terminos en cualquier momento. Los cambios se publican en esta pagina y entran en vigencia al momento de su publicacion. Recomendamos revisar periodicamente.</p>
+        </section>
+
+        <section>
+          <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">8. Contacto</h2>
+          <p>Para cualquier consulta sobre estos terminos: <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a></p>
+        </section>
+
+      </div>
+    </div>
+  </section>
+</Layout>

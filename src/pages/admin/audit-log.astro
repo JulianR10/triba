@@ -1,6 +1,6 @@
 ---
 import AdminLayout from "../../components/admin/AdminLayout.astro";
-import { getAdminAuditLog, getAdminAuditLogCount } from "../../lib/admin";
+import { getAdminAuditLog, getAdminAuditLogCount } from "../../lib/admin/audit";
 
 const page = Math.max(1, parseInt(Astro.url.searchParams.get("page") || "1", 10) || 1);
 const pageSize = 50;

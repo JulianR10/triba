@@ -1,26 +1,45 @@
 import type { APIRoute } from "astro";
-import { supabase } from "../../lib/supabase";
+import { supabaseAdmin } from "../../lib/supabase-admin";
+import { ok, error } from "../../lib/response";
+import { logger } from "../../lib/logger";
+import { checkRateLimit, rateLimitKey } from "../../lib/rate-limit";
 
 export const POST: APIRoute = async ({ request }) => {
-  try {
-    const { email } = await request.json();
-
-    if (!email || typeof email !== "string") {
-      return new Response(JSON.stringify({ ok: false, error: "Email requerido" }), { status: 400 });
-    }
-
-    const { error } = await supabase.from("newsletters").insert({ email });
-
-    if (error) {
-      if (error.code === "23505") {
-        return new Response(JSON.stringify({ ok: false, existing: true }), { status: 200 });
-      }
-      throw error;
-    }
-
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
-  } catch (err) {
-    console.error("Newsletter error:", err);
-    return new Response(JSON.stringify({ ok: false, error: "Error interno" }), { status: 500 });
+  const ip =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+    request.headers.get("cf-connecting-ip") ||
+    "unknown";
+  const rl = checkRateLimit(rateLimitKey(ip, "newsletter"), {
+    maxRequests: 5,
+    windowMs: 60_000,
+  });
+  if (!rl.allowed) {
+    return error("Demasiados intentos. Esperá un momento.", 429);
   }
+
+  let body: { email?: string };
+  try {
+    body = await request.json();
+  } catch {
+    return error("Invalid body", 400);
+  }
+
+  const email = body?.email?.trim().toLowerCase();
+  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    return error("Email inválido", 400);
+  }
+
+  const { error: dbError } = await supabaseAdmin
+    .from("newsletters")
+    .insert({ email });
+
+  if (dbError) {
+    if (dbError.code === "23505") {
+      return ok({ existing: true });
+    }
+    logger.error({ err: dbError, email }, "Newsletter subscribe error");
+    return error("Error al suscribir", 500);
+  }
+
+  return ok();
 };

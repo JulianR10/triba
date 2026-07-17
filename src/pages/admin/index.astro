@@ -1,6 +1,7 @@
 ---
 import AdminLayout from "../../components/admin/AdminLayout.astro";
-import { getAdminDashboardStats, getAdminAuditLog } from "../../lib/admin";
+import { getAdminDashboardStats } from "../../lib/admin";
+import { getAdminAuditLog } from "../../lib/admin/audit";
 
 const stats = await getAdminDashboardStats();
 const recentLogs = await getAdminAuditLog(5);

@@ -33,15 +33,18 @@ alter table public.subscriptions enable row level security;
 alter table public.profiles enable row level security;
 
 -- RLS policies for subscriptions
+drop policy if exists "Users can read own subscriptions" on public.subscriptions;
 create policy "Users can read own subscriptions"
   on public.subscriptions for select
   using (auth.uid() = user_id);
 
 -- RLS policies for profiles
+drop policy if exists "Users can read own profile" on public.profiles;
 create policy "Users can read own profile"
   on public.profiles for select
   using (auth.uid() = id);
 
+drop policy if exists "Users can update own profile" on public.profiles;
 create policy "Users can update own profile"
   on public.profiles for update
   using (auth.uid() = id);
@@ -60,7 +63,8 @@ end;
 $$;
 
 -- Trigger to auto-create profile on signup
-create or replace trigger on_auth_user_created
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
   after insert on auth.users
   for each row
   execute function public.handle_new_user();

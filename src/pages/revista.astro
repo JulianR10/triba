@@ -36,6 +36,21 @@ const featured = editions.find((e) => e.featured) || editions[0];
 ---
 
 <Layout title={title} description={description} canonical={canonical}>
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Periodical",
+    "name": "Triba",
+    "description": description,
+    "url": "https://triba.com/revista",
+    "issn": "",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Triba",
+      "url": "https://triba.com"
+    },
+    "inLanguage": "es",
+    "numberOfIssues": allEditions.length,
+  })} />
   <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
     <div class="max-w-6xl mx-auto">
       <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
@@ -48,8 +63,13 @@ const featured = editions.find((e) => e.featured) || editions[0];
           <p id="featured-desc" class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8">
             {featured.description}
           </p>
-          <div class="flex justify-center md:justify-start">
-            <Button variant="primary" id="featured-cta" href={featured.pdf}>LA QUIERO!</Button>
+          <div class="flex flex-wrap justify-center md:justify-start gap-4">
+            {featuredPages.length > 0 && (
+              <Button variant="primary" href="#visor-revista">Leer aquí</Button>
+            )}
+            <Button variant="default" id="featured-cta" href={featuredEdition?.pdf_url || "/suscribirme"}>
+              {featuredEdition?.pdf_url ? "LA QUIERO!" : "Suscribirme"}
+            </Button>
           </div>
         </div>
         <div class="hidden md:block flex-1 order-2 md:order-2">
@@ -82,7 +102,8 @@ const featured = editions.find((e) => e.featured) || editions[0];
       </div>
 
       <!-- Bloque 3: Vista previa de artículo -->
-      <div class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 reveal-stagger" data-reveal>
+      {previewPages.length > 0 && (
+      <div id="visor-revista" class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 reveal-stagger" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" data-reveal>
         <div class="flex-1 order-2 md:order-1">
           <PageFlipViewer pages={previewPages} client:visible />
         </div>
@@ -113,12 +134,13 @@ const featured = editions.find((e) => e.featured) || editions[0];
           </div>
         </div>
       </div>
+      )}
     </div>
   </section>
 </Layout>
 
 <script>
-  (function () {
+  function setup() {
     var featuredCover = document.getElementById("featured-cover");
     var featuredBadge = document.getElementById("featured-badge");
     var featuredDesc = document.getElementById("featured-desc");
@@ -157,18 +179,27 @@ const featured = editions.find((e) => e.featured) || editions[0];
       var ed = readEdition(card);
       currentId = id;
 
-      featuredCover.src = ed.cover;
-      featuredCover.alt = "Portada de " + ed.title;
-      featuredCta.href = ed.pdf || "#";
+      if (featuredCover) {
+        featuredCover.src = ed.cover;
+        featuredCover.alt = "Portada de " + ed.title;
+      }
+      if (featuredCta) {
+        featuredCta.href = ed.pdf && ed.pdf !== "#" ? ed.pdf : "/suscribirme";
+        featuredCta.textContent = ed.pdf && ed.pdf !== "#" ? "LA QUIERO!" : "Suscribirme";
+      }
       if (featuredDesc) {
         featuredDesc.textContent = ed.description || "";
       }
 
       if (ed.badge) {
-        featuredBadge.textContent = ed.badge;
-        featuredBadge.classList.remove("hidden");
+        if (featuredBadge) {
+          featuredBadge.textContent = ed.badge;
+          featuredBadge.classList.remove("hidden");
+        }
       } else {
-        featuredBadge.classList.add("hidden");
+        if (featuredBadge) {
+          featuredBadge.classList.add("hidden");
+        }
       }
 
       setActiveCard(id);
@@ -183,5 +214,8 @@ const featured = editions.find((e) => e.featured) || editions[0];
         }
       });
     }
-  })();
+  }
+
+  setup();
+  document.addEventListener("astro:page-load", setup);
 </script>

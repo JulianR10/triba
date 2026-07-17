@@ -15,14 +15,13 @@ const publicLinks = [
 ];
 
 const authLinks = [
-  { href: "/mi-cuenta", label: "Mi cuenta" },
   { href: "/revista", label: "Revista" },
 ];
 ---
 
 <style>
   :root {
-    --nav-height: 64px;
+    --nav-height: calc(64px + env(safe-area-inset-top, 0px));
   }
 
   .slide-in {
@@ -31,12 +30,38 @@ const authLinks = [
 
   #navbar {
     transition: transform 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    padding-top: calc(1rem + env(safe-area-inset-top));
+  }
+
+  #menu-toggle {
+    top: calc(1rem + env(safe-area-inset-top));
+  }
+
+  #mobile-menu {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
   }
 
   #navbar.nav-hidden {
     transform: translateY(-100%);
   }
 
+  #mi-cuenta-dropdown {
+    transform-origin: top right;
+    transition: opacity 0.15s ease, transform 0.15s ease;
+  }
+
+  #mi-cuenta-dropdown.hidden {
+    opacity: 0;
+    transform: scale(0.95);
+    pointer-events: none;
+  }
+
+  #mi-cuenta-dropdown:not(.hidden) {
+    opacity: 1;
+    transform: scale(1);
+    pointer-events: auto;
+  }
 </style>
 
 <nav id="navbar" class="hidden md:flex fixed top-0 left-0 right-0 z-40 items-center px-5 py-4 md:px-10 lg:px-20 bg-triba-bone/80 backdrop-blur-sm">
@@ -69,7 +94,19 @@ const authLinks = [
 
     {
       isLoggedIn
-        ? <button id="logout-btn" class="rounded-button bg-triba-red px-6 py-2.5 font-heading text-sm font-medium uppercase text-triba-white border-2 border-triba-black transition-all hover:scale-[1.02] active:scale-[0.98]">CERRAR SESION</button>
+        ? <div class="relative">
+            <button id="mi-cuenta-btn" class="rounded-button bg-triba-red px-6 py-2.5 font-heading text-sm font-medium uppercase text-triba-white border-2 border-triba-black transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2">
+              MI CUENTA
+              <svg class="w-3 h-3 fill-current" viewBox="0 0 10 6"><path d="M0 0l5 6 5-6z"/></svg>
+            </button>
+            <div id="mi-cuenta-dropdown" class="hidden absolute right-0 top-full mt-2 w-64 bg-triba-white border-2 border-triba-black rounded-xl shadow-xl overflow-hidden z-50">
+              <div class="p-4" id="mi-cuenta-content">
+                <div class="flex items-center justify-center py-4">
+                  <div class="w-5 h-5 border-2 border-triba-red border-t-2 border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              </div>
+            </div>
+          </div>
         : <a href="/iniciar-sesion" class="rounded-button bg-triba-red px-6 py-2.5 font-heading text-sm font-medium uppercase text-triba-white border-2 border-triba-black transition-all hover:scale-[1.02] active:scale-[0.98]">INICIAR SESION</a>
     }
   </div>
@@ -99,6 +136,16 @@ const authLinks = [
         </a>
       ))
     }
+
+    {
+      isLoggedIn && (
+        <div id="mobile-mi-cuenta-items" class="border-b border-triba-black/10 py-3 space-y-3">
+          <div class="flex items-center justify-center py-2">
+            <div class="w-4 h-4 border-2 border-triba-red border-t-2 border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        </div>
+      )
+    }
   </div>
 
   <div class="px-6 pb-8 pt-4 border-t border-triba-black/10">
@@ -112,9 +159,11 @@ const authLinks = [
 
 <script>
   import { supabase } from "../lib/supabase";
+  import { showConfirm } from "./admin/AdminUI";
+
+  var lastSubStatus = null;
 
   function setupNav() {
-    // Clean up previous listeners/observers (for view transitions)
     if (window._navScrollHandler) {
       window.removeEventListener("scroll", window._navScrollHandler);
     }
@@ -133,7 +182,6 @@ const authLinks = [
 
     updateNavHeight();
 
-    // Navbar hide/show on scroll
     var lastScrollY = window.scrollY;
     var tickingNav = false;
 
@@ -222,7 +270,10 @@ const authLinks = [
       });
     }
 
-    // Logout
+    // --- MI CUENTA dropdown ---
+    setupMiCuentaDropdown();
+
+    // --- Logout ---
     async function logout() {
       if (supabase) {
         await supabase.auth.signOut();
@@ -230,10 +281,207 @@ const authLinks = [
       window.location.href = "/";
     }
 
-    var logoutBtn = document.getElementById("logout-btn");
-    var logoutBtnMobile = document.getElementById("logout-btn-mobile");
+    var logoutBtn = document.getElementById("logout-btn-mobile");
     if (logoutBtn) logoutBtn.addEventListener("click", logout);
-    if (logoutBtnMobile) logoutBtnMobile.addEventListener("click", logout);
+  }
+
+  function setupMiCuentaDropdown() {
+    // Desktop dropdown
+    var btn = document.getElementById("mi-cuenta-btn");
+    var dropdown = document.getElementById("mi-cuenta-dropdown");
+    var content = document.getElementById("mi-cuenta-content");
+
+    if (btn && dropdown && content) {
+      if (!btn.dataset.bound) {
+        btn.dataset.bound = "1";
+        btn.addEventListener("click", function (e) {
+          e.stopPropagation();
+          var isHidden = dropdown.classList.contains("hidden");
+          dropdown.classList.toggle("hidden");
+          if (isHidden && !dropdown.dataset.loaded) {
+            fetchSubStatus(content, dropdown);
+          }
+        });
+
+        document.addEventListener("click", function (e) {
+          if (!dropdown.classList.contains("hidden") &&
+              !dropdown.contains(e.target) &&
+              e.target !== btn &&
+              !btn.contains(e.target)) {
+            dropdown.classList.add("hidden");
+          }
+        });
+      }
+    }
+
+    // Mobile items
+    var mobileItems = document.getElementById("mobile-mi-cuenta-items");
+    if (mobileItems && !mobileItems.dataset.bound) {
+      mobileItems.dataset.bound = "1";
+      fetchSubStatus(mobileItems, null);
+    }
+  }
+
+  async function fetchSubStatus(container, dropdown) {
+    try {
+      var { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        renderGuest(container);
+        if (dropdown) dropdown.dataset.loaded = "1";
+        return;
+      }
+
+      var res = await fetch("/api/subscription-status", {
+        headers: { Authorization: "Bearer " + session.access_token },
+      });
+      var data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+
+      lastSubStatus = data;
+      renderDropdown(container, data, dropdown);
+    } catch (e) {
+      container.innerHTML =
+        '<p class="font-sans text-xs text-triba-red text-center">Error al cargar</p>';
+    } finally {
+      if (dropdown) dropdown.dataset.loaded = "1";
+    }
+  }
+
+  function renderDropdown(container, data, dropdown) {
+    var sub = data.subscription;
+    var role = data.role;
+
+    if (role === "admin") {
+      container.innerHTML =
+        '<a href="/admin" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-brown hover:text-triba-red py-2 transition-colors">Panel de administración →</a>' +
+        '<hr class="border-triba-black/10 my-2">' +
+        '<button class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>';
+      bindLogout(container);
+      return;
+    }
+
+    if (!sub || sub.status === "none" || sub.status === "incomplete") {
+      container.innerHTML =
+        '<p class="font-sans text-xs text-triba-brown/70 mb-2">Aún no estás suscripta</p>' +
+        '<a href="/suscribirme" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Suscribirme</a>' +
+        '<hr class="border-triba-black/10 my-2">' +
+        '<button class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>';
+      bindLogout(container);
+      return;
+    }
+
+    if (sub.status === "canceled") {
+      container.innerHTML =
+        '<p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 mb-1">Suscripción cancelada</p>' +
+        '<p class="font-sans text-xs text-triba-brown/50 mb-3">Ya no tenés acceso a la revista</p>' +
+        '<a href="/suscribirme" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Suscribirme de nuevo</a>' +
+        '<hr class="border-triba-black/10 my-2">' +
+        '<button class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>';
+      bindLogout(container);
+      return;
+    }
+
+    // Active subscription
+    var periodEnd = sub.current_period_end
+      ? new Date(sub.current_period_end).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
+      : "";
+
+    container.innerHTML =
+      '<div class="mb-3">' +
+        '<p class="font-heading text-xs uppercase tracking-wider text-triba-green mb-1">Suscripción activa</p>' +
+        '<p class="font-sans text-xs text-triba-brown">' +
+          'Plan <span class="font-bold">' + sub.plan_currency + '</span> vía <span class="font-bold capitalize">' + sub.provider + '</span>' +
+        '</p>' +
+        (periodEnd ? '<p class="font-sans text-[10px] text-triba-brown/50">Vence ' + periodEnd + '</p>' : '') +
+      '</div>' +
+      (sub.provider === "stripe"
+        ? '<button class="manage-sub-btn block w-full text-left font-sans text-xs text-triba-brown hover:text-triba-red hover:underline py-1.5 transition-colors">Gestionar suscripción</button>'
+        : '<p class="font-sans text-[10px] text-triba-brown/50 mb-1">Gestioná desde tu cuenta de Mercado Pago</p>') +
+      '<button class="cancel-sub-btn block w-full text-left font-sans text-xs text-triba-red hover:underline py-1.5 transition-colors">Cancelar suscripción</button>' +
+      '<hr class="border-triba-black/10 my-2">' +
+      '<button class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>';
+
+    bindManage(container);
+    bindCancel(container);
+    bindLogout(container);
+  }
+
+  function renderGuest(container) {
+    container.innerHTML =
+      '<a href="/iniciar-sesion" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Iniciar sesión</a>';
+  }
+
+  function bindManage(container) {
+    container.querySelector(".manage-sub-btn")?.addEventListener("click", async function () {
+      var { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      try {
+        var res = await fetch("/api/portal", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + session.access_token,
+          },
+        });
+        var data = await res.json();
+        if (data.url) { window.location.href = data.url; return; }
+        throw new Error(data.error || "Error");
+      } catch (e) {
+        alert("Error al abrir el portal de gestión");
+      }
+    });
+  }
+
+  function bindCancel(container) {
+    container.querySelector(".cancel-sub-btn")?.addEventListener("click", async function () {
+      var confirmed = await showConfirm(
+        "Cancelar suscripción",
+        "¿Estás segura? Perderás el acceso a la revista al final del período actual."
+      );
+      if (!confirmed) return;
+
+      var { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+
+      this.disabled = true;
+      this.textContent = "Cancelando...";
+      try {
+        var res = await fetch("/api/cancel-subscription", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + session.access_token,
+          },
+        });
+        var data = await res.json();
+        if (data.ok) {
+          var toast = (window as any).adminToast;
+          if (toast) { toast("Suscripción cancelada", "success"); }
+          if (data.providerWarnings && data.providerWarnings.length > 0) {
+            var warnMsg = "Cancelada en Triba, pero hubo un problema con el proveedor de pago: " + data.providerWarnings.join(". ");
+            setTimeout(function () { alert(warnMsg); }, 500);
+          }
+          setTimeout(function () { window.location.reload(); }, 1000);
+        } else {
+          alert(data.error || "Error al cancelar");
+          this.disabled = false;
+          this.textContent = "Cancelar suscripción";
+        }
+      } catch (e) {
+        alert("Error de conexión");
+        this.disabled = false;
+        this.textContent = "Cancelar suscripción";
+      }
+    });
+  }
+
+  function bindLogout(container) {
+    container.querySelectorAll(".logout-dropdown-btn").forEach(function (btn) {
+      btn.addEventListener("click", async function () {
+        if (supabase) await supabase.auth.signOut();
+        window.location.href = "/";
+      });
+    });
   }
 
   setupNav();

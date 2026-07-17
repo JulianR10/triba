@@ -1,12 +1,13 @@
 import type { APIRoute } from "astro";
-import { searchSubscribersForAdmin } from "../../../../lib/admin";
+import { requireAdmin } from "../../../../lib/auth";
+import { ok, error } from "../../../../lib/response";
+import { searchSubscribersForAdmin } from "../../../../lib/admin/subscribers";
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  if (!locals.user || locals.profile?.role !== "admin") {
-    return json({ error: "Forbidden" }, 403);
-  }
+  const admin = requireAdmin(locals);
+  if (admin instanceof Response) return admin;
 
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";
@@ -18,12 +19,5 @@ export const GET: APIRoute = async ({ request, locals }) => {
   const statusFilter = validStatuses.includes(status as any) ? status : "all";
 
   const result = await searchSubscribersForAdmin(search, statusFilter, page, pageSize);
-  return json(result);
+  return ok(result);
 };
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}

@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import type { Database } from "./database.types";
 
 export function createSupabaseServerClient(
   request: Request,
@@ -6,7 +7,7 @@ export function createSupabaseServerClient(
 ) {
   const cookieHeader = request.headers.get("cookie") || "";
 
-  return createServerClient(
+  return createServerClient<Database>(
     import.meta.env.PUBLIC_SUPABASE_URL!,
     import.meta.env.PUBLIC_SUPABASE_ANON_KEY!,
     {

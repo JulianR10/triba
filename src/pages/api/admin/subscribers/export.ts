@@ -1,12 +1,12 @@
 import type { APIRoute } from "astro";
-import { exportSubscribersCSV } from "../../../../lib/admin";
+import { requireAdmin } from "../../../../lib/auth";
+import { exportSubscribersCSV } from "../../../../lib/admin/subscribers";
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ request, locals }) => {
-  if (!locals.user || locals.profile?.role !== "admin") {
-    return new Response("Forbidden", { status: 403 });
-  }
+  const admin = requireAdmin(locals);
+  if (admin instanceof Response) return admin;
 
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";

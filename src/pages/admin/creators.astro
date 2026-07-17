@@ -1,6 +1,6 @@
 ---
 import AdminLayout from "../../components/admin/AdminLayout.astro";
-import { listCreatorApplicationsForAdmin } from "../../lib/admin";
+import { listCreatorApplicationsForAdmin } from "../../lib/admin/creators";
 
 const statusFilter = (Astro.url.searchParams.get("status") || "all") as "all" | "pending" | "approved" | "rejected";
 const validFilters = ["all", "pending", "approved", "rejected"] as const;

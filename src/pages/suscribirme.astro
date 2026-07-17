@@ -130,7 +130,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 </Layout>
 
 <script>
-  (function () {
+  function setup() {
     var tabs = document.querySelectorAll("[data-currency]");
     var plans = document.querySelectorAll("[data-plan]");
 
@@ -149,7 +149,6 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
       });
     }
 
-    // Auto-select from URL param
     var urlParams = new URLSearchParams(window.location.search);
     var urlCurrency = urlParams.get("currency");
     if (urlCurrency) selectCurrency(urlCurrency);
@@ -160,11 +159,9 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
       });
     });
 
-    // Newsletter form card
     var nf = document.getElementById("newsletter-form-card");
     var nm = document.getElementById("newsletter-card-msg");
 
-    // Banner dismiss
     document.querySelectorAll("[data-dismiss-banner]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var banner = btn.closest("[data-banner]");
@@ -194,5 +191,8 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
         }
       });
     }
-  })();
+  }
+
+  setup();
+  document.addEventListener("astro:page-load", setup);
 </script>

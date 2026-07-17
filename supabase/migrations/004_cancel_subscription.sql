@@ -2,6 +2,7 @@
 alter table if exists public.subscriptions add column if not exists canceled_at timestamptz;
 
 -- RLS policy for users to update their own subscriptions
+drop policy if exists "Users can update own subscriptions" on public.subscriptions;
 create policy "Users can update own subscriptions"
   on public.subscriptions for update
   using (auth.uid() = user_id);

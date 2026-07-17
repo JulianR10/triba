@@ -1,36 +1,30 @@
 import type { APIRoute } from "astro";
-import { supabase } from "../../lib/supabase";
+import { requireUser } from "../../lib/auth";
+import { ok, error } from "../../lib/response";
 import { supabaseAdmin } from "../../lib/supabase-admin";
+import { logger } from "../../lib/logger";
 
 const RATE_LIMIT_MS = 60_000;
 const MAX_MESSAGE_LENGTH = 2000;
 
 export const POST: APIRoute = async ({ request }) => {
-  const authHeader = request.headers.get("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-  }
-
-  const token = authHeader.slice(7);
-  const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-
-  if (authError || !user) {
-    return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401 });
-  }
+  const auth = await requireUser(request);
+  if (auth instanceof Response) return auth;
+  const user = auth.user;
 
   let body: { mensaje?: unknown };
   try {
     body = await request.json();
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid body" }), { status: 400 });
+    return error("Invalid body", 400);
   }
 
   const mensaje = typeof body.mensaje === "string" ? body.mensaje.trim() : "";
   if (!mensaje) {
-    return new Response(JSON.stringify({ error: "El mensaje no puede estar vacío" }), { status: 400 });
+    return error("El mensaje no puede estar vacío", 400);
   }
   if (mensaje.length > MAX_MESSAGE_LENGTH) {
-    return new Response(JSON.stringify({ error: "El mensaje es demasiado largo" }), { status: 400 });
+    return error("El mensaje es demasiado largo", 400);
   }
 
   try {
@@ -45,10 +39,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (lastFeedback?.created_at) {
       const last = new Date(lastFeedback.created_at).getTime();
       if (Number.isFinite(last) && Date.now() - last < RATE_LIMIT_MS) {
-        return new Response(
-          JSON.stringify({ error: "Esperá un momento antes de enviar otro feedback" }),
-          { status: 429 }
-        );
+        return error("Esperá un momento antes de enviar otro feedback", 429);
       }
     }
 
@@ -58,13 +49,13 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     if (insertError) {
-      console.error("feedback insert error:", insertError);
-      return new Response(JSON.stringify({ error: "No se pudo guardar el feedback" }), { status: 500 });
+      logger.error({ err: insertError, userId: user.id }, "feedback insert error");
+      return error("No se pudo guardar el feedback", 500);
     }
 
-    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+    return ok();
   } catch (err) {
-    console.error("feedback error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500 });
+    logger.error({ err, userId: user.id }, "feedback error");
+    return error("Internal server error", 500);
   }
 };

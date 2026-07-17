@@ -21,6 +21,7 @@ create index if not exists idx_admin_audit_log_entity
 -- Enable RLS but allow service_role only
 alter table public.admin_audit_log enable row level security;
 
+drop policy if exists "Service role can manage audit log" on public.admin_audit_log;
 create policy "Service role can manage audit log"
   on public.admin_audit_log
   using (true)

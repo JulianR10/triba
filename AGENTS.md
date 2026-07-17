@@ -305,6 +305,26 @@ Admin y suscriptora comparten Supabase Auth y la página `/iniciar-sesion` (no h
 
 ---
 
+## Diagrama de arquitectura
+
+```mermaid
+flowchart LR
+  U[Usuaria] -->|HTTP| AS[Astro Server<br/>@astrojs/node]
+  AS -->|View Transitions| AC[Astro Client]
+  AS -->|SSR pages| SU[Supabase Auth]
+  AS -->|API routes| SU
+  AS -->|API routes| ST[Stripe SDK]
+  AS -->|API routes| MP[Mercado Pago SDK]
+  ST -->|webhook| WH["/api/webhook/stripe"]
+  MP -->|webhook| WH2["/api/webhook/mercadopago"]
+  WH -->|upsert| SB[(Supabase<br/>PostgreSQL)]
+  WH2 -->|upsert| SB
+  AS -->|storage| S3[(Supabase<br/>Storage)]
+  AC -->|supabase-js| SU
+  SB -->|profiles, subscriptions,<br/>editions, feedback| AS
+  S3 -->|covers, PDFs, pages| AS
+```
+
 ## Estructura del proyecto
 
 ```
@@ -328,13 +348,27 @@ triba/
 │   │   ├── Layout.astro
 │   │   └── global.css
 │   ├── lib/                    # Clients y config de servicios
+│   │   ├── admin/
+│   │   │   ├── audit.ts
+│   │   │   ├── creators.ts
+│   │   │   ├── editions.ts
+│   │   │   ├── feedback.ts
+│   │   │   ├── index.ts
+│   │   │   └── subscribers.ts
+│   │   ├── auth.ts
+│   │   ├── database.types.ts
 │   │   ├── editions.ts
-│   │   ├── supabase.ts
-│   │   ├── supabase-server.ts
-│   │   ├── supabase-admin.ts
-│   │   ├── stripe.ts
+│   │   ├── logger.ts
 │   │   ├── mercadopago.ts
+│   │   ├── payment-provider.ts
 │   │   ├── pricing.ts
+│   │   ├── rate-limit.ts
+│   │   ├── response.ts
+│   │   ├── storage.ts
+│   │   ├── stripe.ts
+│   │   ├── supabase-admin.ts
+│   │   ├── supabase-server.ts
+│   │   ├── supabase.ts
 │   │   └── types.ts
 │   ├── middleware.ts
 │   ├── pages/

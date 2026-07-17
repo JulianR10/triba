@@ -98,6 +98,8 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
 <script>
   import { supabase } from "../lib/supabase";
 
+  function setup() {
+
   const loginCard = document.getElementById("login-card");
   const signupCard = document.getElementById("signup-card");
   const forgotCard = document.getElementById("forgot-card");
@@ -355,4 +357,9 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
   if (pageParams.get("recovery") === "true" && !pageParams.get("code")) {
     showCard(resetCard);
   }
+
+  }
+
+  setup();
+  document.addEventListener("astro:page-load", setup);
 </script>

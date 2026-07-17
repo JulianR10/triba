@@ -1,12 +1,14 @@
 import type { APIRoute } from "astro";
 import { stripe, STRIPE_WEBHOOK_SECRET } from "../../../lib/stripe";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
+import { ok, error } from "../../../lib/response";
+import { logger } from "../../../lib/logger";
 
 const VERIFY_SIGNATURES = true;
 
 export const POST: APIRoute = async ({ request }) => {
   if (!stripe || !STRIPE_WEBHOOK_SECRET) {
-    return new Response(JSON.stringify({ error: "Stripe not configured" }), { status: 500 });
+    return error("Stripe not configured", 500);
   }
 
   const body = await request.text();
@@ -20,7 +22,7 @@ export const POST: APIRoute = async ({ request }) => {
       event = JSON.parse(body);
     }
   } catch {
-    return new Response(JSON.stringify({ error: "Invalid signature" }), { status: 400 });
+    return error("Invalid signature", 400);
   }
 
   try {
@@ -84,9 +86,9 @@ export const POST: APIRoute = async ({ request }) => {
       }
     }
 
-    return new Response(JSON.stringify({ received: true }), { status: 200 });
+    return ok({ received: true });
   } catch (err: any) {
-    console.error("stripe webhook error:", err);
-    return new Response(JSON.stringify({ error: "Internal server error" }), { status: 500 });
+    logger.error({ err, eventType: event?.type }, "stripe webhook error");
+    return error("Internal server error", 500);
   }
 };

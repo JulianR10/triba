@@ -102,6 +102,10 @@ export const onRequest = defineMiddleware(async (context, next) => {
         "form-action 'self'",
       ].join("; ")
     );
+
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    response.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   }
 
   return response;

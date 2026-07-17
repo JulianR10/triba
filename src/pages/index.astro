@@ -118,7 +118,7 @@ if (magazines.length >= 3) {
   }
 </style>
 
-  <div class="relative isolate min-h-screen">
+  <div class="relative isolate">
     <div aria-hidden="true" class="fixed inset-0 -z-10 bg-triba-bone bg-cover bg-center" style="background-image: linear-gradient(rgba(242,241,235,0.5),rgba(242,241,235,0.5)), url('/fondo-cielo.webp')"></div>
 
   <section class="relative pb-12 md:pb-20 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 overflow-x-hidden md:min-h-screen hero-section">
@@ -171,14 +171,13 @@ if (magazines.length >= 3) {
     <div class="relative z-10 max-w-6xl mx-auto flex flex-col md:flex-row gap-8 md:gap-12 pb-8 md:pb-16">
       <div class="w-full md:w-[35%] reveal mobile-center" data-reveal>
         <PatchTitle content="¿Qué somos?" tag="h1" centered={false} class="text-3xl sm:text-4xl md:text-7xl text-triba-black font-bold mb-6" />
-        <ul class="space-y-1 font-sans text-triba-brown text-sm leading-relaxed mb-6 font-medium text-center md:text-left">
-          {["Una revista digital mensual", "Escrita por mujeres de todo el mundo", "Cultura, arte, identidad, y todo lo que nos interesa"].map((item) => (
-            <li class="flex items-start gap-2 justify-center md:justify-start">
-              <span class="text-triba-red mt-0.5 shrink-0">✦</span>
-              <span>{item}</span>
-            </li>
+        <div class="flex flex-col items-center md:items-start gap-3 mb-6">
+          {["Una revista digital mensual", "Escrita por mujeres de todo el mundo", "Cultura, arte, identidad, y todo lo que nos interesa"].map((item, i) => (
+            <div class="washi-tape">
+              <p class={`font-sans text-triba-brown text-sm leading-relaxed font-medium px-4 py-1.5${i === 2 ? ' text-balance text-center max-w-[260px]' : ''}`}>{item}</p>
+            </div>
           ))}
-        </ul>
+        </div>
         <p class="font-sans text-triba-brown text-sm leading-relaxed font-medium text-center md:text-left max-w-xl mx-auto md:mx-0">
           Nos gusta pensar que somos un universo cultural, porque las posibilidades son infinitas. Hoy existimos de esta forma pero hay muchos proyectos por delante.
         </p>
@@ -227,7 +226,7 @@ if (magazines.length >= 3) {
     </div>
   </section>
 
-  <section class="relative min-h-screen px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 overflow-hidden flex flex-col items-center md:items-start">
+  <section class="relative px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 overflow-hidden flex flex-col items-center md:items-start">
     <div class="relative z-10 max-w-6xl mx-auto w-full flex flex-col md:flex-row gap-8 md:gap-12 md:gap-20 pt-12 md:pt-20 pb-10">
       <div class="w-full md:w-1/2 reveal mobile-center" data-reveal>
         <PatchTitle tag="h2" centered={false} class="text-3xl sm:text-4xl md:text-7xl text-triba-black font-bold mb-6" lines={[
@@ -286,7 +285,7 @@ if (magazines.length >= 3) {
 <script src="/scripts/scroll-cards.js" is:inline></script>
 
 <script>
-  (function () {
+  function setup() {
     var container = document.getElementById("card-stack");
     if (!container) return;
 
@@ -297,6 +296,7 @@ if (magazines.length >= 3) {
     }
 
     var dotsEl = document.getElementById("stack-dots");
+    if (!dotsEl) return;
 
     var current = 0;
     var total = cards.length;
@@ -464,5 +464,8 @@ if (magazines.length >= 3) {
     container.addEventListener("mouseleave", function () {
       mouseDown = false;
     });
-  })();
+  }
+
+  setup();
+  document.addEventListener("astro:page-load", setup);
 </script>

@@ -61,33 +61,40 @@ import PatchTitle from "../components/PatchTitle.astro";
 <script>
   import { supabase } from "../lib/supabase";
 
-  const form = document.getElementById("creators-form");
-  const msg = document.getElementById("creators-msg");
+  function setup() {
+    const form = document.getElementById("creators-form");
+    const msg = document.getElementById("creators-msg");
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    msg.classList.add("hidden");
+    if (!form) return;
 
-    const data = new FormData(form);
-    const areas = Array.from(form.querySelectorAll("[name=area]:checked")).map(cb => cb.value);
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      msg.classList.add("hidden");
 
-    const { error } = await supabase.from("creator_applications").insert({
-      nombre: data.get("nombre"),
-      email: data.get("email"),
-      pais: data.get("pais"),
-      areas,
-      propuesta: data.get("propuesta"),
-      trabajo_url: data.get("trabajo") || null,
+      const data = new FormData(form);
+      const areas = Array.from(form.querySelectorAll("[name=area]:checked")).map(cb => cb.value);
+
+      const { error } = await supabase.from("creator_applications").insert({
+        nombre: data.get("nombre"),
+        email: data.get("email"),
+        pais: data.get("pais"),
+        areas,
+        propuesta: data.get("propuesta"),
+        trabajo_url: data.get("trabajo") || null,
+      });
+
+      if (error) {
+        msg.textContent = "Error al enviar. Intentalo de nuevo.";
+        msg.className = "font-sans text-sm text-center text-triba-red";
+      } else {
+        msg.textContent = "¡Gracias por postularte! Te vamos a contactar pronto.";
+        msg.className = "font-sans text-sm text-center text-triba-green";
+        form.reset();
+      }
+      msg.classList.remove("hidden");
     });
+  }
 
-    if (error) {
-      msg.textContent = "Error al enviar. Intentalo de nuevo.";
-      msg.className = "font-sans text-sm text-center text-triba-red";
-    } else {
-      msg.textContent = "¡Gracias por postularte! Te vamos a contactar pronto.";
-      msg.className = "font-sans text-sm text-center text-triba-green";
-      form.reset();
-    }
-    msg.classList.remove("hidden");
-  });
+  setup();
+  document.addEventListener("astro:page-load", setup);
 </script>

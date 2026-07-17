@@ -1,19 +1,20 @@
 import type { APIRoute } from "astro";
+import { requireAdmin } from "../../../../../../../lib/auth";
+import { ok, error } from "../../../../../../../lib/response";
 import { supabaseAdmin } from "../../../../../../../lib/supabase-admin";
-import { logAdminAction } from "../../../../../../../lib/admin";
+import { logAdminAction } from "../../../../../../../lib/admin/audit";
 
 export const prerender = false;
 
 export const DELETE: APIRoute = async ({ params, locals }) => {
-  if (!locals.user || locals.profile?.role !== "admin") {
-    return json({ error: "Forbidden" }, 403);
-  }
+  const admin = requireAdmin(locals);
+  if (admin instanceof Response) return admin;
 
   const editionId = Number(params.id);
   const pageId = Number(params.pageId);
 
   if (!Number.isInteger(editionId) || !Number.isInteger(pageId)) {
-    return json({ error: "ID inválido" }, 400);
+    return error("ID inválido", 400);
   }
 
   const { data: page, error: findErr } = await supabaseAdmin
@@ -24,7 +25,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     .single();
 
   if (findErr || !page) {
-    return json({ error: "Página no encontrada" }, 404);
+    return error("Página no encontrada", 404);
   }
 
   const { error: delErr } = await supabaseAdmin
@@ -33,24 +34,17 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     .eq("id", pageId);
 
   if (delErr) {
-    return json({ error: delErr.message }, 500);
+    return error(delErr.message, 500);
   }
 
   logAdminAction(
-    locals.user!.id,
-    locals.profile!.email,
+    admin.user.id,
+    admin.profile.email,
     "edition.page_deleted",
     "edition",
     String(editionId),
     { page_number: page.page_number }
   );
 
-  return json({ ok: true });
+  return ok();
 };
-
-function json(body: unknown, status = 200) {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  });
-}
