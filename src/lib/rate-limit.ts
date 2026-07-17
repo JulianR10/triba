@@ -1,26 +1,50 @@
-const store = new Map<string, { count: number; resetAt: number }>();
+import { supabaseAdmin } from "./supabase-admin";
 
 export interface RateLimitConfig {
   maxRequests: number;
   windowMs: number;
 }
 
-export function checkRateLimit(
+export async function checkRateLimit(
   key: string,
   config: RateLimitConfig,
-): { allowed: boolean; retryAfterMs: number } {
-  const now = Date.now();
-  const entry = store.get(key);
+): Promise<{ allowed: boolean; retryAfterMs: number }> {
+  const [ip, endpoint] = key.split(":");
+  const since = new Date(Date.now() - config.windowMs).toISOString();
 
-  if (!entry || now > entry.resetAt) {
-    store.set(key, { count: 1, resetAt: now + config.windowMs });
+  const { count, error: countError } = await supabaseAdmin
+    .from("rate_limits")
+    .select("*", { count: "exact", head: true })
+    .eq("ip", ip)
+    .eq("endpoint", endpoint)
+    .gte("created_at", since);
+
+  if (countError) {
     return { allowed: true, retryAfterMs: 0 };
   }
 
-  entry.count++;
-  if (entry.count > config.maxRequests) {
-    return { allowed: false, retryAfterMs: entry.resetAt - now };
+  if (count != null && count >= config.maxRequests) {
+    const oldestAllowed = new Date(Date.now() - config.windowMs).getTime();
+    const { data: oldest } = await supabaseAdmin
+      .from("rate_limits")
+      .select("created_at")
+      .eq("ip", ip)
+      .eq("endpoint", endpoint)
+      .order("created_at", { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    const retryAfterMs = oldest?.created_at
+      ? new Date(oldest.created_at).getTime() + config.windowMs - Date.now()
+      : config.windowMs;
+
+    return { allowed: false, retryAfterMs: Math.max(1, retryAfterMs) };
   }
+
+  await supabaseAdmin.from("rate_limits").insert({
+    ip,
+    endpoint,
+  });
 
   return { allowed: true, retryAfterMs: 0 };
 }

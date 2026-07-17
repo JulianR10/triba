@@ -13,7 +13,7 @@ export const POST: APIRoute = async ({ request }) => {
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("cf-connecting-ip") ||
     "unknown";
-  const rl = checkRateLimit(rateLimitKey(ip, "create-checkout"), {
+  const rl = await checkRateLimit(rateLimitKey(ip, "create-checkout"), {
     maxRequests: 10,
     windowMs: 60_000,
   });

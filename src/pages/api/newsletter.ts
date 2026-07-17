@@ -9,7 +9,7 @@ export const POST: APIRoute = async ({ request }) => {
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("cf-connecting-ip") ||
     "unknown";
-  const rl = checkRateLimit(rateLimitKey(ip, "newsletter"), {
+  const rl = await checkRateLimit(rateLimitKey(ip, "newsletter"), {
     maxRequests: 5,
     windowMs: 60_000,
   });
