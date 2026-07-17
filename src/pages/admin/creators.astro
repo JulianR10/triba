@@ -130,10 +130,10 @@ const counts = {
         if (!confirmed) return;
         btn.disabled = true;
         try {
-          const res = await fetch(`/api/admin/creators/${id}/status`, {
+          const res = await fetch(`/api/admin/creators`, {
             method: "PATCH",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ status: action }),
+            body: JSON.stringify({ id, status: action }),
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {

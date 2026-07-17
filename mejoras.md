@@ -20,10 +20,12 @@ Cero tests en un sitio de suscripción es un riesgo estructural.
 
 ---
 
-### 3. Error tracking con Sentry
-Hoy si algo revienta en producción, te enterás cuando un user manda un mail.
+### 3. ✅ Error tracking con Sentry
+SDK integrado (`@sentry/astro`), server + browser.
 
-**Acción:** Sentry SDK para Node (server) y browser (cliente). 5 min de setup. Incluir source maps.
+**Pendiente en producción:**
+- `SENTRY_DSN` en `.env` con el DSN real de sentry.io
+- `SENTRY_AUTH_TOKEN` en `.env` para upload de source maps (opcional)
 
 ---
 
@@ -39,8 +41,12 @@ No hay analytics. No se sabe de dónde vienen los signups, dónde abandonan chec
 
 ---
 
-### 16. CI/CD con GitHub Actions
-Workflow: en cada PR correr `npm ci` → `npm run build` → tests → lint. En merge a main: deploy.
+### 16. ✅ CI/CD
+Archivos en `.github/workflows/` listos:
+- `ci.yml` — build en cada PR
+- `deploy.yml` — build en push a main
+
+**Hostinger Git Deploy** pendiente de configurar desde hPanel.
 
 ---
 
@@ -78,3 +84,22 @@ Pasar home y `/mi-cuenta` por axe DevTools. Focus rings, contraste, labels en ic
 ## Menor (no bloqueante)
 
 - **Logo real y assets finales de la diseñadora** — reemplazar logo actual y SVGs placeholder por los definitivos.
+
+---
+
+## Checklist producción
+
+Cosas que requieren acción manual antes o después del deploy.
+
+### Sentry
+
+| Variable | Dónde conseguirla |
+|---|---|
+| `SENTRY_DSN` | [sentry.io](https://sentry.io) → Projects → Triba → Client Keys (DSN) |
+| `SENTRY_AUTH_TOKEN` | [sentry.io](https://sentry.io) → Settings → Auth Tokens → Create new token con scope `project:releases` y `org:read` |
+
+**Pasos:**
+1. Crear proyecto en Sentry (elegí "Astro" como framework)
+2. Copiar el DSN al `.env` del servidor
+3. (Opcional) Generar auth token y agregarlo para que suba source maps en el build
+4. Hacer un deploy → provocar un error a propósito → confirmar que aparece en Sentry

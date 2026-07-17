@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
+    "start": "node dist/server/entry.mjs",
     "preview": "astro preview",
+    "deploy": "npm run build && node scripts/deploy-ftp.mjs",
     "astro": "astro"
   },
   "dependencies": {
@@ -14,9 +16,12 @@
     "@astrojs/react": "^4.2.4",
     "@astrojs/sitemap": "^3.7.3",
     "@astrojs/tailwind": "^6.0.2",
+    "@sentry/astro": "^10.66.0",
     "@supabase/ssr": "^0.12.1",
     "@supabase/supabase-js": "^2.49.4",
+    "archiver": "^8.0.0",
     "astro": "^5.6.2",
+    "basic-ftp": "^6.0.1",
     "mercadopago": "^3.2.0",
     "pino": "^10.3.1",
     "react": "^19.1.0",
