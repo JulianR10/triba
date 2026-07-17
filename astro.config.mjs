@@ -1,9 +1,9 @@
 import { defineConfig } from "astro/config";
 import tailwind from "@astrojs/tailwind";
 import react from "@astrojs/react";
-import node from "@astrojs/node";
 import sitemap from "@astrojs/sitemap";
 import sentry from "@sentry/astro";
+import vercel from "@astrojs/vercel";
 
 export default defineConfig({
   site: "https://comunidadtriba.com",
@@ -25,5 +25,9 @@ export default defineConfig({
     }),
   ],
   output: "server",
-  adapter: node({ mode: "standalone" }),
+  adapter: vercel({
+    isr: {
+      expiration: 60 * 60 * 24,
+    },
+  }),
 });
