@@ -78,6 +78,7 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 | `/admin/suscriptoras` | `admin/suscriptoras.astro` | Listado de suscriptoras con cancel manual |
 | `/admin/feedback` | `admin/feedback.astro` | Mensajes de feedback recibidos |
 | `/admin/creators` | `admin/creators.astro` | Postulaciones de Triba Creators con aprobar/rechazar |
+| `/terminos` | `terminos.astro` | Términos y condiciones legales |
 
 ---
 
@@ -109,7 +110,8 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 | `/api/create-checkout` | POST | Crea sesión Stripe o MP, devuelve URL |
 | `/api/portal` | POST | Redirige a Stripe Customer Portal. Usado desde `mi-cuenta.astro` (botón "Gestionar suscripción" para provider=stripe; MP muestra texto informativo). |
 | `/api/cancel-subscription` | POST | Cancela suscripción en proveedor + DB |
-| `/api/newsletter` | POST | Suscripción al newsletter gratuito |
+| `/api/newsletter` | POST | Suscripción al newsletter gratuito. Rate limit 5/min por IP. |
+| `/api/subscription-status` | GET | Polling de estado de suscripción (usado desde mi-cuenta para auto-reload suave) |
 | `/api/feedback` | POST | Envía feedback de la edición. Auth + rate limit 60s server-side. Usado desde `mi-cuenta.astro`. |
 | `/api/webhook/stripe` | POST | Eventos de suscripción Stripe (con verificación de firma) |
 | `/api/webhook/mercadopago` | POST | Notificaciones de pago MP. Verificación de firma HMAC-SHA256 activa (fail-closed, manifest aislado en `buildManifest`). Default `VERIFY_SIGNATURES=true`; override con `VERIFY_MP_SIGNATURES=false` en env. |
@@ -137,10 +139,12 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 ### Server routes (`src/pages/api/`)
 Patrón estándar:
 - `export const POST: APIRoute = async ({ request }) => { ... }`.
-- Auth vía `Authorization: Bearer <token>` → `supabase.auth.getUser(token)`. `401` si no hay token o el user no existe.
+- Auth vía `requireUser(request)` → devuelve `{ user, token }` o `error("Unauthorized", 401)`. Para admin: `requireAdmin(locals)`.
 - Operaciones privilegiadas (webhooks, admin, rate limit): `supabaseAdmin` (service role).
 - Operaciones del usuario actual (con su permiso): `supabase` con el token.
-- Respuestas: `{ ok: true }` o `{ url: "..." }` para éxito; `{ error: "..." }` con status code apropiado (`400` body inválido, `401` no auth, `404` no encontrado, `429` rate limit, `500` error interno).
+- Respuestas con helpers de `src/lib/response.ts`: `ok(data)` para 200, `error(msg, status)` para errores.
+- Rate limiting con `src/lib/rate-limit.ts`: `checkRateLimit(rateLimitKey(ip, endpoint), { maxRequests, windowMs })`.
+- Logging con Pino via `src/lib/logger.ts`: `logger.info({...}, "msg")`.
 - `Content-Type: application/json` siempre.
 - Body JSON: validar y sanear. `trim()` en strings, length check, tipos.
 
@@ -176,8 +180,8 @@ Tailwind cascadea las utilidades de `display` por orden en el CSS generado. `md:
 ### Navbar glassmorphism casi invisible sobre fondo bone
 El navbar desktop usa `bg-triba-bone/80 backdrop-blur-sm` y la mayoría de las páginas tienen `bg-triba-bone`. El `backdrop-filter: blur()` sobre un fondo mayormente uniforme devuelve el mismo color, así que el efecto glass apenas se nota. Solo se ve bien sobre la home donde el fondo es la imagen `fondo-cielo.webp` (alto contenido visual). Si querés glass visible en todas las páginas, hay que cambiar el tinte del navbar a un color con más contraste contra el fondo (o aumentar la opacidad del blur).
 
-### "Suscripción" de Mercado Pago son pagos únicos
-`create-checkout` crea una `Preference` (pago único), no un `PreApproval`. El webhook otorga 30 días por cada `payment.created`. No hay billing recurrente en MP. Además, `cancel-subscription` llama a `PreApproval.update()` con un payment ID, lo cual **falla en la API de MP** (espera un preapproval ID). Resultado: cancelar una sub de MP solo cancela en la DB local; en MP sigue activa. La migración a `PreApproval` está en [`mejoras.md`](./mejoras.md).
+### Mercado Pago usa PreApproval (suscripción real)
+A partir del refactor, MP usa `PreApproval` (suscripción recurrente real con billing automático), no pagos únicos como antes. `create-checkout` llama a `preApproval.create()`, el webhook escucha `subscription_preapproval` y `subscription_authorized_payment`. `cancel-subscription` pasa el `preapproval_id` correcto. El quirk del pago único ya no aplica.
 
 ### `--nav-height` la setea el Navbar
 El Navbar usa un `ResizeObserver` para publicar su altura real en `document.documentElement.style.setProperty('--nav-height', nav.offsetHeight + 'px')`. Las secciones con contenido debajo del navbar fixed usan `padding-top: max(1rem, var(--nav-height, 64px))` para no quedar tapadas. Si agregás una nueva sección full-width debajo del navbar, usá este patrón. Para scroll a un anchor dentro de una sección, agregá `scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)` al target (ej. el `PageFlipViewer` ya lo tiene).
@@ -378,6 +382,7 @@ triba/
 │   │   │   ├── portal.ts
 │   │   │   ├── newsletter.ts
 │   │   │   ├── feedback.ts
+│   │   │   ├── subscription-status.ts
 │   │   │   └── webhook/
 │   │   │       ├── stripe.ts
 │   │   │       └── mercadopago.ts
@@ -388,6 +393,7 @@ triba/
 │   │   ├── privacidad.astro
 │   │   ├── revista.astro
 │   │   ├── triba-creators.astro
+│   │   ├── terminos.astro
 │   │   └── revista/
 │   │       └── [slug].astro
 │   └── scripts/
