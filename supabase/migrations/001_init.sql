@@ -2,7 +2,7 @@
 create table if not exists public.subscriptions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
-  provider text not null check (provider in ('stripe', 'mercadopago', 'paypal')),
+  provider text not null check (provider in ('stripe', 'mercadopago')),
   provider_subscription_id text not null,
   status text not null default 'incomplete' check (status in ('active', 'canceled', 'past_due', 'trialing', 'incomplete')),
   plan_currency text not null check (plan_currency in ('EUR', 'USD', 'ARS')),

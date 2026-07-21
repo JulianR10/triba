@@ -8,6 +8,7 @@ export interface Profile {
   role: "free" | "subscriber" | "admin";
   subscription_id: string | null;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Subscription {
@@ -17,7 +18,9 @@ export interface Subscription {
   provider_subscription_id: string;
   status: SubscriptionStatus;
   plan_currency: "EUR" | "USD" | "ARS";
-  current_period_start: string;
-  current_period_end: string;
+  current_period_start: string | null;
+  current_period_end: string | null;
   created_at: string;
+  updated_at: string;
+  canceled_at: string | null;
 }

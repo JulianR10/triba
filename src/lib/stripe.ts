@@ -11,5 +11,4 @@ export const STRIPE_WEBHOOK_SECRET = import.meta.env.STRIPE_WEBHOOK_SECRET || ""
 export const STRIPE_PRICE_IDS = {
   EUR: import.meta.env.STRIPE_PRICE_EUR || "",
   USD: import.meta.env.STRIPE_PRICE_USD || "",
-  ARS: import.meta.env.STRIPE_PRICE_ARS || "",
 };

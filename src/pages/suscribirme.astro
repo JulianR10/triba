@@ -72,7 +72,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
                   <p class="font-sans text-sm text-triba-brown/60 mb-6">{p.periodo}</p>
 
                   <div class="space-y-3 mb-4">
-                    <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth />
+                    {p.moneda !== "ARS" && <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth />}
                     <CheckoutButton provider="mercadopago" currency={p.moneda} variant="default" fullWidth />
                   </div>
 
@@ -133,26 +133,45 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 
 <script>
   import { setupNewsletterForm } from "../scripts/newsletter-handler";
+  import { getCheckoutIntent, clearCheckoutIntent } from "../lib/checkout-intent";
+
+  function selectCurrency(currency: string) {
+    var tabs = document.querySelectorAll("[data-currency]");
+    var planEls = document.querySelectorAll("[data-plan]");
+
+    tabs.forEach(function (t) {
+      t.classList.remove("bg-triba-red", "text-triba-white");
+      t.classList.add("bg-triba-white", "text-triba-brown");
+    });
+    var activeTab = document.querySelector('[data-currency="' + currency + '"]');
+    if (activeTab) {
+      activeTab.classList.remove("bg-triba-white", "text-triba-brown");
+      activeTab.classList.add("bg-triba-red", "text-triba-white");
+    }
+    planEls.forEach(function (p) {
+      p.classList.toggle("hidden", p.dataset.plan !== currency);
+    });
+  }
+
+  function flushPendingCheckout() {
+    var pending = getCheckoutIntent();
+    if (!pending) return;
+    clearCheckoutIntent();
+
+    var currency = pending.currency;
+    selectCurrency(currency);
+
+    var btn = document.querySelector(
+      'button[data-provider="' + pending.provider + '"][data-currency="' + currency + '"]'
+    ) as HTMLButtonElement | null;
+    if (!btn) return;
+
+    btn.scrollIntoView({ behavior: "smooth", block: "center" });
+    setTimeout(function () { btn.click(); }, 400);
+  }
 
   function setup() {
     var tabs = document.querySelectorAll("[data-currency]");
-    var plans = document.querySelectorAll("[data-plan]");
-
-    function selectCurrency(currency) {
-      tabs.forEach(function (t) {
-        t.classList.remove("bg-triba-red", "text-triba-white");
-        t.classList.add("bg-triba-white", "text-triba-brown");
-      });
-      var activeTab = document.querySelector('[data-currency="' + currency + '"]');
-      if (activeTab) {
-        activeTab.classList.remove("bg-triba-white", "text-triba-brown");
-        activeTab.classList.add("bg-triba-red", "text-triba-white");
-      }
-      plans.forEach(function (p) {
-        p.classList.toggle("hidden", p.dataset.plan !== currency);
-      });
-    }
-
     var urlParams = new URLSearchParams(window.location.search);
     var urlCurrency = urlParams.get("currency");
     if (urlCurrency) selectCurrency(urlCurrency);
@@ -173,6 +192,8 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
     var nf = document.getElementById("newsletter-form-card") as HTMLFormElement | null;
     var nm = document.getElementById("newsletter-card-msg");
     if (nf && nm) setupNewsletterForm(nf, nm);
+
+    flushPendingCheckout();
   }
 
   setup();

@@ -74,7 +74,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
         </div>
         <div class="hidden md:block flex-1 order-2 md:order-2">
           <div class="relative max-w-sm mx-auto md:mx-auto">
-            <img id="featured-cover" src={featured.cover} alt={`Portada de ${featured.title}`} class="w-full rounded-xl border-2 border-triba-black shadow-lg hover:scale-[1.02] transition-transform duration-500" />
+            <img id="featured-cover" src={featured.cover} alt={`Portada de ${featured.title}`} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-lg hover:scale-[1.02] transition-transform duration-500" />
             <span id="featured-badge" class={"absolute -top-3 -right-3 bg-triba-red text-triba-white font-heading text-xs uppercase px-3 py-1 rounded-full border-2 border-triba-black shadow-[2px_2px_0_rgba(0,0,0,0.15)] " + (featured.badge ? "" : "hidden")}>
               {featured.badge}
             </span>

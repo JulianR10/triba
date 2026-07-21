@@ -425,6 +425,7 @@ const authLinks = [
         });
         var data = await res.json();
         if (data.url) { window.location.href = data.url; return; }
+        if (data.note) { alert(data.note); return; }
         throw new Error(data.error || "Error");
       } catch (e) {
         alert("Error al abrir el portal de gestión");

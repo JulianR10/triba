@@ -83,7 +83,7 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 | Ruta | Método | Propósito |
 |---|---|---|
 | `/api/create-checkout` | POST | Crea sesión Stripe o MP, devuelve URL |
-| `/api/portal` | POST | Redirige a Stripe Customer Portal |
+| `/api/portal` | POST | Redirige a Stripe Customer Portal o devuelve `note` para MP |
 | `/api/cancel-subscription` | POST | Cancela suscripción en proveedor + DB |
 | `/api/newsletter` | POST | Suscripción newsletter. Rate limit 5/min por IP. |
 | `/api/subscription-status` | GET | Polling estado suscripción |
@@ -119,6 +119,11 @@ Revista digital mensual escrita por y para mujeres, sobre cultura, arte, identid
 - **View Transitions:** Scripts se re-ejecutan en cada navegación. Usar patrón `setup(); document.addEventListener("astro:page-load", setup)`.
 - **`client:visible` en PageFlipViewer:** Pesa ~48kB. No cambiar a `client:load` o impacta LCP.
 - **Rate limiting serverless:** Usa tabla `rate_limits` en Supabase (no Map en memoria).
+- **CSP strings cacheadas:** `connect-src`, `img-src` y base CSP se precomputan al importar `middleware.ts`, no en cada request.
+- **Preload Bootzy TM:** `<link rel="preload" as="font" crossorigin>` para `/fonts/bootzyTM/BootzyTM.woff2` en `Layout.astro`.
+- **Portal MP:** `/api/portal` devuelve `{ note }` para MP (no tiene portal hosted). Navbar y `mi-cuenta` muestran `alert(note)`.
+- **Botón gestionar suscripción:** Presente en `Navbar.astro` y en la card de estado de `mi-cuenta.astro`. Ambos usan `POST /api/portal`.
+- **Profile.updated_at:** El tipo `Profile` en `types.ts` incluye `updated_at: string` (sync con `database.types.ts`).
 
 ---
 

@@ -67,7 +67,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
         <div data-banner="checkout-success" class="mb-8 p-4 bg-triba-green/20 border-2 border-triba-green rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
           <div>
             <p class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-1">¡Suscripción exitosa!</p>
-            <p class="font-sans text-sm text-triba-brown">Gracias por sumarte a Triba. Te enviamos un email con los detalles.</p>
+            <p class="font-sans text-sm text-triba-brown">Gracias por sumarte a Triba. Ya podés acceder a la revista desde tu perfil.</p>
           </div>
           <button type="button" data-dismiss-banner class="shrink-0 text-triba-brown hover:text-triba-red text-xl leading-none" aria-label="Cerrar">×</button>
         </div>
@@ -109,6 +109,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
               <p class="font-medium">{subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" }) : "—"}</p>
             </div>
           </div>
+          <button type="button" class="manage-sub-btn mt-4 w-full text-center rounded-button bg-triba-white text-triba-brown border-2 border-triba-brown px-4 py-2 font-heading text-xs uppercase tracking-wider hover:bg-triba-brown hover:text-triba-white transition-all">Gestionar suscripción</button>
         </div>
       </div>
 
@@ -133,7 +134,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
         </div>
         <div class="flex-1">
           <div class="max-w-sm mx-auto md:mx-auto">
-            <img src={featured.cover} alt={`Portada de ${featured.title}`} class="w-full rounded-xl border-2 border-triba-black shadow-lg hover:scale-[1.02] transition-transform duration-500" />
+            <img src={featured.cover} alt={`Portada de ${featured.title}`} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-lg hover:scale-[1.02] transition-transform duration-500" />
           </div>
         </div>
       </div>
@@ -208,6 +209,18 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
         )
       }
 
+      {
+        !(subscription?.status === "active") && (
+          <div class="max-w-lg mx-auto mt-10 text-center reveal" data-reveal>
+            <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8">
+              <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">Todavía no tenés suscripción</h2>
+              <p class="font-sans text-sm text-triba-brown/70 mb-6 leading-relaxed">Suscribite para acceder a la revista completa, el archivo histórico y la descarga PDF.</p>
+              <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+            </div>
+          </div>
+        )
+      }
+
     </div>
   </section>
 </Layout>
@@ -216,6 +229,60 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
   import { supabase } from "../lib/supabase";
 
   function setup() {
+
+  // --- Poll subscription after checkout ---
+  var pollInterval: ReturnType<typeof setInterval> | null = null;
+  var searchParams = new URLSearchParams(window.location.search);
+  if (searchParams.get("checkout") === "success") {
+    var attempts = 0;
+    var maxAttempts = 12;
+
+    pollInterval = setInterval(async function () {
+      attempts++;
+      if (attempts > maxAttempts) {
+        if (pollInterval) clearInterval(pollInterval);
+        return;
+      }
+
+      try {
+        var { data: { session } } = await supabase.auth.getSession();
+        if (!session) return;
+
+        var res = await fetch("/api/subscription-status", {
+          headers: { Authorization: "Bearer " + session.access_token },
+        });
+        var data = await res.json();
+        if (data.role === "subscriber") {
+          if (pollInterval) clearInterval(pollInterval);
+          window.location.reload();
+        }
+      } catch {
+        /* retry */
+      }
+    }, 3000);
+  }
+
+  // --- Manage subscription ---
+  document.querySelector(".manage-sub-btn")?.addEventListener("click", async function () {
+    searchParams = new URLSearchParams(window.location.search);
+    var { data: { session } } = await supabase.auth.getSession();
+    if (!session) return;
+    try {
+      var res = await fetch("/api/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.access_token,
+        },
+      });
+      var data = await res.json();
+      if (data.url) { window.location.href = data.url; return; }
+      if (data.note) { alert(data.note); return; }
+      throw new Error(data.error || "Error");
+    } catch (e) {
+      alert("Error al abrir el portal de gestión");
+    }
+  });
 
   // --- Feedback form ---
   const fbForm = document.getElementById("feedback-form");
@@ -245,7 +312,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
       fbMsg.classList.add("hidden");
       fbMsg.className = "font-sans text-sm text-center hidden mb-4";
 
-      const { data: { session } } = await supabase.auth.getSession();
+      var { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         fbMsg.textContent = "Debés iniciar sesión para enviar feedback";
         fbMsg.className = "font-sans text-sm text-center text-triba-red mb-4";

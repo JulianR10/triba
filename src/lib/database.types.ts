@@ -33,7 +33,7 @@ export interface Database {
         Row: {
           id: string;
           user_id: string;
-          provider: "stripe" | "mercadopago" | "paypal";
+          provider: "stripe" | "mercadopago";
           provider_subscription_id: string;
           status: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
           plan_currency: "EUR" | "USD" | "ARS";
@@ -46,7 +46,7 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          provider: "stripe" | "mercadopago" | "paypal";
+          provider: "stripe" | "mercadopago";
           provider_subscription_id: string;
           status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
           plan_currency: "EUR" | "USD" | "ARS";
@@ -59,7 +59,7 @@ export interface Database {
         Update: {
           id?: string;
           user_id?: string;
-          provider?: "stripe" | "mercadopago" | "paypal";
+          provider?: "stripe" | "mercadopago";
           provider_subscription_id?: string;
           status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
           plan_currency?: "EUR" | "USD" | "ARS";

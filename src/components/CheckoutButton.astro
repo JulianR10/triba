@@ -29,47 +29,54 @@ const btnClass = `
 
 <script>
   import { supabase } from "../lib/supabase";
+  import { saveCheckoutIntent } from "../lib/checkout-intent";
 
-  document.querySelectorAll("button[data-provider]").forEach((btn) => {
-    btn.addEventListener("click", async () => {
-      const provider = btn.getAttribute("data-provider");
-      const currency = btn.getAttribute("data-currency");
-      const originalText = btn.textContent;
+  function attachCheckoutHandlers() {
+    document.querySelectorAll("button[data-provider]").forEach((btn) => {
+      btn.addEventListener("click", async () => {
+        const provider = btn.getAttribute("data-provider");
+        const currency = btn.getAttribute("data-currency");
+        const originalText = btn.textContent;
 
-      const errorEl = btn.parentElement?.querySelector("[data-checkout-error]");
-      if (errorEl) errorEl.classList.add("hidden");
-      (btn as HTMLButtonElement).disabled = true;
-      btn.textContent = "Procesando...";
-
-      try {
-        if (!supabase) throw new Error("Supabase no configurado");
-        const { data: { session } } = await supabase.auth.getSession();
-        if (!session) {
-          const redirect = encodeURIComponent(window.location.pathname + "?currency=" + currency);
-          window.location.href = "/iniciar-sesion?redirect=" + redirect;
-          return;
-        }
-
-        const res = await fetch("/api/create-checkout", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ provider, currency }),
-        });
-        const data = await res.json();
-        if (data.url) window.location.href = data.url;
-        else throw new Error(data.error || "Error creando checkout");
-      } catch (err: any) {
         const errorEl = btn.parentElement?.querySelector("[data-checkout-error]");
-        if (errorEl) {
-          errorEl.textContent = err.message || "Error al procesar el pago. Intentalo de nuevo.";
-          errorEl.classList.remove("hidden");
+        if (errorEl) errorEl.classList.add("hidden");
+        (btn as HTMLButtonElement).disabled = true;
+        btn.textContent = "Procesando...";
+
+        try {
+          if (!supabase) throw new Error("Supabase no configurado");
+          const { data: { session } } = await supabase.auth.getSession();
+          if (!session) {
+            saveCheckoutIntent(provider!, currency!);
+            const redirect = encodeURIComponent(window.location.pathname + "?currency=" + currency);
+            window.location.href = "/iniciar-sesion?redirect=" + redirect;
+            return;
+          }
+
+          const res = await fetch("/api/create-checkout", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ provider, currency }),
+          });
+          const data = await res.json();
+          if (data.url) window.location.href = data.url;
+          else throw new Error(data.error || "Error creando checkout");
+        } catch (err: any) {
+          const errorEl = btn.parentElement?.querySelector("[data-checkout-error]");
+          if (errorEl) {
+            errorEl.textContent = err.message || "Error al procesar el pago. Intentalo de nuevo.";
+            errorEl.classList.remove("hidden");
+          }
+          btn.textContent = originalText;
+          (btn as HTMLButtonElement).disabled = false;
         }
-        btn.textContent = originalText;
-        (btn as HTMLButtonElement).disabled = false;
-      }
+      });
     });
-  });
+  }
+
+  attachCheckoutHandlers();
+  document.addEventListener("astro:page-load", attachCheckoutHandlers);
 </script>

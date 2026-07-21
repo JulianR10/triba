@@ -45,7 +45,7 @@ export const POST: APIRoute = async ({ request }) => {
           current_period_end: new Date(stripeSub.current_period_end * 1000).toISOString(),
         }, { onConflict: "provider, provider_subscription_id" }).select("id").single();
 
-        await supabaseAdmin.from("profiles").update({
+          await supabaseAdmin.from("profiles").update({
           role: "subscriber",
           subscription_id: subs?.id || null,
           updated_at: new Date().toISOString(),
@@ -74,7 +74,7 @@ export const POST: APIRoute = async ({ request }) => {
             .maybeSingle();
 
           if (existing) {
-          await supabaseAdmin.from("profiles").update({
+        await supabaseAdmin.from("profiles").update({
             role: "free",
             subscription_id: null,
             updated_at: new Date().toISOString(),

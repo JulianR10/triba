@@ -2,7 +2,6 @@ import { defineConfig } from "astro/config";
 import tailwind from "@astrojs/tailwind";
 import react from "@astrojs/react";
 import sitemap from "@astrojs/sitemap";
-import sentry from "@sentry/astro";
 import vercel from "@astrojs/vercel";
 
 export default defineConfig({
@@ -17,11 +16,6 @@ export default defineConfig({
         return !url.pathname.startsWith("/admin") &&
                !url.pathname.startsWith("/iniciar-sesion") &&
                !url.pathname.startsWith("/api");
-      },
-    }),
-    sentry({
-      sourceMapsUploadOptions: {
-        enabled: import.meta.env.PROD,
       },
     }),
   ],

@@ -69,7 +69,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
   }
 
   if (validated.data.edition_number !== current.edition_number) {
-    const { data: conflict } = await supabaseAdmin
+      const { data: conflict } = await supabaseAdmin
       .from("editions")
       .select("id")
       .eq("edition_number", validated.data.edition_number)

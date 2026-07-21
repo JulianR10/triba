@@ -91,13 +91,13 @@ En el dashboard de Mercado Pago, andá a **"Configuración"** → **"Cobros por 
 
 | Item | Estado |
 |---|---|
-| Price ID EUR (`price_...`) | ⬜ |
-| Price ID USD (`price_...`) | ⬜ |
-| Price ID ARS (`price_...`) | ⬜ |
-| Stripe Signing secret (`whsec_...`) | ⬜ |
-| Stripe Secret Key (`sk_live_...`) | ✅ (ya la tengo) |
-| MP Access Token (`APP_USR-...`) | ✅ (ya lo tengo) |
-| MP Webhook secret (si existe) | ⬜ |
+| Price ID EUR (`price_...`) | ✅ |
+| Price ID USD (`price_...`) | ✅ |
+| Price ID ARS (`price_...`) | ⬜ (pendiente) |
+| Stripe Webhook secret (`whsec_...`) | ✅ |
+| Stripe Secret Key (`sk_live_...`) | ✅ |
+| MP Access Token (`APP_USR-...`) | ✅ |
+| MP Webhook secret | ✅ |
 
 ---
 

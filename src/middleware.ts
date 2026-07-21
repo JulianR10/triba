@@ -11,6 +11,31 @@ const supabaseUrl =
 const supabaseHost = supabaseUrl ? new URL(supabaseUrl).host : "";
 const supabaseOrigin = supabaseUrl ? new URL(supabaseUrl).origin : "";
 
+const CSP_CONNECT_SRC = [
+  "'self'",
+  "https://api.stripe.com",
+  ...(supabaseOrigin ? [supabaseOrigin, `wss://${supabaseHost}`, `https://${supabaseHost}`] : []),
+].join(" ");
+
+const CSP_IMG_SRC = [
+  "'self'",
+  "data:",
+  ...(supabaseOrigin
+    ? [`${supabaseOrigin}/storage/v1/storage/file/`, `${supabaseOrigin}/storage/v1/object/public/`]
+    : []),
+].join(" ");
+
+const CSP_BASE = [
+  "default-src 'self'",
+  "script-src 'self' 'unsafe-inline'",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "font-src 'self' https://fonts.gstatic.com",
+  "frame-src 'none'",
+  "object-src 'none'",
+  "base-uri 'self'",
+  "form-action 'self'",
+].join("; ");
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const supabase = createSupabaseServerClient(context.request);
   const {
@@ -68,39 +93,9 @@ export const onRequest = defineMiddleware(async (context, next) => {
       response.headers.set("content-type", "text/html; charset=utf-8");
     }
 
-    const connectDomains = [
-      "'self'",
-      "https://api.stripe.com",
-      ...(supabaseOrigin
-        ? [supabaseOrigin, `wss://${supabaseHost}`, `https://${supabaseHost}`]
-        : []),
-    ];
-
-    const imgDomains = [
-      "'self'",
-      "data:",
-      ...(supabaseOrigin
-        ? [
-            `${supabaseOrigin}/storage/v1/storage/file/`,
-            `${supabaseOrigin}/storage/v1/object/public/`,
-          ]
-        : []),
-    ];
-
     response.headers.set(
       "Content-Security-Policy",
-      [
-        "default-src 'self'",
-        "script-src 'self' 'unsafe-inline'",
-        "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-        "font-src 'self' https://fonts.gstatic.com",
-        `img-src ${imgDomains.join(" ")}`,
-        `connect-src ${connectDomains.join(" ")}`,
-        "frame-src 'none'",
-        "object-src 'none'",
-        "base-uri 'self'",
-        "form-action 'self'",
-      ].join("; ")
+      `${CSP_BASE}; img-src ${CSP_IMG_SRC}; connect-src ${CSP_CONNECT_SRC}`
     );
 
     response.headers.set("X-Content-Type-Options", "nosniff");
