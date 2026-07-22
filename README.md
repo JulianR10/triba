@@ -1,46 +1,31 @@
 # TRIBA
 
-Revista digital mensual escrita por y para mujeres, sobre cultura, arte e identidad. Newsletter gratuito + suscripción paga (acceso a la revista completa, archivo histórico y descarga PDF) con pagos vía Stripe y Mercado Pago.
+Revista digital mensual — newsletter gratuito + suscripción paga. Escrita por y para mujeres, sobre cultura, arte e identidad.
 
-**Stack:** Astro 5 · Supabase (PostgreSQL + Auth + Storage) · Tailwind CSS 3 · Stripe · Mercado Pago · react-pageflip
+**Stack:** Astro 5 · Supabase · Tailwind CSS 3 · Stripe · Mercado Pago · react-pdf
 
-> Documentación detallada del proyecto: [`AGENTS.md`](./AGENTS.md)
-
----
+> Contexto completo del proyecto: [`AGENTS.md`](./AGENTS.md)
 
 ## Quickstart
 
 ```bash
 npm install
-cp .env.example .env    # completar claves
-npm run dev              # http://localhost:4321
+cp .env.example .env   # completar claves
+npm run dev             # http://localhost:4321
 ```
 
-Migraciones SQL en `supabase/migrations/` (correr en orden sobre Supabase). Seed mínimo: crear una fila en `editions` con `featured = true` y `cover_url`.
-
----
+Migraciones SQL en `supabase/migrations/` (ejecutar en orden).
 
 ## Scripts
 
-| Script | Qué hace |
-|---|---|
-| `npm run dev` | Dev server con HMR |
+| `npm run dev` | Dev server |
 | `npm run build` | Build producción |
 | `npm run preview` | Sirve build local |
 
----
-
 ## Variables de entorno
 
-Ver `.env.example`. Requeridas:
-- `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`
-- `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*`
-- `MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`
-
-Sin los `*_WEBHOOK_SECRET` los webhooks rechazan requests (fail-closed).
-
----
+Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`), Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*`), MP (`MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`). Sin `*_WEBHOOK_SECRET` los webhooks fallan.
 
 ## Deploy
 
-Adapter `@astrojs/vercel`. Cada push a `main` dispara deploy automático en Vercel.
+Adapter `@astrojs/vercel`. Push a `main` → deploy automático en Vercel.

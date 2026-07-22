@@ -12,14 +12,6 @@ export interface Edition {
   published_at: string;
 }
 
-export interface EditionPage {
-  id: number;
-  edition_id: number;
-  page_number: number;
-  image_url: string;
-  alt_text: string;
-}
-
 export async function getEditions(): Promise<Edition[]> {
   const { data } = await supabase
     .from("editions")
@@ -47,13 +39,4 @@ export async function getEditionBySlug(slug: string): Promise<Edition | null> {
   return data as Edition | null;
 }
 
-export async function getEditionPages(
-  editionId: number
-): Promise<EditionPage[]> {
-  const { data } = await supabase
-    .from("edition_pages")
-    .select("*")
-    .eq("edition_id", editionId)
-    .order("page_number", { ascending: true });
-  return (data as EditionPage[]) || [];
-}
+

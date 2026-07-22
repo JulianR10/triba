@@ -1,13 +1,12 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import Button from "../../components/Button.astro";
-import PageFlipViewer from "../../components/PageFlipViewer.tsx";
-import { getEditionBySlug, getEditionPages } from "../../lib/editions";
+import PDFViewer from "../../components/PDFViewer.tsx";
+import { getEditionBySlug } from "../../lib/editions";
 import PatchTitle from "../../components/PatchTitle.astro";
 
 const { slug } = Astro.params;
 const edition = await getEditionBySlug(slug!);
-const pages = edition ? await getEditionPages(edition.id) : [];
 
 if (!edition) {
   return Astro.redirect("/revista");
@@ -16,7 +15,6 @@ if (!edition) {
 const title = `${edition.title} — Revista`;
 const description = edition.description.split("\n")[0];
 const canonical = `/revista/${slug}`;
-const previewPages = pages.map((p) => ({ src: p.image_url, alt: p.alt_text }));
 
 const structuredData = {
   "@context": "https://schema.org",
@@ -49,7 +47,7 @@ const structuredData = {
           <PatchTitle content={edition.title} tag="h1" centered={false} class="text-3xl md:text-4xl text-triba-brown mb-6" />
           <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8 whitespace-pre-line">{edition.description}</p>
           <div class="flex flex-wrap gap-4">
-            {previewPages.length > 1 && (
+            {edition.pdf_url && (
               <Button variant="primary" size="md" href="#visor-revista">Leer aquí</Button>
             )}
             {edition.pdf_url && (
@@ -64,10 +62,10 @@ const structuredData = {
         </div>
       </div>
 
-      {previewPages.length > 1 && (
+      {edition.pdf_url && (
         <div class="mb-16 md:mb-20 reveal" id="visor-revista" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" data-reveal>
           <PatchTitle content="Previsualización" tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
-          <PageFlipViewer pages={previewPages} client:visible />
+          <PDFViewer pdfUrl={edition.pdf_url} client:visible />
         </div>
       )}
 

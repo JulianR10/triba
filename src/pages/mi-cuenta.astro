@@ -1,12 +1,11 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
-import MagazineCarousel from "../components/MagazineCarousel.astro";
-import PageFlipViewer from "../components/PageFlipViewer.tsx";
+import PDFViewer from "../components/PDFViewer.tsx";
 import PatchTitle from "../components/PatchTitle.astro";
 
 import { createSupabaseServerClient } from "../lib/supabase-server";
-import { getEditions, getFeaturedEdition, getEditionPages } from "../lib/editions";
+import { getEditions, getFeaturedEdition } from "../lib/editions";
 import type { Profile, Subscription } from "../lib/types";
 
 const supabase = createSupabaseServerClient(Astro.request);
@@ -29,12 +28,6 @@ const isAdmin = profile?.role === "admin";
 
 const allEditions = await getEditions();
 const featuredEdition = await getFeaturedEdition();
-const featuredPages = featuredEdition ? await getEditionPages(featuredEdition.id) : [];
-
-const previewPages = featuredPages.map((p) => ({
-  src: p.image_url,
-  alt: p.alt_text,
-}));
 
 const editions = allEditions.map((e) => ({
   id: e.id,
@@ -45,26 +38,23 @@ const editions = allEditions.map((e) => ({
   pdf: e.pdf_url || "#",
   featured: e.featured,
   badge: e.badge,
+  slug: `edicion-${e.edition_number}`,
   previewArticle: true,
 }));
 
 const featured = editions.find((e) => e.featured) || editions[0];
 
-const blogPosts = allEditions.map((e) => ({
-  title: e.title,
-  image: e.cover_url,
-  excerpt: e.description.split("\n")[0],
-}));
-
 const checkoutStatus = Astro.url.searchParams.get("checkout");
+
+const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || "lectora";
 ---
 
 <Layout>
-  <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
-      <div class="max-w-6xl mx-auto">
+  <section style="padding-top: max(1rem, var(--nav-height, 64px))">
+    <div class="max-w-6xl mx-auto">
 
       {checkoutStatus === "success" && (
-        <div data-banner="checkout-success" class="mb-8 p-4 bg-triba-green/20 border-2 border-triba-green rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
+        <div data-banner="checkout-success" class="mx-5 md:mx-10 lg:mx-20 xl:mx-32 2xl:mx-48 mb-8 p-4 bg-triba-green/20 border-2 border-triba-green rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
           <div>
             <p class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-1">¡Suscripción exitosa!</p>
             <p class="font-sans text-sm text-triba-brown">Gracias por sumarte a Triba. Ya podés acceder a la revista desde tu perfil.</p>
@@ -73,15 +63,46 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
         </div>
       )}
 
-      <!-- 1. Bienvenida -->
-      <p class="font-heading text-4xl md:text-5xl text-triba-brown mb-6 text-center reveal" data-reveal>
-        Bienvenido/a, <span class="font-bold text-triba-red">{user?.email?.split("@")[0] || "lectora"}</span>
-      </p>
+      {
+        (subscription?.status === "active") && (
+          <>
+
+      <!-- ===== HERO ===== -->
+      <div class="relative overflow-hidden rounded-none md:rounded-[32px] bg-gradient-to-br from-triba-pink via-triba-pink/60 to-triba-cream px-5 md:px-14 lg:px-20 py-10 md:py-16 lg:py-20 reveal" data-reveal>
+        <div class="flex flex-col md:flex-row gap-8 md:gap-12 items-center">
+          <div class="flex-1">
+            <p class="font-heading text-sm md:text-base uppercase tracking-[0.2em] text-triba-brown/60 mb-4">Tu edición del mes</p>
+            <h1 class="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-triba-brown leading-tight mb-2">
+              Hola, <span class="text-triba-red">{displayName}</span>
+            </h1>
+            <div class="mt-6 mb-6">
+              <span class="font-heading text-lg uppercase tracking-wider text-triba-red">{featured.edition}</span>
+              <h2 class="font-heading text-2xl md:text-3xl text-triba-brown mt-1">{featured.title}</h2>
+            </div>
+            <p class="font-sans text-sm md:text-base text-triba-brown/80 leading-relaxed mb-8 max-w-lg whitespace-pre-line">
+              {featured.description}
+            </p>
+            <div class="flex flex-wrap gap-4">
+              {featured.pdf !== "#" && (
+                <Button variant="primary" size="md" href="#visor-revista">Seguir leyendo</Button>
+              )}
+              {featured.pdf !== "#" && (
+                <Button variant="ghost" size="md" href={featured.pdf}>Descargar PDF</Button>
+              )}
+            </div>
+          </div>
+          <div class="flex-1 flex justify-center md:justify-end">
+            <div class="w-56 sm:w-64 md:w-72 lg:w-80 -rotate-[3deg] hover:rotate-0 transition-transform duration-500">
+              <img src={featured.cover} alt={`Portada de ${featured.title}`} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)]" />
+            </div>
+          </div>
+        </div>
+      </div>
 
       <!-- Admin banner -->
       {isAdmin && (
-        <div class="max-w-lg mx-auto mb-10 reveal" data-reveal>
-          <div class="bg-triba-green/30 rounded-xl border-2 border-triba-black p-6 text-center">
+        <div class="mt-4 mx-5 md:mx-14 lg:mx-20 mb-8 reveal" data-reveal>
+          <div class="bg-triba-green/30 rounded-xl border-2 border-triba-black p-6 text-center max-w-lg mx-auto">
             <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Sesión de administración</p>
             <p class="font-sans text-sm text-triba-brown mb-4 text-balance">Estás logueada como <span class="font-bold">admin</span>. El panel de gestión está disponible desde acá.</p>
             <Button variant="primary" href="/admin">Ir al panel de administración</Button>
@@ -89,118 +110,94 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
         </div>
       )}
 
-      {
-        (subscription?.status === "active") && (
-          <>
-      <!-- 2. Estado de suscripción -->
-      <div class="max-w-lg mx-auto mb-10 reveal" data-reveal>
-        <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6">
-          <div class="flex items-center gap-2 mb-4">
-            <span class="w-2.5 h-2.5 rounded-full bg-triba-green inline-block"></span>
-            <span class="font-heading text-xs uppercase tracking-wider text-triba-brown">Suscripción activa</span>
-          </div>
-          <div class="grid grid-cols-2 gap-4 font-sans text-sm text-triba-brown">
-            <div>
-              <p class="text-triba-brown/60 text-xs mb-0.5">Suscriptora desde</p>
-              <p class="font-medium">{subscription.created_at ? new Date(subscription.created_at).toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" }) : "—"}</p>
-            </div>
-            <div>
-              <p class="text-triba-brown/60 text-xs mb-0.5">Vencimiento</p>
-              <p class="font-medium">{subscription.current_period_end ? new Date(subscription.current_period_end).toLocaleDateString("es-AR", { year: "numeric", month: "long", day: "numeric" }) : "—"}</p>
-            </div>
-          </div>
-          <button type="button" class="manage-sub-btn mt-4 w-full text-center rounded-button bg-triba-white text-triba-brown border-2 border-triba-brown px-4 py-2 font-heading text-xs uppercase tracking-wider hover:bg-triba-brown hover:text-triba-white transition-all">Gestionar suscripción</button>
-        </div>
-      </div>
-
-      <!-- 3. Edición actual -->
-      <div class="flex flex-col md:flex-row gap-6 md:gap-12 lg:gap-16 mb-12 md:mb-20 reveal-stagger" data-reveal>
-        <div class="flex-1 flex flex-col justify-center">
-          <h2 class="font-heading text-2xl md:text-3xl uppercase tracking-wide text-triba-brown mb-4">
-            <span class="text-triba-red">{featured.edition}</span>
-            {featured.title}
-          </h2>
-          <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8 whitespace-pre-line">
-            {featured.description}
-          </p>
-          <div class="flex flex-wrap gap-4">
-            {featuredPages.length > 0 && (
-              <Button variant="primary" size="md" href="#visor-revista">Leer aquí</Button>
-            )}
-            {featuredEdition?.pdf_url && (
-              <Button variant="default" size="md" href={featured.pdf}>Descargar PDF</Button>
-            )}
-          </div>
-        </div>
-        <div class="flex-1">
-          <div class="max-w-sm mx-auto md:mx-auto">
-            <img src={featured.cover} alt={`Portada de ${featured.title}`} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-lg hover:scale-[1.02] transition-transform duration-500" />
-          </div>
-        </div>
-      </div>
-
-      <!-- 3. Carrusel de ediciones -->
-      <div class="relative bg-triba-white w-full px-5 md:px-10 lg:px-20 py-8 md:py-14 rounded-[20px] mx-auto mb-12 md:mb-20 reveal" data-reveal>
+      <!-- ===== COLECCIÓN (staggered cover collage) ===== -->
+      <div class="px-5 md:px-14 lg:px-20 mt-12 md:mt-16 mb-12 md:mb-20 reveal" data-reveal>
         <div class="max-w-6xl mx-auto">
-          <h3 class="font-heading text-lg uppercase tracking-wider text-triba-brown mb-6">Todas las ediciones</h3>
-          <MagazineCarousel editions={editions} selectedId={featured.id} />
-        </div>
-      </div>
+          <p class="font-heading text-xs uppercase tracking-[0.25em] text-triba-brown/50 mb-8">Tus tomos</p>
 
-      <!-- 4. Archivo de noticias -->
-      <div class="mb-12 md:mb-20 reveal" data-reveal>
-        <div class="mb-10 md:mb-14">
-          <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown">Nuestro archivo de noticias</h2>
-        </div>
-
-        <div class="bg-triba-cream rounded-xl p-6 md:p-10">
-          <div class="grid md:grid-cols-3 gap-6 mb-8 reveal-stagger">
-            {blogPosts.map((post) => (
-              <div class="bg-triba-white rounded-xl overflow-hidden transition-all hover:scale-[1.02]">
-                <div class="aspect-[4/3] overflow-hidden">
-                  <img src={post.image} alt={post.title} class="w-full h-full object-cover" />
-                </div>
-                <div class="p-4">
-                  <h3 class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-2">{post.title}</h3>
-                  <p class="font-sans text-xs text-triba-brown/70 leading-relaxed">{post.excerpt}</p>
-                </div>
-              </div>
-            ))}
+          <!-- Desktop: stacked collage -->
+          <div class="hidden md:flex justify-center items-end gap-0 py-8" data-collage-desktop>
+            {editions.map((ed, i) => {
+              const rotations = [-2.5, 1.8, -1.2, 2.2, -1.8, 1.5, -2.0, 2.5];
+              const rot = rotations[i % rotations.length];
+              const z = editions.length - i;
+              const ml = i === 0 ? 0 : -12;
+              return (
+                <a
+                  href={`/revista/${ed.slug}`}
+                  class="relative transition-all duration-400 hover:z-30 group block"
+                  style={`margin-left: ${ml}px; z-index: ${z}; transform: rotate(${rot}deg);`}
+                >
+                  <div class="w-44 lg:w-52 xl:w-56 aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg transition-all duration-400 group-hover:rotate-0 group-hover:scale-105 group-hover:shadow-2xl">
+                    <img src={ed.cover} alt={`Portada ${ed.edition}`} class="w-full h-full object-cover" loading="lazy" />
+                  </div>
+                  <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 text-center mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">{ed.edition}</p>
+                </a>
+              );
+            })}
           </div>
 
-          <div class="text-center">
-            <Button variant="default" size="md" href="/revista">Ver más</Button>
+          <!-- Mobile: snap-horizontal scroll -->
+          <div class="md:hidden" data-collage-mobile>
+            <div class="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 -mx-5 px-5">
+              {editions.map((ed, i) => {
+                const rotations = [-2, 1.5, -1, 2, -1.5, 1, -2.5, 2];
+                const rot = rotations[i % rotations.length];
+                return (
+                  <a href={`/revista/${ed.slug}`} class="snap-center shrink-0 w-[70vw] max-w-[240px] block" style={`transform: rotate(${rot}deg);`}>
+                    <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg">
+                      <img src={ed.cover} alt={`Portada ${ed.edition}`} class="w-full h-full object-cover" loading="lazy" />
+                    </div>
+                    <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 text-center mt-2">{ed.edition}</p>
+                  </a>
+                );
+              })}
+            </div>
+            <!-- Dots -->
+            <div class="flex justify-center gap-2 mt-4" data-dots>
+              {editions.map((_, i) => (
+                <span class="w-2 h-2 rounded-full bg-triba-brown/20 transition-colors duration-300" data-dot={i}></span>
+              ))}
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- 5. Visor de revista -->
-      {previewPages.length > 0 && (
-      <div id="visor-revista" class="mb-12 md:mb-20 reveal" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" data-reveal>
-        <PatchTitle content={`${featured.edition} ${featured.title}`} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
+      <!-- ===== VISOR ===== -->
+      <div class="bg-triba-cream w-full px-5 md:px-14 lg:px-20 xl:px-32 2xl:px-48 py-12 md:py-20">
+        <div class="max-w-6xl mx-auto">
+          {featured.pdf !== "#" && (
+          <div id="visor-revista" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" class="reveal" data-reveal>
+            <PatchTitle content={`${featured.edition} ${featured.title}`} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
-        <PageFlipViewer pages={previewPages} client:visible />
+            <div class="-mx-5 md:mx-0">
+              <PDFViewer pdfUrl={featured.pdf} client:visible />
+            </div>
+
+            <p class="font-heading text-xs uppercase tracking-[0.2em] text-triba-brown/40 text-center mt-6">Deslizá o usá los botones para pasar las páginas</p>
+          </div>
+          )}
+        </div>
       </div>
-      )}
 
-      <!-- 6. Feedback -->
-      <div class="mb-10 reveal" data-reveal>
-        <h2 class="font-heading text-base uppercase tracking-wide text-triba-brown text-center">¿Qué te pareció esta edición?</h2>
+      <!-- ===== FEEDBACK ===== -->
+      <div class="px-5 md:px-14 lg:px-20 py-12 md:py-16">
+        <div class="max-w-lg mx-auto reveal" data-reveal>
+          <h2 class="font-heading text-2xl md:text-3xl text-triba-brown text-center mb-8">Contanos qué te pareció</h2>
 
-        <div class="max-w-lg mx-auto">
           <form id="feedback-form">
             <textarea
               name="feedback"
-              rows="5"
-              placeholder="Contanos qué te pareció esta edición..."
+              rows="4"
+              placeholder="¿Qué te gustó? ¿Qué cambiarías?..."
               maxlength="2000"
-              class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none mb-2"
+              class="w-full px-5 py-4 rounded-xl border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none mb-3"
             ></textarea>
-            <span id="feedback-counter" class="font-sans text-xs text-triba-brown/60 text-right block mb-2">0 / 2000</span>
-            <p id="feedback-msg" class="font-sans text-sm text-center hidden mb-4"></p>
-            <div class="text-center">
+            <div class="flex items-center justify-between gap-4">
+              <span id="feedback-counter" class="font-sans text-xs text-triba-brown/50">0 / 2000</span>
               <Button variant="primary" type="submit">Enviar</Button>
             </div>
+            <p id="feedback-msg" class="font-sans text-sm text-center mt-3 hidden"></p>
           </form>
         </div>
       </div>
@@ -211,7 +208,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 
       {
         !(subscription?.status === "active") && (
-          <div class="max-w-lg mx-auto mt-10 text-center reveal" data-reveal>
+          <div class="max-w-lg mx-auto mt-10 text-center reveal px-5" data-reveal>
             <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8">
               <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">Todavía no tenés suscripción</h2>
               <p class="font-sans text-sm text-triba-brown/70 mb-6 leading-relaxed">Suscribite para acceder a la revista completa, el archivo histórico y la descarga PDF.</p>
@@ -262,27 +259,24 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
     }, 3000);
   }
 
-  // --- Manage subscription ---
-  document.querySelector(".manage-sub-btn")?.addEventListener("click", async function () {
-    searchParams = new URLSearchParams(window.location.search);
-    var { data: { session } } = await supabase.auth.getSession();
-    if (!session) return;
-    try {
-      var res = await fetch("/api/portal", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: "Bearer " + session.access_token,
-        },
+  // --- Mobile collage dots ---
+  var collageScroll = document.querySelector("[data-collage-mobile] .overflow-x-auto");
+  var dots = document.querySelectorAll("[data-dot]");
+  if (collageScroll && dots.length) {
+    var updateDots = function () {
+      var scrollLeft = collageScroll.scrollLeft;
+      var scrollWidth = collageScroll.scrollWidth - collageScroll.clientWidth;
+      if (scrollWidth <= 0) { dots.forEach(function (d) { d.classList.add("bg-triba-brown/60"); d.classList.remove("bg-triba-brown/20"); }); return; }
+      var ratio = scrollLeft / scrollWidth;
+      var active = Math.round(ratio * (dots.length - 1));
+      dots.forEach(function (d, i) {
+        d.classList.toggle("bg-triba-brown/60", i === active);
+        d.classList.toggle("bg-triba-brown/20", i !== active);
       });
-      var data = await res.json();
-      if (data.url) { window.location.href = data.url; return; }
-      if (data.note) { alert(data.note); return; }
-      throw new Error(data.error || "Error");
-    } catch (e) {
-      alert("Error al abrir el portal de gestión");
-    }
-  });
+    };
+    collageScroll.addEventListener("scroll", updateDots);
+    updateDots();
+  }
 
   // --- Feedback form ---
   const fbForm = document.getElementById("feedback-form");
@@ -294,10 +288,10 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
   const updateCounter = () => {
     if (!fbTextarea || !fbCounter) return;
     const len = fbTextarea.value.length;
-    fbCounter.textContent = `${len} / 2000`;
+    fbCounter.textContent = len + " / 2000";
     fbCounter.className = len > 2000
-      ? "font-sans text-xs text-triba-red text-right block mb-2"
-      : "font-sans text-xs text-triba-brown/60 text-right block mb-2";
+      ? "font-sans text-xs text-triba-red"
+      : "font-sans text-xs text-triba-brown/50";
     if (fbBtn) fbBtn.disabled = len === 0 || len > 2000;
   };
 
@@ -310,12 +304,12 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
     fbForm.addEventListener("submit", async (e) => {
       e.preventDefault();
       fbMsg.classList.add("hidden");
-      fbMsg.className = "font-sans text-sm text-center hidden mb-4";
+      fbMsg.className = "font-sans text-sm text-center mt-3 hidden";
 
       var { data: { session } } = await supabase.auth.getSession();
       if (!session) {
         fbMsg.textContent = "Debés iniciar sesión para enviar feedback";
-        fbMsg.className = "font-sans text-sm text-center text-triba-red mb-4";
+        fbMsg.className = "font-sans text-sm text-center text-triba-red mt-3";
         fbMsg.classList.remove("hidden");
         return;
       }
@@ -331,7 +325,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
+            Authorization: "Bearer " + session.access_token,
           },
           body: JSON.stringify({ mensaje }),
         });
@@ -340,19 +334,19 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 
         if (res.status === 429) {
           fbMsg.textContent = data.error || "Esperá un momento antes de enviar otro feedback";
-          fbMsg.className = "font-sans text-sm text-center text-triba-red mb-4";
+          fbMsg.className = "font-sans text-sm text-center text-triba-red mt-3";
         } else if (!res.ok) {
           fbMsg.textContent = data.error || "Error al enviar. Intentalo de nuevo.";
-          fbMsg.className = "font-sans text-sm text-center text-triba-red mb-4";
+          fbMsg.className = "font-sans text-sm text-center text-triba-red mt-3";
         } else {
           fbMsg.textContent = "¡Gracias por tu feedback!";
-          fbMsg.className = "font-sans text-sm text-center text-triba-green mb-4";
+          fbMsg.className = "font-sans text-sm text-center text-triba-green mt-3";
           if (fbTextarea) fbTextarea.value = "";
           updateCounter();
         }
       } catch (err) {
         fbMsg.textContent = "Error de conexión. Intentalo de nuevo.";
-        fbMsg.className = "font-sans text-sm text-center text-triba-red mb-4";
+        fbMsg.className = "font-sans text-sm text-center text-triba-red mt-3";
       } finally {
         if (fbBtn) {
           fbBtn.disabled = false;

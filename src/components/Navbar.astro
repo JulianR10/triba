@@ -15,7 +15,9 @@ const publicLinks = [
 ];
 
 const authLinks = [
+  { href: "/mi-cuenta", label: "Mi perfil" },
   { href: "/revista", label: "Revista" },
+  { href: "/triba-creators", label: "Triba Creators" },
 ];
 ---
 
@@ -387,6 +389,8 @@ const authLinks = [
       : "";
 
     container.innerHTML =
+      '<a href="/mi-cuenta" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Ir a mi perfil →</a>' +
+      '<hr class="border-triba-black/10 my-2">' +
       '<div class="mb-3">' +
         '<p class="font-heading text-xs uppercase tracking-wider text-triba-green mb-1">Suscripción activa</p>' +
         '<p class="font-sans text-xs text-triba-brown">' +

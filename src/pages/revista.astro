@@ -3,22 +3,16 @@ import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
 import MagazineCarousel from "../components/MagazineCarousel.astro";
 import MagazineSlider from "../components/MagazineSlider.astro";
-import PageFlipViewer from "../components/PageFlipViewer.tsx";
+import PDFViewer from "../components/PDFViewer.tsx";
 import PatchTitle from "../components/PatchTitle.astro";
 
 const title = "Revista";
 const description = "Explorá las ediciones de Triba, nuestra revista digital mensual. Leé online, descargá PDF y descubrí artículos de cultura, arte e identidad.";
 const canonical = "/revista";
 
-import { getEditions, getFeaturedEdition, getEditionPages } from "../lib/editions";
+import { getEditions, getFeaturedEdition } from "../lib/editions";
 const allEditions = await getEditions();
 const featuredEdition = await getFeaturedEdition();
-const featuredPages = featuredEdition ? await getEditionPages(featuredEdition.id) : [];
-
-const previewPages = featuredPages.map((p) => ({
-  src: p.image_url,
-  alt: p.alt_text,
-}));
 
 const editions = allEditions.map((e) => ({
   id: e.id,
@@ -64,11 +58,11 @@ const featured = editions.find((e) => e.featured) || editions[0];
             {featured.description}
           </p>
           <div class="flex flex-wrap justify-center md:justify-start gap-4">
-            {featuredPages.length > 0 && (
+            {featured.pdf !== "#" && (
               <Button variant="primary" href="#visor-revista">Leer aquí</Button>
             )}
-            <Button variant="default" id="featured-cta" href={featuredEdition?.pdf_url || "/suscribirme"}>
-              {featuredEdition?.pdf_url ? "LA QUIERO!" : "Suscribirme"}
+            <Button variant="default" id="featured-cta" href={featured.pdf !== "#" ? featured.pdf : "/suscribirme"}>
+              {featured.pdf !== "#" ? "LA QUIERO!" : "Suscribirme"}
             </Button>
           </div>
         </div>
@@ -102,10 +96,10 @@ const featured = editions.find((e) => e.featured) || editions[0];
       </div>
 
       <!-- Bloque 3: Vista previa de artículo -->
-      {previewPages.length > 0 && (
+      {featured.pdf !== "#" && (
       <div id="visor-revista" class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 reveal-stagger" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" data-reveal>
         <div class="flex-1 order-2 md:order-1">
-          <PageFlipViewer pages={previewPages} client:visible />
+          <PDFViewer pdfUrl={featured.pdf} client:visible />
         </div>
         <div class="flex-1 flex flex-col justify-center order-1 md:order-2 text-center md:text-left">
           <PatchTitle tag="h2" class="mb-4 text-2xl md:text-3xl" lines={[

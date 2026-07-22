@@ -1,54 +1,23 @@
 import { supabaseAdmin } from "../supabase-admin";
-import type { Edition, EditionPage } from "../editions";
+import type { Edition } from "../editions";
 
-export interface AdminEditionRow extends Edition {
-  pages_count: number;
-  pdf_size_hint?: string | null;
-}
-
-export async function listEditionsForAdmin(): Promise<AdminEditionRow[]> {
+export async function listEditionsForAdmin(): Promise<Edition[]> {
   const { data: editions, error } = await supabaseAdmin
     .from("editions")
     .select("*")
     .order("edition_number", { ascending: false });
   if (error || !editions) return [];
-
-  const { data: pages } = await supabaseAdmin
-    .from("edition_pages")
-    .select("edition_id");
-
-  const counts = new Map<number, number>();
-  for (const p of pages || []) {
-    counts.set(p.edition_id, (counts.get(p.edition_id) || 0) + 1);
-  }
-
-  return (editions as Edition[]).map((e) => ({
-    ...e,
-    pages_count: counts.get(e.id) || 0,
-  }));
+  return editions as Edition[];
 }
 
-export async function getEditionForAdmin(id: number): Promise<{
-  edition: Edition;
-  pages: EditionPage[];
-} | null> {
+export async function getEditionForAdmin(id: number): Promise<Edition | null> {
   const { data: edition, error } = await supabaseAdmin
     .from("editions")
     .select("*")
     .eq("id", id)
     .single();
   if (error || !edition) return null;
-
-  const { data: pages } = await supabaseAdmin
-    .from("edition_pages")
-    .select("*")
-    .eq("edition_id", id)
-    .order("page_number", { ascending: true });
-
-  return {
-    edition: edition as Edition,
-    pages: (pages as EditionPage[]) || [],
-  };
+  return edition as Edition;
 }
 
 export interface EditionInput {

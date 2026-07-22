@@ -11,7 +11,7 @@ function getPublicUrl(path: string): string {
   return `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${path}`;
 }
 
-export type EditionFileKind = "cover" | "pdf" | "page";
+export type EditionFileKind = "cover" | "pdf";
 
 function fileExt(name: string): string {
   const i = name.lastIndexOf(".");
@@ -26,10 +26,6 @@ export const FILE_RULES: Record<EditionFileKind, { maxBytes: number; mime: RegEx
   pdf: {
     maxBytes: 80 * 1024 * 1024,
     mime: /^application\/pdf$/,
-  },
-  page: {
-    maxBytes: 5 * 1024 * 1024,
-    mime: /^image\/(jpeg|png|webp|avif)$/,
   },
 };
 
