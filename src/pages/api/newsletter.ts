@@ -40,7 +40,19 @@ export const POST: APIRoute = async ({ request }) => {
       return ok({ existing: true });
     }
     logger.error({ err: dbError, email }, "Newsletter subscribe error");
-    return error("Error al suscribir", 500);
+    return new Response(
+      JSON.stringify({
+        error: "Error al suscribir",
+        debug: { code: dbError.code, message: dbError.message, email },
+      }),
+      {
+        status: 500,
+        headers: {
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        },
+      },
+    );
   }
 
   try {
