@@ -82,27 +82,31 @@ triba/
 
 **Backend (funciona):**
 - `POST /api/newsletter` inserta en Supabase `newsletters` → responde `{ok:true}` o `{existing:true}`
-- Envía email de bienvenida por Resend (`sendWelcomeEmail` en `src/lib/email.ts`)
-- Sincroniza a Kit con tag `newsletter-gratuito` (`syncFreeSubscriber`) y `suscriptora-paga` (`syncPaidSubscriber` en webhooks)
+- Envía email de bienvenida por Resend (`sendWelcomeEmail` en `src/lib/email.ts`) — template básico, hay que mejorarlo visualmente
+- Sincroniza a Kit con tag `newsletter-gratuito` (`syncFreeSubscriber`) y `suscriptora-paga` (`syncPaidSubscriber` en webhooks) — corrigió response format a Kit API v4
 
-**Email de bienvenida no llega por:**
-1. Dominio `comunidadtriba.com` en Resend: DNS verificado, **"Enable Sending" pendiente** — esperar hasta 48h
-2. `RESEND_API_KEY` en Vercel: cambiada a key de Onboarding (`re_it5y...`) — válida
-3. `RESEND_FROM`: `Triba <noreply@comunidadtriba.com>`
+**Resend:**
+- Dominio `comunidadtriba.com` verificado (DKIM ✅, SPF ✅, MX ✅)
+- Envío habilitado — el welcome email llega pero va a Promociones (normal con dominio nuevo, mejora con engagement)
+- `RESEND_FROM`: `Triba <hola@comunidadtriba.com>`
 
-**Próximos pasos cuando "Enable Sending" esté ✅:**
-1. Probar envío desde terminal con curl + key de Onboarding
-2. Redeploy en Vercel
-3. Probar suscripción + email de bienvenida
-4. Si funciona, borrar `src/pages/api/diagnose-email.ts`
-5. Verificar email de bienvenida en suscripción paga (Stripe/MP webhooks)
+**Kit:**
+- Cuenta original de Kit restaurada — `src/lib/kit.ts`, webhooks, newsletter e import script activos
+- API v4: response format corregido (`{ subscriber }`, `{ tag }`, `{ tags }`)
+- Plan free: no incluye Rules/Visual Automations → no puede enviar emails automáticos al aplicar tag
+- Newsletter mensual se envía como Broadcast manual desde Kit a la tag correspondiente
 
-**Newsletter mensual (gratuito):**
-- Dueñas lo crearán en herramienta externa (Kit, MailerLite o Brevo — a decidir)
-- Triba solo sincroniza suscriptores via API (similar a `syncFreeSubscriber`)
-- La revista para suscriptoras pagas la hacen en Canva (no involucra a Triba)
+**Migración WooCommerce:**
+- 92 suscriptores pagos viejos importados desde `suscriptoresViejos.csv` a `subscriber_migrations` + Kit tag "suscriptora-paga"
+- CSV no está en el repo (`.gitignore`)
 
-**Kit restaurado:** Jul 2026. Se volvió a la cuenta original de Kit. `src/lib/kit.ts`, webhooks, newsletter e import script tienen la sincronización activa nuevamente.
+**UI NewsletterForm:**
+- Mensaje de éxito/error aparece al lado del input, centrado verticalmente, color `triba-red`
+
+## Próximo — template welcome email
+
+- Mejorar el HTML template de `sendWelcomeEmail` en `src/lib/email.ts` para que tenga el branding visual de Triba (logo, colores, tipografía)
+- Cuando Kit se upgrade a Creator, se puede reemplazar Resend por automations de Kit
 
 ## Migración WooCommerce — Jul 2026
 
