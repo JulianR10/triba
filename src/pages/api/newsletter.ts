@@ -3,6 +3,8 @@ import { supabaseAdmin } from "../../lib/supabase-admin";
 import { ok, error } from "../../lib/response";
 import { logger } from "../../lib/logger";
 import { checkRateLimit, rateLimitKey } from "../../lib/rate-limit";
+import { syncFreeSubscriber } from "../../lib/kit";
+import { sendWelcomeEmail } from "../../lib/email";
 
 export const POST: APIRoute = async ({ request }) => {
   const ip =
@@ -40,6 +42,14 @@ export const POST: APIRoute = async ({ request }) => {
     logger.error({ err: dbError, email }, "Newsletter subscribe error");
     return error("Error al suscribir", 500);
   }
+
+  syncFreeSubscriber(email).catch((err) =>
+    logger.error({ err, email }, "Kit sync error"),
+  );
+
+  sendWelcomeEmail(email, true).catch((err) =>
+    logger.error({ err, email }, "Welcome email error"),
+  );
 
   return ok();
 };

@@ -3,6 +3,8 @@ import { stripe, STRIPE_WEBHOOK_SECRET } from "../../../lib/stripe";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { ok, error } from "../../../lib/response";
 import { logger } from "../../../lib/logger";
+import { syncPaidSubscriber } from "../../../lib/kit";
+import { sendWelcomeEmail } from "../../../lib/email";
 
 const VERIFY_SIGNATURES = true;
 
@@ -50,6 +52,16 @@ export const POST: APIRoute = async ({ request }) => {
           subscription_id: subs?.id || null,
           updated_at: new Date().toISOString(),
         }).eq("id", userId);
+
+          const email = session.customer_email || session.customer_details?.email;
+          if (email) {
+            syncPaidSubscriber(email).catch((err) =>
+              logger.error({ err, email }, "Kit sync error (stripe)"),
+            );
+            sendWelcomeEmail(email, false).catch((err) =>
+              logger.error({ err, email }, "Welcome email error (stripe)"),
+            );
+          }
 
         break;
       }
