@@ -6,6 +6,7 @@ import PatchTitle from "../components/PatchTitle.astro";
 
 import { createSupabaseServerClient } from "../lib/supabase-server";
 import { getEditions, getFeaturedEdition } from "../lib/editions";
+import { getSignedPdfUrl } from "../lib/storage";
 import type { Profile, Subscription } from "../lib/types";
 
 const supabase = createSupabaseServerClient(Astro.request);
@@ -35,7 +36,7 @@ const editions = allEditions.map((e) => ({
   title: e.title,
   description: e.description,
   cover: e.cover_url,
-  pdf: e.pdf_url || "#",
+  pdf: e.pdf_url ? `/api/pdf/${e.id}` : "#",
   featured: e.featured,
   badge: e.badge,
   slug: `edicion-${e.edition_number}`,
@@ -43,6 +44,10 @@ const editions = allEditions.map((e) => ({
 }));
 
 const featured = editions.find((e) => e.featured) || editions[0];
+const featuredEditionRaw = featuredEdition ?? allEditions[0];
+const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
+  ? await getSignedPdfUrl(featuredEditionRaw.pdf_url).catch(() => null) ?? featured.pdf
+  : undefined;
 
 const checkoutStatus = Astro.url.searchParams.get("checkout");
 
@@ -87,7 +92,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
                 <Button variant="primary" size="md" href="#visor-revista">Seguir leyendo</Button>
               )}
               {featured.pdf !== "#" && (
-                <Button variant="ghost" size="md" href={featured.pdf}>Descargar PDF</Button>
+                <Button variant="ghost" size="md" href={`${featured.pdf}?download=1`}>Descargar PDF</Button>
               )}
             </div>
           </div>
@@ -171,7 +176,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
             <PatchTitle content={`${featured.edition} ${featured.title}`} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
             <div class="-mx-5 md:mx-0">
-              <PDFViewer pdfUrl={featured.pdf} client:visible />
+              <PDFViewer pdfUrl={featuredPdfSignedUrl || ''} client:visible />
             </div>
 
             <p class="font-heading text-xs uppercase tracking-[0.2em] text-triba-brown/40 text-center mt-6">Deslizá o usá los botones para pasar las páginas</p>

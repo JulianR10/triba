@@ -16,9 +16,7 @@ const shortDesc = (text) => text.length > 120 ? text.slice(0, 120).trimEnd() + '
 const magazines = editions.map((e, i) => ({
   number: String(e.edition_number),
   title: e.title,
-  description: e.title === "El show debe continuar"
-    ? "Esta edición viene a recordarnos un poco quienes fuimos y quienes somos hoy, transitando por 15 articulos diferentes."
-    : shortDesc(e.description),
+  description: shortDesc(e.description),
   image: e.cover_url,
   coverId: `cover-${e.id}`,
 }));

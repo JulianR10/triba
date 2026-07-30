@@ -1,53 +1,15 @@
 <footer class="relative z-20 bg-triba-white border-t-4 border-triba-black pt-6 md:pt-8 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 pb-[calc(1.5rem+env(safe-area-inset-bottom))] md:pb-[calc(2rem+env(safe-area-inset-bottom))]">
-  <div class="max-w-6xl mx-auto">
-
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-12">
-      <!-- Col 1: Logo + tagline -->
-      <div class="text-center md:text-left">
-        <a href="/" class="inline-block mb-3">
-          <img src="/logo-triba.svg" alt="Triba" class="h-[36px]" />
-        </a>
-        <p class="font-sans text-sm text-triba-brown/70 leading-relaxed">
-          Revista digital mensual escrita por y para mujeres. Cultura, arte, identidad y todo lo que nos interesa.
-        </p>
-      </div>
-
-      <!-- Col 2: Contacto -->
-      <div class="text-center md:text-left">
-        <h3 class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-4">Contacto</h3>
-        <ul class="space-y-2 font-sans text-sm">
-          <li>
-            <a href="mailto:comunidadtriba@gmail.com" class="text-triba-brown/70 hover:text-triba-red transition-colors">comunidadtriba@gmail.com</a>
-          </li>
-          <li>
-            <a href="https://instagram.com/triba" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-triba-brown/70 hover:text-triba-red transition-colors">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="2" y="2" width="20" height="20" rx="5" ry="5" />
-                <path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z" />
-                <line x1="17.5" y1="6.5" x2="17.51" y2="6.5" />
-              </svg>
-              Instagram
-            </a>
-          </li>
-        </ul>
-      </div>
-
-      <!-- Col 3: Legal -->
-      <div class="text-center md:text-left">
-        <h3 class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-4">Legal</h3>
-        <ul class="space-y-2 font-sans text-sm">
-          <li><a href="/privacidad" class="text-triba-brown/70 hover:text-triba-red transition-colors">Politica de privacidad</a></li>
-          <li><a href="/terminos" class="text-triba-brown/70 hover:text-triba-red transition-colors">Terminos y condiciones</a></li>
-          <li class="text-triba-brown/50 text-xs pt-1">&copy; {new Date().getFullYear()} Triba. Todos los derechos reservados.</li>
-        </ul>
-      </div>
+  <div class="max-w-6xl mx-auto flex flex-wrap items-center justify-between gap-x-6 gap-y-2 font-sans text-sm">
+    <div class="flex items-center gap-x-5">
+      <a href="/privacidad" class="text-triba-brown/70 hover:text-triba-red transition-colors">Privacidad</a>
+      <a href="/terminos" class="text-triba-brown/70 hover:text-triba-red transition-colors">Terminos y condiciones</a>
     </div>
-
-    <!-- Hecho por -->
-    <div class="flex flex-col items-center justify-center pt-6 gap-[5px]">
+    <a href="/" class="inline-flex">
+      <img src="/logo-triba.svg" alt="Triba" class="h-[28px]" />
+    </a>
+    <div class="flex items-center gap-[5px]">
       <h3 class="font-heading text-xs uppercase tracking-wider text-triba-brown">Hecho por</h3>
-      <img src="/firma.png" alt="Firma" class="h-[26px]" />
+      <img src="/firma.png" alt="Firma" class="h-[22px]" />
     </div>
-
   </div>
 </footer>

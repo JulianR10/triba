@@ -3,6 +3,7 @@ import Layout from "../../layouts/Layout.astro";
 import Button from "../../components/Button.astro";
 import PDFViewer from "../../components/PDFViewer.tsx";
 import { getEditionBySlug } from "../../lib/editions";
+import { getSignedPdfUrl } from "../../lib/storage";
 import PatchTitle from "../../components/PatchTitle.astro";
 
 const { slug } = Astro.params;
@@ -16,13 +17,18 @@ const title = `${edition.title} — Revista`;
 const description = edition.description.split("\n")[0];
 const canonical = `/revista/${slug}`;
 
+const rawDate = edition.created_at;
+const isoDate = rawDate && !isNaN(Date.parse(rawDate))
+  ? new Date(rawDate).toISOString()
+  : undefined;
+
 const structuredData = {
   "@context": "https://schema.org",
   "@type": "Article",
   "headline": edition.title,
   "description": description,
   "image": edition.cover_url,
-  "datePublished": edition.created_at,
+  ...(isoDate ? { "datePublished": isoDate } : {}),
   "author": {
     "@type": "Organization",
     "name": "Triba",
@@ -48,10 +54,10 @@ const structuredData = {
           <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8 whitespace-pre-line">{edition.description}</p>
           <div class="flex flex-wrap gap-4">
             {edition.pdf_url && (
-              <Button variant="primary" size="md" href="#visor-revista">Leer aquí</Button>
+                <Button variant="primary" size="md" href="#visor-revista">Leer aquí</Button>
             )}
             {edition.pdf_url && (
-              <Button variant="default" size="md" href={edition.pdf_url}>Descargar PDF</Button>
+              <Button variant="default" size="md" href={`/api/pdf/${edition.id}?download=1`}>Descargar PDF</Button>
             )}
           </div>
         </div>
@@ -65,7 +71,7 @@ const structuredData = {
       {edition.pdf_url && (
         <div class="mb-16 md:mb-20 reveal" id="visor-revista" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" data-reveal>
           <PatchTitle content="Previsualización" tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
-          <PDFViewer pdfUrl={edition.pdf_url} client:visible />
+          <PDFViewer pdfUrl={edition.pdf_url ? (await getSignedPdfUrl(edition.pdf_url).catch(() => edition.pdf_url)) ?? edition.pdf_url : ''} client:visible />
         </div>
       )}
 
