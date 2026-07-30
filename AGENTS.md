@@ -77,3 +77,31 @@ triba/
 ├── astro.config.mjs
 └── tailwind.config.mjs
 ```
+
+## Newsletter — estado actual Jul 2026
+
+**Backend (funciona):**
+- `POST /api/newsletter` inserta en Supabase `newsletters` → responde `{ok:true}` o `{existing:true}`
+- Envía email de bienvenida por Resend (`sendWelcomeEmail` en `src/lib/email.ts`)
+- Sincroniza a Kit con tag `newsletter-gratuito` (`syncFreeSubscriber`, falla silenciosamente si no hay plan)
+
+**Email de bienvenida no llega por:**
+1. Dominio `comunidadtriba.com` en Resend: DNS verificado, **"Enable Sending" pendiente** — esperar hasta 48h
+2. `RESEND_API_KEY` en Vercel: cambiada a key de Onboarding (`re_it5y...`) — válida
+3. `RESEND_FROM`: `Triba <noreply@comunidadtriba.com>`
+
+**Próximos pasos cuando "Enable Sending" esté ✅:**
+1. Probar envío desde terminal con curl + key de Onboarding
+2. Redeploy en Vercel
+3. Probar suscripción + email de bienvenida
+4. Si funciona, borrar `src/pages/api/diagnose-email.ts`
+5. Verificar email de bienvenida en suscripción paga (Stripe/MP webhooks)
+
+**Newsletter mensual (gratuito):**
+- Dueñas lo crearán en herramienta externa (Kit, MailerLite o Brevo — a decidir)
+- Triba solo sincroniza suscriptores via API (similar a `syncFreeSubscriber`)
+- La revista para suscriptoras pagas la hacen en Canva (no involucra a Triba)
+
+**Pendiente arquitectura:**
+- Decidir herramienta de email marketing para reemplazar Kit (trial expirado)
+- Conectar nueva herramienta con flujo de suscripción de Triba
