@@ -2,16 +2,18 @@
 import Button from "./Button.astro";
 ---
 
-<form class="flex flex-col sm:flex-row gap-3" id="newsletter-form">
-  <input
-    type="email"
-    name="email"
-    placeholder="tu email"
-    required
-    class="flex-1 px-4 py-3 border-2 border-triba-black bg-white text-triba-brown font-sans text-sm placeholder:text-triba-brown/50 focus:outline-none focus:ring-2 focus:ring-triba-red/30 rounded-md"
-  />
+<form class="flex flex-col sm:flex-row gap-3 items-center" id="newsletter-form">
+  <div class="flex-1 w-full flex items-center gap-3">
+    <input
+      type="email"
+      name="email"
+      placeholder="tu email"
+      required
+      class="flex-1 px-4 py-3 border-2 border-triba-black bg-white text-triba-brown font-sans text-sm placeholder:text-triba-brown/50 focus:outline-none focus:ring-2 focus:ring-triba-red/30 rounded-md"
+    />
+    <div id="newsletter-msg" class="hidden font-sans text-sm text-triba-red whitespace-nowrap"></div>
+  </div>
   <Button variant="primary" class="shrink-0" type="submit">Suscribirme</Button>
-  <div id="newsletter-msg" class="font-sans text-sm mt-2"></div>
 </form>
 
 <script>

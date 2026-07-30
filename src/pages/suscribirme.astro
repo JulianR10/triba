@@ -94,9 +94,11 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
             <p class="font-sans text-xs text-triba-brown/70 mt-4 leading-relaxed text-balance">Te llega a tu correo todos los meses, como un blog de noticias</p>
             <form class="mt-4 space-y-4" id="newsletter-form-card">
               <label for="newsletter-email" class="sr-only">Correo electrónico</label>
-              <input id="newsletter-email" type="email" name="email" required placeholder="tu@email.com" class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors text-center" />
+              <div class="flex items-center gap-3">
+                <input id="newsletter-email" type="email" name="email" required placeholder="tu@email.com" class="flex-1 px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+                <p id="newsletter-card-msg" class="hidden font-sans text-xs text-triba-red whitespace-nowrap"></p>
+              </div>
               <Button variant="ghost" size="md" type="submit">Quiero el newsletter</Button>
-              <p id="newsletter-card-msg" class="font-sans text-xs text-center"></p>
             </form>
           </div>
 
