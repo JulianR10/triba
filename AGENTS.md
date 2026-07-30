@@ -106,3 +106,18 @@ triba/
 - Conectar nueva herramienta con flujo de suscripción de Triba
 
 **Kit eliminado:** Jul 2026. Se borró `src/lib/kit.ts` y todas sus referencias en webhooks, newsletter e import script. La herramienta de reemplazo la definen las dueñas.
+
+## Migración WooCommerce — Jul 2026
+
+- **Tabla `subscriber_migrations`:** emails de suscriptores pagos viejos
+- **Trigger `handle_new_user()`:** si el email está en `subscriber_migrations`, asigna `role=subscriber` + suscripción `migrated` (90 días de gracia)
+- **`/admin/suscriptoras`:** formulario para migrar email individual (llama `/api/admin/subscribers/migrate`)
+- **`scripts/import-wp-subscribers.mjs`:** importa CSV (columna `email`) → `subscriber_migrations`
+- **PDF access:** permite `status = 'migrated'` además de `'active'` en `[editionId].ts`
+- **Admin subscribers filter:** incluye `'migrated'` en `src/lib/admin/subscribers.ts`
+
+## Notificar nueva edición — Jul 2026
+
+- **Endpoint** `POST /api/admin/editions/[id]/notify`: envía email a todas las suscriptoras con `role = subscriber`
+- **Botón "Notificar suscriptoras"** en `/admin/ediciones/[id].astro` con confirmación y resultado
+- **Email** usa `sendNewEditionEmail(to, edition)` en `src/lib/email.ts` (mismo template que bienvenida, con portada, descripción y link a la revista)
