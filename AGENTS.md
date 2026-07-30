@@ -83,7 +83,6 @@ triba/
 **Backend (funciona):**
 - `POST /api/newsletter` inserta en Supabase `newsletters` → responde `{ok:true}` o `{existing:true}`
 - Envía email de bienvenida por Resend (`sendWelcomeEmail` en `src/lib/email.ts`)
-- Sincroniza a Kit con tag `newsletter-gratuito` (`syncFreeSubscriber`, falla silenciosamente si no hay plan)
 
 **Email de bienvenida no llega por:**
 1. Dominio `comunidadtriba.com` en Resend: DNS verificado, **"Enable Sending" pendiente** — esperar hasta 48h
@@ -105,3 +104,5 @@ triba/
 **Pendiente arquitectura:**
 - Decidir herramienta de email marketing para reemplazar Kit (trial expirado)
 - Conectar nueva herramienta con flujo de suscripción de Triba
+
+**Kit eliminado:** Jul 2026. Se borró `src/lib/kit.ts` y todas sus referencias en webhooks, newsletter e import script. La herramienta de reemplazo la definen las dueñas.
