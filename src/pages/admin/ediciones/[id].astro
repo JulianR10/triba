@@ -26,4 +26,65 @@ if (!edition) {
   <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6">
     <EditionForm mode="edit" edition={edition} />
   </div>
+
+  <div class="mt-6 p-6 bg-triba-cream rounded-xl border-2 border-triba-black">
+    <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">Notificar suscriptoras</p>
+    <p class="font-sans text-sm text-triba-brown/70 mb-4">Envía un email a todas las suscriptoras activas avisando que esta edición ya está disponible.</p>
+    <button id="notify-subscribers-btn" data-edition-id={edition.id} type="button" class="rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-6 py-3 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
+      Notificar suscriptoras
+    </button>
+    <p id="notify-msg" class="font-sans text-sm hidden mt-3"></p>
+  </div>
 </AdminLayout>
+
+<script>
+  function setupNotifyButton() {
+    const btn = document.getElementById("notify-subscribers-btn") as HTMLButtonElement | null;
+    const msg = document.getElementById("notify-msg");
+    if (!btn || !msg) return;
+
+    if ((btn as any)._notifyBound) return;
+    (btn as any)._notifyBound = true;
+
+    btn.addEventListener("click", async () => {
+      const confirmed = await (window as any).adminConfirm?.(
+        "Notificar suscriptoras",
+        "¿Enviar email a todas las suscriptoras activas sobre esta edición?"
+      );
+      if (!confirmed) return;
+
+      const editionId = btn.dataset.editionId;
+      btn.disabled = true;
+      btn.textContent = "Enviando...";
+
+      try {
+        const res = await fetch(`/api/admin/editions/${editionId}/notify`, { method: "POST" });
+        const data = await res.json();
+
+        if (!res.ok) {
+          msg.textContent = data.error || "Error al notificar";
+          msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
+          msg.classList.remove("hidden");
+          (window as any).adminToast?.(data.error || "Error", "error");
+          return;
+        }
+
+        msg.textContent = `Notificadas: ${data.notified} de ${data.total} suscriptoras${data.failed ? ` (${data.failed} fallaron)` : ""}`;
+        msg.className = "font-sans text-sm text-triba-green bg-triba-green/10 border border-triba-green rounded p-3";
+        msg.classList.remove("hidden");
+        (window as any).adminToast?.(`${data.notified} notificadas`, "success");
+      } catch (err) {
+        msg.textContent = "Error de conexión";
+        msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
+        msg.classList.remove("hidden");
+        (window as any).adminToast?.("Error de conexión", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Notificar suscriptoras";
+      }
+    });
+  }
+
+  setupNotifyButton();
+  document.addEventListener("astro:page-load", setupNotifyButton);
+</script>

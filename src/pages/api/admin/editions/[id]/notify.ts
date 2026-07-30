@@ -1,0 +1,57 @@
+import type { APIRoute } from "astro";
+import { requireAdmin } from "../../../../../lib/auth";
+import { ok, error } from "../../../../../lib/response";
+import { supabaseAdmin } from "../../../../../lib/supabase-admin";
+import { sendNewEditionEmail } from "../../../../../lib/email";
+import { logger } from "../../../../../lib/logger";
+
+export const prerender = false;
+
+export const POST: APIRoute = async ({ params, locals }) => {
+  const admin = requireAdmin(locals);
+  if (admin instanceof Response) return admin;
+
+  const editionId = Number(params.id);
+  if (!Number.isInteger(editionId)) {
+    return error("ID inválido", 400);
+  }
+
+  const { data: edition, error: fetchError } = await supabaseAdmin
+    .from("editions")
+    .select("id, edition_number, title, description, cover_url")
+    .eq("id", editionId)
+    .single();
+
+  if (fetchError || !edition) {
+    return error("Edición no encontrada", 404);
+  }
+
+  const { data: subscribers, error: subsError } = await supabaseAdmin
+    .from("profiles")
+    .select("email")
+    .eq("role", "subscriber");
+
+  if (subsError) {
+    logger.error({ err: subsError }, "Error fetching subscribers for notification");
+    return error("Error obteniendo suscriptoras", 500);
+  }
+
+  if (!subscribers || subscribers.length === 0) {
+    return ok({ notified: 0, total: 0 });
+  }
+
+  let notified = 0;
+  let failed = 0;
+
+  for (const sub of subscribers) {
+    try {
+      await sendNewEditionEmail(sub.email, edition);
+      notified++;
+    } catch (err) {
+      failed++;
+      logger.error({ err, email: sub.email, editionId }, "Failed to notify subscriber");
+    }
+  }
+
+  return ok({ notified, total: subscribers.length, failed });
+};

@@ -18,6 +18,20 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     </div>
   </div>
 
+  <details class="mb-6 bg-triba-cream rounded-xl border-2 border-triba-black p-4">
+    <summary class="font-heading text-xs uppercase tracking-wider text-triba-brown cursor-pointer select-none">Migrar suscriptora desde WooCommerce</summary>
+    <div class="mt-4 flex flex-col sm:flex-row gap-3">
+      <input
+        id="migrate-email"
+        type="email"
+        placeholder="email de la suscriptora"
+        class="flex-1 px-4 py-2.5 rounded-button border-2 border-triba-black/20 bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors"
+      />
+      <button id="migrate-btn" type="button" class="rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shrink-0">Migrar</button>
+    </div>
+    <p id="migrate-msg" class="font-sans text-sm hidden mt-3"></p>
+  </details>
+
   <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
     <div class="flex gap-2 flex-wrap">
       {[
@@ -190,7 +204,66 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     });
   }
 
+  function setupMigrate() {
+    const btn = document.getElementById("migrate-btn") as HTMLButtonElement | null;
+    const input = document.getElementById("migrate-email") as HTMLInputElement | null;
+    const msg = document.getElementById("migrate-msg");
+    if (!btn || !input || !msg) return;
+
+    btn.addEventListener("click", async () => {
+      const email = input.value.trim();
+      if (!email || !email.includes("@")) {
+        msg.textContent = "Ingresá un email válido";
+        msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
+        msg.classList.remove("hidden");
+        return;
+      }
+
+      const confirmed = await (window as any).adminConfirm?.(
+        "Migrar suscriptora",
+        `¿Migrar ${email}? Se registrará en subscriber_migrations y, si ya tiene cuenta, se le asignará role subscriber con 90 días de acceso.`
+      );
+      if (!confirmed) return;
+
+      btn.disabled = true;
+      btn.textContent = "Migrando...";
+
+      try {
+        const res = await fetch("/api/admin/subscribers/migrate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          msg.textContent = data.error || "Error";
+          msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
+          msg.classList.remove("hidden");
+          (window as any).adminToast?.(data.error || "Error", "error");
+          return;
+        }
+
+        msg.textContent = data.note;
+        msg.className = "font-sans text-sm text-triba-green bg-triba-green/10 border border-triba-green rounded p-3";
+        msg.classList.remove("hidden");
+        (window as any).adminToast?.(data.alreadyMigrated ? "Ya estaba migrada" : "Migrada correctamente", "success");
+        input.value = "";
+        loadSubscribers();
+      } catch {
+        msg.textContent = "Error de conexión";
+        msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
+        msg.classList.remove("hidden");
+        (window as any).adminToast?.("Error de conexión", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Migrar";
+      }
+    });
+  }
+
   function initSubscribers() {
+    setupMigrate();
     searchInput.addEventListener("input", () => {
       if (searchTimer) clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {

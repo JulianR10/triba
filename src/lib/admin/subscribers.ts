@@ -123,7 +123,7 @@ export async function searchSubscribersForAdmin(
   }));
 
   if (status === "active") {
-    allRows = allRows.filter((r) => r.subscription?.status === "active");
+    allRows = allRows.filter((r) => r.subscription?.status === "active" || r.subscription?.status === "migrated");
   } else if (status === "canceled") {
     allRows = allRows.filter((r) => r.subscription?.status === "canceled");
   } else if (status === "none") {
