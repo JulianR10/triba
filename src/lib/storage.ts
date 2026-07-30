@@ -1,6 +1,13 @@
 import { supabaseAdmin } from "./supabase-admin";
 
 const BUCKET = "editions";
+const STORAGE_URL_PREFIX = `/storage/v1/object/public/${BUCKET}/`;
+
+export function extractStoragePath(publicUrl: string): string | null {
+  const idx = publicUrl.indexOf(STORAGE_URL_PREFIX);
+  if (idx < 0) return null;
+  return publicUrl.slice(idx + STORAGE_URL_PREFIX.length);
+}
 
 function getPublicUrl(path: string): string {
   const supabaseUrl =
@@ -58,6 +65,23 @@ export async function uploadEditionFile(
   if (error) throw new Error(`Error subiendo archivo: ${error.message}`);
 
   return { url: getPublicUrl(path), path };
+}
+
+export async function getSignedPdfUrl(
+  pdfUrl: string,
+  options?: { download?: boolean; ttl?: number }
+): Promise<string | null> {
+  const path = extractStoragePath(pdfUrl);
+  if (!path) return pdfUrl;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from(BUCKET)
+    .createSignedUrl(path, options?.ttl ?? 60 * 30, {
+      download: options?.download ?? false,
+    });
+
+  if (error || !data) return null;
+  return data.signedUrl;
 }
 
 export function isStorageConfigured(): boolean {
