@@ -8,7 +8,8 @@ function apiKey() {
 }
 
 function fromAddress() {
-  return import.meta.env.RESEND_FROM || "Triba <onboarding@resend.dev>";
+  const raw = import.meta.env.RESEND_FROM || "Triba <onboarding@resend.dev>";
+  return raw.replace(/^"(.*)"$/, "$1");
 }
 
 function welcomeHtml(showCta: boolean) {

@@ -43,13 +43,17 @@ export const POST: APIRoute = async ({ request }) => {
     return error("Error al suscribir", 500);
   }
 
-  syncFreeSubscriber(email).catch((err) =>
-    logger.error({ err, email }, "Kit sync error"),
-  );
+  try {
+    await syncFreeSubscriber(email);
+  } catch (err) {
+    logger.error({ err, email }, "Kit sync error");
+  }
 
-  sendWelcomeEmail(email, true).catch((err) =>
-    logger.error({ err, email }, "Welcome email error"),
-  );
+  try {
+    await sendWelcomeEmail(email, true);
+  } catch (err) {
+    logger.error({ err, email }, "Welcome email error");
+  }
 
   return ok();
 };
