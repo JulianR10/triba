@@ -83,6 +83,7 @@ triba/
 **Backend (funciona):**
 - `POST /api/newsletter` inserta en Supabase `newsletters` → responde `{ok:true}` o `{existing:true}`
 - Envía email de bienvenida por Resend (`sendWelcomeEmail` en `src/lib/email.ts`)
+- Sincroniza a Kit con tag `newsletter-gratuito` (`syncFreeSubscriber`) y `suscriptora-paga` (`syncPaidSubscriber` en webhooks)
 
 **Email de bienvenida no llega por:**
 1. Dominio `comunidadtriba.com` en Resend: DNS verificado, **"Enable Sending" pendiente** — esperar hasta 48h
@@ -101,11 +102,7 @@ triba/
 - Triba solo sincroniza suscriptores via API (similar a `syncFreeSubscriber`)
 - La revista para suscriptoras pagas la hacen en Canva (no involucra a Triba)
 
-**Pendiente arquitectura:**
-- Decidir herramienta de email marketing para reemplazar Kit (trial expirado)
-- Conectar nueva herramienta con flujo de suscripción de Triba
-
-**Kit eliminado:** Jul 2026. Se borró `src/lib/kit.ts` y todas sus referencias en webhooks, newsletter e import script. La herramienta de reemplazo la definen las dueñas.
+**Kit restaurado:** Jul 2026. Se volvió a la cuenta original de Kit. `src/lib/kit.ts`, webhooks, newsletter e import script tienen la sincronización activa nuevamente.
 
 ## Migración WooCommerce — Jul 2026
 

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../lib/supabase-admin";
 import { ok, error } from "../../lib/response";
 import { logger } from "../../lib/logger";
 import { checkRateLimit, rateLimitKey } from "../../lib/rate-limit";
+import { syncFreeSubscriber } from "../../lib/kit";
 import { sendWelcomeEmail } from "../../lib/email";
 
 export const POST: APIRoute = async ({ request }) => {
@@ -52,6 +53,12 @@ export const POST: APIRoute = async ({ request }) => {
         },
       },
     );
+  }
+
+  try {
+    await syncFreeSubscriber(email);
+  } catch (err) {
+    logger.error({ err, email }, "Kit sync error");
   }
 
   try {
