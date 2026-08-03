@@ -4,6 +4,7 @@ import { ok, error } from "../../lib/response";
 import { getPaymentProvider } from "../../lib/payment-provider";
 import { checkRateLimit, rateLimitKey } from "../../lib/rate-limit";
 import { logger } from "../../lib/logger";
+import { getSiteOrigin } from "../../lib/site-url";
 
 const validProviders = ["stripe", "mercadopago"] as const;
 const validCurrencies = ["EUR", "USD", "ARS"] as const;
@@ -43,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const paymentProvider = getPaymentProvider(provider);
-    const origin = new URL(request.url).origin;
+    const origin = getSiteOrigin(request);
     const result = await paymentProvider.createCheckout({
       userId: user.id,
       userEmail: user.email,

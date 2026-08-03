@@ -4,6 +4,7 @@ import { ok, error } from "../../lib/response";
 import { supabase } from "../../lib/supabase";
 import { getPaymentProvider } from "../../lib/payment-provider";
 import { logger } from "../../lib/logger";
+import { getSiteOrigin } from "../../lib/site-url";
 
 export const POST: APIRoute = async ({ request }) => {
   const auth = await requireUser(request);
@@ -23,7 +24,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const provider = getPaymentProvider(sub.provider);
-    const origin = new URL(request.url).origin;
+    const origin = getSiteOrigin(request);
     const result = await provider.getPortalUrl(sub.provider_subscription_id, origin);
     return ok(result);
   } catch (err: any) {

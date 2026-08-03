@@ -303,7 +303,9 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
       }
 
       if (error) {
-        signupError.textContent = error.message;
+        signupError.textContent = /already registered|already exists/i.test(error.message)
+          ? "Ya existe una cuenta con este email. Iniciá sesión para continuar."
+          : error.message;
         signupError.classList.remove("hidden");
         return;
       }

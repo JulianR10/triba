@@ -37,6 +37,12 @@ export const POST: APIRoute = async ({ request }) => {
         const stripeSub = await stripe.subscriptions.retrieve(session.subscription);
         const userId = session.client_reference_id || session.metadata?.user_id;
 
+        let email = session.customer_email || session.customer_details?.email;
+        if (!email && userId) {
+          const { data: user } = await supabaseAdmin.auth.admin.getUserById(userId);
+          email = user?.user?.email;
+        }
+
         const { data: subs } = await supabaseAdmin.from("subscriptions").upsert({
           user_id: userId,
           provider: "stripe",
@@ -47,13 +53,14 @@ export const POST: APIRoute = async ({ request }) => {
           current_period_end: new Date(stripeSub.current_period_end * 1000).toISOString(),
         }, { onConflict: "provider, provider_subscription_id" }).select("id").single();
 
-          await supabaseAdmin.from("profiles").update({
+          await supabaseAdmin.from("profiles").upsert({
+          id: userId,
+          ...(email ? { email } : {}),
           role: "subscriber",
           subscription_id: subs?.id || null,
           updated_at: new Date().toISOString(),
-        }).eq("id", userId);
+        }, { onConflict: "id" });
 
-          const email = session.customer_email || session.customer_details?.email;
           if (email) {
             syncPaidSubscriber(email).catch((err) =>
               logger.error({ err, email }, "Sender sync error (stripe)"),

@@ -8,3 +8,8 @@ dist/
 *.zip
 *.pdf
 suscriptoresViejos.csv
+.vercel
+.env
+.env.local
+.env.*
+!.env.example

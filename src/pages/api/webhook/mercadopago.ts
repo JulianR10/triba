@@ -65,11 +65,13 @@ async function handlePreApprovalEvent(
   }, { onConflict: "provider, provider_subscription_id" }).select("id").single();
 
   if (subs?.id) {
-    await supabase.from("profiles").update({
+    await supabase.from("profiles").upsert({
+      id: userId,
+      email: preapproval.payer_email || null,
       role: "subscriber",
       subscription_id: subs.id,
       updated_at: now,
-    }).eq("id", userId);
+    }, { onConflict: "id" });
   }
 
   const email = preapproval.payer_email;
