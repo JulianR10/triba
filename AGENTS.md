@@ -109,6 +109,7 @@ triba/
 - Verificado: `POST /message/send` OK, alta newsletter a grupo OK, workflow `newsletter-gratuito` ACTIVE (dispara welcome con `emails_sent: 1` tras el alta)
 - En producción, `POST /api/newsletter` responde `{ok:true}` 200 en `comunidadtriba.com` y `triba.vercel.app` (Prueba 2 OK)
 - ⚠️ El endpoint `/api/diagnose-email` se **eliminó** (Ago 2026): crasheaba en producción con `FUNCTION_INVOCATION_FAILED` en la función ISR de Vercel (bug del adapter `vercel({ isr })` con rutas API GET públicas, aún sin query params). No se usaba en la app; la validación de Sender queda cubierta por el flujo newsletter.
+- **Fix ISR (Ago 2026):** `astro.config.mjs` → `isr.exclude: [/^\/api\//]`. Sin esto, **TODOS** los POST de `/api/*` se cacheaban 24h en `_isr` **por URL (ignorando el body)**: la función no se ejecutaba → el suscriptor nunca se insertaba ni se sincronizaba a Sender, aunque la UI mostraba "gracias por suscribirte". Diagnóstico: un POST inválido devolvía `{ok:true}` con `X-Vercel-Cache: HIT` en vez de 400. Verificado en vivo: POST inválido→400, nuevo→`{ok:true}` + fila en `newsletters`, duplicado→`{existing:true}`, sync a Sender OK. No tocar este exclude.
 
 **Migración WooCommerce:**
 - 92 suscriptores pagos viejos importados desde `suscriptoresViejos.csv` a `subscriber_migrations`
