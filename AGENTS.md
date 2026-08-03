@@ -114,7 +114,7 @@ triba/
 **Migración WooCommerce:**
 - 92 suscriptores pagos viejos importados desde `suscriptoresViejos.csv` a `subscriber_migrations`
 - **Ago 2026:** reimportados a la cuenta Sender definitiva con `scripts/import-wp-subscribers.mjs` → **88 de 92 en grupo `suscriptora-paga`**
-- ⚠️ Faltan **4** (`jimena.1310@outlook.es`, `valentinave.98@gmail.com`, `sylvanalopez45@gmail.com`, `mariaclaudiaherrera2009@hotmail.com`) por **429 rate limit del plan** (retry 2026-08-04T15:07Z). Reintentar con: `node --env-file=.env scripts/import-wp-subscribers.mjs ./suscriptoresViejos.csv` (idempotente, solo agrega faltantes)
+- ⚠️ Faltan **4** (`jimena.1310@outlook.es`, `valentinave.98@gmail.com`, `sylvanalopez45@gmail.com`, `mariaclaudiaherrera2009@hotmail.com`) por **429 rate limit del plan**. Reintentado 2026-08-03 (falló de nuevo, 429 a nivel cuenta) → retry **2026-08-04T17:02:44Z**. Comando: `node --env-file=.env scripts/import-wp-subscribers.mjs ./suscriptoresViejos.csv` (idempotente, solo agrega faltantes)
 - CSV no está en el repo (`.gitignore`)
 
 **UI NewsletterForm:**
@@ -122,7 +122,8 @@ triba/
 
 ## Próximo
 
-- Reintentar los 4 suscriptores faltantes de Sender (429 rate limit, ver Migración WooCommerce)
+- Reintentar los 4 suscriptores faltantes de Sender tras `2026-08-04T17:02:44Z` (429 rate limit, ver Migración WooCommerce)
+- Limpiar email de prueba `comunidadtriba+liveverify1785776465@gmail.com` de Sender (no se pudo borrar por el mismo rate limit)
 - Cuando se tenga volumen alto, evaluar plan pago de Sender para workflows/automations en vez de envíos manuales
 
 ## Deuda de tipos — `astro check` (271 errores, Ago 2026)
