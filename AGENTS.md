@@ -42,7 +42,7 @@ Revista digital mensual — newsletter gratuito + suscripción paga. Escrita por
 - **MP no tiene portal hosted:** `/api/portal` devuelve `{ note }`, se muestra con `alert()`.
 - **⚠️ Webhook MP (`/api/webhook/mercadopago`):** usar SIEMPRE el `WebhookSignatureValidator` del SDK `mercadopago` (manifest `id:...;request-id:...;ts:...;`). NUNCA implementar el manifest a mano: el formato anterior (comas + `user_id`) rechazaba 401 todos los webhooks (los pagos de MP jamás activaban la suscripción). No usar `toleranceSeconds` (MP manda `ts` en segundos y el SDK compara contra ms).
 - **CSP:** cadenas precomputadas al importar `middleware.ts`.
-- **⚠️ ISR de Vercel:** `astro.config.mjs` → `isr.exclude: [/^\/api\//]`. **No tocar.** Sin esto los POST de `/api/*` se cachean 24h por URL (ignoran el body): la función no se ejecuta y la UI miente con éxito.
+- **Sin ISR:** `astro.config.mjs` usa `adapter: vercel()` sin `isr`. Todo es SSR on-demand por request (el Navbar y el contenido dependen de la sesión; el ISR cacheaba por URL ignorando cookies y servía nav/estado ajeno 24h). No reintroducir ISR: también cacheaba los POST de `/api/*`.
 
 ## Auth
 
