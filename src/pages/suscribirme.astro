@@ -73,7 +73,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 
                   <div class="space-y-3 mb-4">
                     {p.moneda !== "ARS" && <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth />}
-                    <CheckoutButton provider="mercadopago" currency={p.moneda} variant="default" fullWidth />
+                    {p.moneda === "ARS" && <CheckoutButton provider="mercadopago" currency={p.moneda} variant="default" fullWidth />}
                   </div>
 
                   <p class="font-sans text-[11px] text-triba-brown/50">Suscripción mensual. Cancelá cuando quieras.</p>
@@ -134,6 +134,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 </Layout>
 
 <script>
+  import { supabase } from "../lib/supabase";
   import { setupNewsletterForm } from "../scripts/newsletter-handler";
   import { getCheckoutIntent, clearCheckoutIntent } from "../lib/checkout-intent";
 
@@ -155,9 +156,15 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
     });
   }
 
-  function flushPendingCheckout() {
+  async function flushPendingCheckout() {
     var pending = getCheckoutIntent();
     if (!pending) return;
+
+    if (supabase) {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+    }
+
     clearCheckoutIntent();
 
     var currency = pending.currency;

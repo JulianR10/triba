@@ -9,7 +9,7 @@ interface Props {
 }
 
 const { provider, currency, variant = "primary", size = "md", label, fullWidth } = Astro.props;
-const displayLabel = label || `${provider === "stripe" ? "Tarjeta (Stripe)" : provider === "mercadopago" ? "Mercado Pago" : "Pagar"}`;
+const displayLabel = label || `${provider === "stripe" ? "Tarjeta de débito/crédito" : provider === "mercadopago" ? "Mercado Pago" : "Pagar"}`;
 const btnClass = `
   inline-flex items-center justify-center font-heading uppercase tracking-wider transition-all duration-200 hover:scale-[1.02]
   ${fullWidth ? "w-full" : ""}
