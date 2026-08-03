@@ -106,7 +106,9 @@ triba/
 **Cuenta Sender aprobada (Ago 2026):**
 - Cuenta aprobada → `/subscribers` y `/message/send` funcionan (antes 401 por revisión)
 - La cuenta actual es la **definitiva**; fue recreada en Ago 2026 (grupos `Test group`, `newsletter-gratuito`, `suscriptora-paga`)
-- Verificado: `POST /message/send` OK, alta newsletter a grupo OK, workflow `newsletter-gratuito` aún en DRAFT (activar en UI)
+- Verificado: `POST /message/send` OK, alta newsletter a grupo OK, workflow `newsletter-gratuito` ACTIVE (dispara welcome con `emails_sent: 1` tras el alta)
+- En producción, `POST /api/newsletter` responde `{ok:true}` 200 en `comunidadtriba.com` y `triba.vercel.app` (Prueba 2 OK)
+- ⚠️ El endpoint `/api/diagnose-email` se **eliminó** (Ago 2026): crasheaba en producción con `FUNCTION_INVOCATION_FAILED` en la función ISR de Vercel (bug del adapter `vercel({ isr })` con rutas API GET públicas, aún sin query params). No se usaba en la app; la validación de Sender queda cubierta por el flujo newsletter.
 
 **Migración WooCommerce:**
 - 92 suscriptores pagos viejos importados desde `suscriptoresViejos.csv` a `subscriber_migrations`
