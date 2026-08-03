@@ -19,6 +19,12 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
   <section class="flex-1 flex items-center justify-center px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone py-10">
     <div class="w-full max-w-md">
 
+      <div id="checkout-pending-banner" class="hidden bg-triba-pink border-2 border-triba-red rounded-xl p-4 mb-4 text-center" data-checkout-pending>
+        <p class="font-sans text-sm text-triba-brown">
+          Tenés una suscripción pendiente. <strong class="text-triba-red">Creá tu cuenta gratis</strong> para continuar con el pago.
+        </p>
+      </div>
+
       <div id="login-card" class={"bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 reveal " + (isRecovery || initialMode === "signup" ? "hidden" : "")} data-reveal>
         <h1 class="font-heading text-xl uppercase tracking-wider text-triba-brown text-center mb-8">Iniciar sesión</h1>
         <form class="space-y-5" id="login-form">
@@ -97,8 +103,15 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
 
 <script>
   import { supabase } from "../lib/supabase";
+  import { getCheckoutIntent } from "../lib/checkout-intent";
 
   function setup() {
+
+  const pendingBanner = document.getElementById("checkout-pending-banner");
+  const pending = getCheckoutIntent();
+  if (pendingBanner) {
+    pendingBanner.classList.toggle("hidden", !pending);
+  }
 
   const loginCard = document.getElementById("login-card");
   const signupCard = document.getElementById("signup-card");

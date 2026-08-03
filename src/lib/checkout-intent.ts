@@ -1,5 +1,5 @@
 const STORAGE_KEY = "triba:checkout";
-const TTL_MS = 5 * 60 * 1000;
+const TTL_MS = 24 * 60 * 60 * 1000;
 
 export interface CheckoutIntent {
   provider: string;
