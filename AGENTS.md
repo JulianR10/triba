@@ -48,6 +48,9 @@ Revista digital mensual — newsletter gratuito + suscripción paga. Escrita por
 
 - Página única `/iniciar-sesion`. Post-login: `?redirect=` explícito → respeta; sino `profiles.role` → admin a `/admin`, otro a `/mi-cuenta`.
 - Middleware protege `/admin*`. Si no es admin → redirect a `/`.
+- **Email de confirmación OFF** en Supabase (alta instantánea). El alta con email ya existente devuelve `identities: 0` → la app avisa "Ya existe una cuenta" en vez de mostrar "revisá tu email".
+- **Custom SMTP en Supabase Auth = Sender** (`smtp.sender.net:587`, AUTH PLAIN/LOGIN, sender `hola@comunidadtriba.com`). Solo queda para reset de contraseña. El email de Supabase por defecto tiene límite de 2/hora a nivel proyecto → NO usar.
+- Checkout sin sesión: guarda `checkout-intent` (TTL 24h) y redirige a `/iniciar-sesion?signup=true&redirect=...` → `flushPendingCheckout` re-dispara el pago al volver.
 
 ## Admin
 
