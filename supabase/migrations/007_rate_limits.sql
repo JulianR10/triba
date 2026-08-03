@@ -34,3 +34,5 @@ create policy "Service role can manage rate limits"
   on public.rate_limits
   using (true)
   with check (true);
+
+grant all on public.rate_limits to service_role;
