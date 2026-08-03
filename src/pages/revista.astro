@@ -1,6 +1,7 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
+import { SITE_URL } from "../lib/site-url";
 import MagazineCarousel from "../components/MagazineCarousel.astro";
 import MagazineSlider from "../components/MagazineSlider.astro";
 import PDFViewer from "../components/PDFViewer.tsx";
@@ -40,12 +41,12 @@ const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
     "@type": "Periodical",
     "name": "Triba",
     "description": description,
-    "url": "https://comunidadtriba.com/revista",
+    "url": `${SITE_URL}/revista`,
     "issn": "",
     "publisher": {
       "@type": "Organization",
       "name": "Triba",
-      "url": "https://comunidadtriba.com"
+      "url": SITE_URL
     },
     "inLanguage": "es",
     "numberOfIssues": allEditions.length,

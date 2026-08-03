@@ -1,7 +1,6 @@
 import { logger } from "./logger";
 import { sendEmail } from "./sender";
-
-const SITE_URL = "https://comunidadtriba.com";
+import { SITE_URL } from "./site-url";
 
 function welcomeHtml(showCta: boolean) {
   return `<!DOCTYPE html>
@@ -17,7 +16,7 @@ function welcomeHtml(showCta: boolean) {
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;border:2px solid #35220A;overflow:hidden;">
             <tr>
               <td align="center" style="padding:40px 40px 20px;">
-                <img src="https://comunidadtriba.com/logo-triba.svg" alt="Triba" width="120" style="display:block;margin-bottom:24px;" />
+                <img src="${SITE_URL}/logo-triba.svg" alt="Triba" width="120" style="display:block;margin-bottom:24px;" />
                 <h1 style="font-family:Times New Roman,Georgia,serif;font-size:28px;color:#35220A;margin:0 0 8px;font-style:italic;">
                   ¡Bienvenida a Triba!
                 </h1>
@@ -59,7 +58,7 @@ function welcomeHtml(showCta: boolean) {
                 <table role="presentation" border="0" cellpadding="0" cellspacing="0">
                   <tr>
                     <td align="center" style="background-color:#E91A39;border-radius:50px;border:2px solid #35220A;">
-                      <a href="https://comunidadtriba.com/suscribirme" target="_blank" style="display:inline-block;padding:14px 40px;font-family:Montserrat,Arial,sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;text-decoration:none;letter-spacing:1px;color:#ffffff;">
+                      <a href="${SITE_URL}/suscribirme" target="_blank" style="display:inline-block;padding:14px 40px;font-family:Montserrat,Arial,sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;text-decoration:none;letter-spacing:1px;color:#ffffff;">
                         Suscribite a Triba
                       </a>
                     </td>
@@ -111,7 +110,7 @@ function newEditionHtml(edition: { title: string; edition_number: number; cover_
           <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;border:2px solid #35220A;overflow:hidden;">
             <tr>
               <td align="center" style="padding:40px 40px 20px;">
-                <img src="https://comunidadtriba.com/logo-triba.svg" alt="Triba" width="120" style="display:block;margin-bottom:24px;" />
+                <img src="${SITE_URL}/logo-triba.svg" alt="Triba" width="120" style="display:block;margin-bottom:24px;" />
                 <h1 style="font-family:Times New Roman,Georgia,serif;font-size:28px;color:#35220A;margin:0 0 4px;font-style:italic;">
                   ¡Nueva edición!
                 </h1>

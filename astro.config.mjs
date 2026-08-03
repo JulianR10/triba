@@ -5,7 +5,7 @@ import sitemap from "@astrojs/sitemap";
 import vercel from "@astrojs/vercel";
 
 export default defineConfig({
-  site: "https://comunidadtriba.com",
+  site: "https://www.comunidadtriba.com",
   devToolbar: { enabled: false },
   integrations: [
     tailwind(),

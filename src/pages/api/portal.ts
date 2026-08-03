@@ -24,7 +24,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const provider = getPaymentProvider(sub.provider);
-    const origin = getSiteOrigin(request);
+    const origin = getSiteOrigin();
     const result = await provider.getPortalUrl(sub.provider_subscription_id, origin);
     return ok(result);
   } catch (err: any) {

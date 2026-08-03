@@ -44,7 +44,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const paymentProvider = getPaymentProvider(provider);
-    const origin = getSiteOrigin(request);
+    const origin = getSiteOrigin();
     const result = await paymentProvider.createCheckout({
       userId: user.id,
       userEmail: user.email,
