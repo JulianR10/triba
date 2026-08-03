@@ -40,6 +40,7 @@ Revista digital mensual — newsletter gratuito + suscripción paga. Escrita por
 - **PDFViewer (`client:visible`, ~48kB):** no cambiar a `client:load`. `minHeight` tracking desde `page.getViewport()` + `aspectRatioRef` contra layout shift. Fullscreen: `pageWidth = viewportHeight - 110`, `scale` se resetea a 1 al salir.
 - **Rate limiting:** tabla `rate_limits` en Supabase (no Map en memoria).
 - **MP no tiene portal hosted:** `/api/portal` devuelve `{ note }`, se muestra con `alert()`.
+- **⚠️ Webhook MP (`/api/webhook/mercadopago`):** usar SIEMPRE el `WebhookSignatureValidator` del SDK `mercadopago` (manifest `id:...;request-id:...;ts:...;`). NUNCA implementar el manifest a mano: el formato anterior (comas + `user_id`) rechazaba 401 todos los webhooks (los pagos de MP jamás activaban la suscripción). No usar `toleranceSeconds` (MP manda `ts` en segundos y el SDK compara contra ms).
 - **CSP:** cadenas precomputadas al importar `middleware.ts`.
 - **⚠️ ISR de Vercel:** `astro.config.mjs` → `isr.exclude: [/^\/api\//]`. **No tocar.** Sin esto los POST de `/api/*` se cachean 24h por URL (ignoran el body): la función no se ejecuta y la UI miente con éxito.
 

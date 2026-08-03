@@ -1,5 +1,5 @@
 import type { APIRoute } from "astro";
-import { createHmac, timingSafeEqual } from "node:crypto";
+import { WebhookSignatureValidator } from "mercadopago";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { ok, error } from "../../../lib/response";
 import { logger } from "../../../lib/logger";
@@ -7,10 +7,6 @@ import { syncPaidSubscriber } from "../../../lib/sender";
 import { sendWelcomeEmail } from "../../../lib/email";
 
 const isSignatureVerificationEnabled = import.meta.env.VERIFY_MP_SIGNATURES !== "false";
-
-function buildManifest(dataId: string, userId: string, xRequestId: string, ts: string): string {
-  return `${dataId},${userId},${xRequestId},${ts}`;
-}
 
 function verifyMercadoPagoSignature(request: Request, body: any): boolean {
   if (!isSignatureVerificationEnabled) return true;
@@ -21,53 +17,21 @@ function verifyMercadoPagoSignature(request: Request, body: any): boolean {
     return false;
   }
 
-  const xSignature = request.headers.get("x-signature");
-  const xRequestId = request.headers.get("x-request-id");
-  if (!xSignature || !xRequestId) {
-    logger.error("[MP webhook] Missing x-signature or x-request-id headers");
+  try {
+    WebhookSignatureValidator.validate({
+      xSignature: request.headers.get("x-signature"),
+      xRequestId: request.headers.get("x-request-id"),
+      dataId: body?.data?.id,
+      secret: webhookSecret,
+    });
+    return true;
+  } catch (err: any) {
+    logger.error(
+      { reason: err?.reason, requestId: err?.requestId, dataId: body?.data?.id },
+      "[MP webhook] Invalid signature",
+    );
     return false;
   }
-
-  const entries = xSignature.split(",").map((p) => {
-    const i = p.indexOf("=");
-    return i < 0 ? [p.trim(), ""] : [p.slice(0, i).trim(), p.slice(i + 1).trim()];
-  });
-  const parsed = Object.fromEntries(entries);
-  const ts = parsed.ts;
-  const v1 = parsed.v1;
-  if (!ts || !v1) {
-    logger.error("[MP webhook] Malformed x-signature header");
-    return false;
-  }
-
-  const tsNum = Number(ts);
-  if (!Number.isFinite(tsNum) || Math.abs(Date.now() / 1000 - tsNum) > 300) {
-    logger.error(`[MP webhook] Timestamp out of window (ts=${ts})`);
-    return false;
-  }
-
-  const dataId = body?.data?.id;
-  const userId = body?.user_id;
-  if (!dataId || !userId) {
-    logger.error("[MP webhook] Missing data.id or user_id in body");
-    return false;
-  }
-
-  const manifest = buildManifest(String(dataId), String(userId), xRequestId, ts);
-  const expected = createHmac("sha256", webhookSecret).update(manifest).digest("hex");
-
-  const a = Buffer.from(expected, "hex");
-  const b = Buffer.from(v1, "hex");
-  if (a.length !== b.length) {
-    logger.error(`[MP webhook] HMAC length mismatch. dataId=${dataId}`);
-    return false;
-  }
-  if (!timingSafeEqual(a, b)) {
-    logger.error(`[MP webhook] HMAC mismatch. dataId=${dataId}`);
-    return false;
-  }
-
-  return true;
 }
 
 async function handlePreApprovalEvent(
