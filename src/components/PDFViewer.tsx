@@ -160,7 +160,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
           {!Components ? (
             <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-cream flex items-center justify-center">
               <p className="font-heading text-base text-triba-brown/40">
-                Cargando PDF...
+                Cargando revista...
               </p>
             </div>
           ) : (
@@ -170,7 +170,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
               loading={
                 <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-cream flex items-center justify-center">
                   <p className="font-heading text-base text-triba-brown/40">
-                    Cargando PDF...
+                    Cargando revista...
                   </p>
                 </div>
               }

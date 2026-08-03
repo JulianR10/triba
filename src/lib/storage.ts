@@ -56,7 +56,10 @@ export async function uploadEditionFile(
   }
 
   const ext = fileExt(file.name) || (kind === "pdf" ? "pdf" : "jpg");
-  const path = `${kind}s/edicion-${editionNumber}-${Date.now()}.${ext}`;
+  const path =
+    kind === "pdf"
+      ? `pdfs/revista-${editionNumber}.${ext}`
+      : `${kind}s/edicion-${editionNumber}-${Date.now()}.${ext}`;
 
   const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, file, {
     contentType: file.type,
