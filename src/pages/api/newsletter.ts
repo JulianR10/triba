@@ -3,8 +3,7 @@ import { supabaseAdmin } from "../../lib/supabase-admin";
 import { ok, error } from "../../lib/response";
 import { logger } from "../../lib/logger";
 import { checkRateLimit, rateLimitKey } from "../../lib/rate-limit";
-import { syncFreeSubscriber } from "../../lib/kit";
-import { sendWelcomeEmail } from "../../lib/email";
+import { syncFreeSubscriber } from "../../lib/sender";
 
 export const POST: APIRoute = async ({ request }) => {
   const ip =
@@ -58,13 +57,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     await syncFreeSubscriber(email);
   } catch (err) {
-    logger.error({ err, email }, "Kit sync error");
-  }
-
-  try {
-    await sendWelcomeEmail(email, true);
-  } catch (err) {
-    logger.error({ err, email }, "Welcome email error");
+    logger.error({ err, email }, "Sender sync error");
   }
 
   return ok();

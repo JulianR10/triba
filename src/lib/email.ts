@@ -1,16 +1,7 @@
 import { logger } from "./logger";
+import { sendEmail } from "./sender";
 
-const RESEND_API = "https://api.resend.com";
-const SITE_URL = "https://triba.vercel.app";
-
-function apiKey() {
-  return import.meta.env.RESEND_API_KEY || "";
-}
-
-function fromAddress() {
-  const raw = import.meta.env.RESEND_FROM || "Triba <onboarding@resend.dev>";
-  return raw.replace(/^"(.*)"$/, "$1");
-}
+const SITE_URL = "https://comunidadtriba.com";
 
 function welcomeHtml(showCta: boolean) {
   return `<!DOCTYPE html>
@@ -98,30 +89,11 @@ export async function sendWelcomeEmail(
   to: string,
   showCta: boolean,
 ): Promise<void> {
-  const key = apiKey();
-  if (!key) {
-    logger.warn({ to }, "Resend not configured — skipping welcome email");
-    return;
-  }
-
-  const res = await fetch(`${RESEND_API}/emails`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromAddress(),
-      to: [to],
-      subject: "¡Bienvenida a Triba!",
-      html: welcomeHtml(showCta),
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    logger.error({ status: res.status, body, to }, "Resend send error");
-    throw new Error(`Resend error: ${res.status}`);
+  try {
+    await sendEmail(to, "¡Bienvenida a Triba!", welcomeHtml(showCta));
+  } catch (err) {
+    logger.error({ err, to }, "Sender welcome email error");
+    throw err;
   }
 }
 
@@ -192,29 +164,10 @@ export async function sendNewEditionEmail(
   to: string,
   edition: { title: string; edition_number: number; cover_url: string; description: string; id: number },
 ): Promise<void> {
-  const key = apiKey();
-  if (!key) {
-    logger.warn({ to, edition }, "Resend not configured — skipping new edition email");
-    return;
-  }
-
-  const res = await fetch(`${RESEND_API}/emails`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${key}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: fromAddress(),
-      to: [to],
-      subject: `¡Nueva edición de Triba! #${edition.edition_number}`,
-      html: newEditionHtml(edition),
-    }),
-  });
-
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    logger.error({ status: res.status, body, to, edition }, "Resend new edition error");
-    throw new Error(`Resend error: ${res.status}`);
+  try {
+    await sendEmail(to, `¡Nueva edición de Triba! #${edition.edition_number}`, newEditionHtml(edition));
+  } catch (err) {
+    logger.error({ err, to, edition }, "Sender new edition email error");
+    throw err;
   }
 }

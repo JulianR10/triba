@@ -10,6 +10,7 @@ Revista digital mensual — newsletter gratuito + suscripción paga. Escrita por
 | Estilos | Tailwind CSS 3, mobile-first |
 | BBDD / Auth / Storage | Supabase |
 | Pagos | Stripe + Mercado Pago (webhooks) |
+| Newsletter + Email | Sender (send.net) — API v2 |
 | Visor PDF | `react-pdf` v10, dynamic import (React island) |
 
 ## Sistema visual
@@ -78,42 +79,66 @@ triba/
 └── tailwind.config.mjs
 ```
 
-## Newsletter — estado actual Jul 2026
+## Newsletter — estado actual Ago 2026
 
 **Backend (funciona):**
 - `POST /api/newsletter` inserta en Supabase `newsletters` → responde `{ok:true}` o `{existing:true}`
-- Envía email de bienvenida por Resend (`sendWelcomeEmail` en `src/lib/email.ts`) — template básico, hay que mejorarlo visualmente
-- Sincroniza a Kit con tag `newsletter-gratuito` (`syncFreeSubscriber`) y `suscriptora-paga` (`syncPaidSubscriber` en webhooks) — corrigió response format a Kit API v4
+- NO envía welcome email en el flujo gratuito: el email de bienvenida/newsletter lo manda la **automatización de Sender** (grupo `newsletter-gratuito`)
+- Sincroniza a Sender (send.net) con grupo `newsletter-gratuito` (`syncFreeSubscriber`) y `suscriptora-paga` (`syncPaidSubscriber` en webhooks)
+- Pagos: webhooks Stripe/MP siguen enviando `sendWelcomeEmail(email, false)` (bienvenida paga, distinta del newsletter gratuito)
 
-**Resend:**
-- Dominio `comunidadtriba.com` verificado (DKIM ✅, SPF ✅, MX ✅)
-- Envío habilitado — el welcome email llega pero va a Promociones (normal con dominio nuevo, mejora con engagement)
-- `RESEND_FROM`: `Triba <hola@comunidadtriba.com>`
+**Sender (send.net):**
+- API v2: base `https://api.sender.net/v2`, auth `Authorization: Bearer <token>`
+- Grupos (`/groups`) reemplazan a los tags de Kit
+- **Alta a grupo en UNA sola llamada:** `POST /subscribers` con `groups: [groupId]` (crea o actualiza el suscriptor y lo asigna al grupo al instante). `addSubscriberToGroup` usa `trigger_automation: true` → el alta dispara automatizaciones atadas al grupo. ⚠️ NO usar `POST /subscribers/groups/{groupId}` para suscriptores nuevos: falla con 400 "No existing subscriber emails provided" hasta que Sender propaga la creación (~15s)
+- Emails transaccionales con `POST /message/send` (`{ from:{email,name}, to:{email}, subject, html }`)
+- Reemplaza a Kit (newsletter) y Resend (welcome + nueva edición) — `src/lib/sender.ts` cliente central
+- `SENDER_FROM_EMAIL`: `hola@comunidadtriba.com` (dominio verificado)
+- **Automatización "Subscriber joins a group"** (`newsletter-gratuito` → email) creada en UI de Sender con el contenido de la campaña *"Ya publicamos la revista de Julio! - TRIBA"* (from: `newsletter@comunidadtriba.com`, `Comunidad Triba`). Faltaba ACTIVAR por revisión de cuenta Sender (ver abajo)
+- Newsletter mensual se envía como Broadcast manual desde Sender al grupo correspondiente
 
-**Kit:**
-- Cuenta original de Kit restaurada — `src/lib/kit.ts`, webhooks, newsletter e import script activos
-- API v4: response format corregido (`{ subscriber }`, `{ tag }`, `{ tags }`)
-- Plan free: no incluye Rules/Visual Automations → no puede enviar emails automáticos al aplicar tag
-- Newsletter mensual se envía como Broadcast manual desde Kit a la tag correspondiente
+**DNS / entrega (Ago 2026):**
+- Dominio `comunidadtriba.com` **verificado en Sender**: SPF, DKIM y DMARC OK
+- DKIM: CNAME `sender._domainkey` → `dkim.sendersrv.com`
+- SPF `@`: `v=spf1 a mx include:_spf.mail.hostinger.com include:_spf.mlsend.com include:sendersrv.com ~all`
+- Registros residuales ya borrados (TXT `send`, MX `send`, AAAA `prueba`, `litesrv._domainkey`, `resend._domainkey`, `mailerlite-domain-verification`)
+
+**Cuenta Sender aprobada (Ago 2026):**
+- Cuenta aprobada → `/subscribers` y `/message/send` funcionan (antes 401 por revisión)
+- La cuenta actual es la **definitiva**; fue recreada en Ago 2026 (grupos `Test group`, `newsletter-gratuito`, `suscriptora-paga`)
+- Verificado: `POST /message/send` OK, alta newsletter a grupo OK, workflow `newsletter-gratuito` aún en DRAFT (activar en UI)
 
 **Migración WooCommerce:**
-- 92 suscriptores pagos viejos importados desde `suscriptoresViejos.csv` a `subscriber_migrations` + Kit tag "suscriptora-paga"
+- 92 suscriptores pagos viejos importados desde `suscriptoresViejos.csv` a `subscriber_migrations`
+- **Ago 2026:** reimportados a la cuenta Sender definitiva con `scripts/import-wp-subscribers.mjs` → **88 de 92 en grupo `suscriptora-paga`**
+- ⚠️ Faltan **4** (`jimena.1310@outlook.es`, `valentinave.98@gmail.com`, `sylvanalopez45@gmail.com`, `mariaclaudiaherrera2009@hotmail.com`) por **429 rate limit del plan** (retry 2026-08-04T15:07Z). Reintentar con: `node --env-file=.env scripts/import-wp-subscribers.mjs ./suscriptoresViejos.csv` (idempotente, solo agrega faltantes)
 - CSV no está en el repo (`.gitignore`)
 
 **UI NewsletterForm:**
 - Mensaje de éxito/error aparece al lado del input, centrado verticalmente, color `triba-red`
 
-## Próximo — template welcome email
+## Próximo
 
-- Mejorar el HTML template de `sendWelcomeEmail` en `src/lib/email.ts` para que tenga el branding visual de Triba (logo, colores, tipografía)
-- Cuando Kit se upgrade a Creator, se puede reemplazar Resend por automations de Kit
+- Reintentar los 4 suscriptores faltantes de Sender (429 rate limit, ver Migración WooCommerce)
+- Cuando se tenga volumen alto, evaluar plan pago de Sender para workflows/automations en vez de envíos manuales
+
+## Deuda de tipos — `astro check` (271 errores, Ago 2026)
+
+`astro check` reporta **271 errores de TS, todos en scripts client-side** de páginas/componentes `.astro`. No rompen build ni runtime; son cosméticos. Se arreglan cuando se toque cada archivo.
+
+**Tipos dominantes:** 18047 (`'X' is possibly 'null'` en queries DOM, 97) · 2339 (propiedad inexistente en `Element`/`HTMLElement`/`never[]` de Supabase, 96) · 7006 (`any` implícito, 20) · 2345 (argumento mal tipado, 18) · 6133 (var sin usar, 10) · resto menor.
+
+**Archivos afectados (por cantidad):**
+- `src/pages/iniciar-sesion.astro` (61) · `src/components/Navbar.astro` (47) · `src/pages/mi-cuenta.astro` (25) · `src/pages/revista.astro` (14) · `src/pages/triba-creators.astro` (11) · `src/pages/index.astro` (10)
+- `src/components/MagazineCarousel.astro` (9) · `src/components/MagazineSlider.astro` (7) · `src/pages/suscribirme.astro` (4) · `src/layouts/Layout.astro` (4)
+- `src/pages/admin/ediciones/nuevo.astro` (2) · `src/pages/admin/suscriptoras.astro` (1) · `src/components/Input.astro` (1)
 
 ## Migración WooCommerce — Jul 2026
 
 - **Tabla `subscriber_migrations`:** emails de suscriptores pagos viejos
 - **Trigger `handle_new_user()`:** si el email está en `subscriber_migrations`, asigna `role=subscriber` + suscripción `migrated` (90 días de gracia)
 - **`/admin/suscriptoras`:** formulario para migrar email individual (llama `/api/admin/subscribers/migrate`)
-- **`scripts/import-wp-subscribers.mjs`:** importa CSV (columna `email`) → `subscriber_migrations`
+- **`scripts/import-wp-subscribers.mjs`:** importa CSV (columna `email`) → `subscriber_migrations` + grupo Sender `suscriptora-paga`
 - **PDF access:** permite `status = 'migrated'` además de `'active'` en `[editionId].ts`
 - **Admin subscribers filter:** incluye `'migrated'` en `src/lib/admin/subscribers.ts`
 
@@ -121,4 +146,4 @@ triba/
 
 - **Endpoint** `POST /api/admin/editions/[id]/notify`: envía email a todas las suscriptoras con `role = subscriber`
 - **Botón "Notificar suscriptoras"** en `/admin/ediciones/[id].astro` con confirmación y resultado
-- **Email** usa `sendNewEditionEmail(to, edition)` en `src/lib/email.ts` (mismo template que bienvenida, con portada, descripción y link a la revista)
+- **Email** usa `sendNewEditionEmail(to, edition)` en `src/lib/email.ts` (mismo template que bienvenida, con portada, descripción y link a la revista, enviado por Sender)

@@ -3,7 +3,7 @@ import { createHmac, timingSafeEqual } from "node:crypto";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { ok, error } from "../../../lib/response";
 import { logger } from "../../../lib/logger";
-import { syncPaidSubscriber } from "../../../lib/kit";
+import { syncPaidSubscriber } from "../../../lib/sender";
 import { sendWelcomeEmail } from "../../../lib/email";
 
 const isSignatureVerificationEnabled = import.meta.env.VERIFY_MP_SIGNATURES !== "false";
@@ -111,7 +111,7 @@ async function handlePreApprovalEvent(
   const email = preapproval.payer_email;
   if (email) {
     syncPaidSubscriber(email).catch((err) =>
-      logger.error({ err, email }, "Kit sync error (mercadopago)"),
+      logger.error({ err, email }, "Sender sync error (mercadopago)"),
     );
     sendWelcomeEmail(email, false).catch((err) =>
       logger.error({ err, email }, "Welcome email error (mercadopago)"),

@@ -3,64 +3,60 @@
  *
  * Para cada email:
  *   1. Lo registra en subscriber_migrations (para auto-upgrade al registrarse)
- *   2. Lo sincroniza a Kit con tag "suscriptora-paga"
+ *   2. Lo sincroniza a Sender (send.net) con grupo "suscriptora-paga"
  *
  * Usage:
  *   node --env-file=.env scripts/import-wp-subscribers.mjs <ruta-al-csv>
  *
  * CSV debe tener al menos columna "email" (con header).
- * Opcional: columna "nombre" para Kit.
+ * Opcional: columna "nombre" para Sender.
  *
  * Requires in .env:
  *   PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
- *   KIT_API_KEY
+ *   SENDER_API_KEY
  */
 
 import { createClient } from "@supabase/supabase-js";
 import { readFileSync } from "fs";
 
-const KIT_API_BASE = "https://api.kit.com/v4";
+const SENDER_API_BASE = "https://api.sender.net/v2";
 
 // ─── Helpers ─────────────────────────────────────────────────────
 
-async function kitRequest(method, path, body) {
-  const url = `${KIT_API_BASE}${path}`;
+async function senderRequest(method, path, body) {
+  const url = `${SENDER_API_BASE}${path}`;
   const res = await fetch(url, {
     method,
     headers: {
-      "X-Kit-Api-Key": process.env.KIT_API_KEY,
+      Authorization: `Bearer ${process.env.SENDER_API_KEY}`,
+      Accept: "application/json",
       ...(body ? { "Content-Type": "application/json" } : {}),
     },
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(`Kit API ${res.status}: ${text}`);
+    throw new Error(`Sender API ${res.status}: ${text}`);
   }
   return res.json();
 }
 
-async function kitAddSubscriber(email, firstName) {
-  const { subscriber } = await kitRequest("POST", "/subscribers", {
-    email_address: email,
-    first_name: firstName || null,
-  });
-  return subscriber;
-}
-
-async function kitTagSubscriber(email, tagId) {
-  await kitRequest("POST", `/tags/${tagId}/subscribers`, {
-    email_address: email,
-  });
-}
-
-async function kitGetOrCreateTag(name) {
-  const res = await kitRequest("GET", `/tags?include=subscriber_count`);
-  const existing = (res.tags || []).find((t) => t.name === name);
+async function senderGetOrCreateGroup(title) {
+  const res = await senderRequest("GET", "/groups");
+  const existing = (res.data || []).find((g) => g.title === title);
   if (existing) return existing;
-  const { tag } = await kitRequest("POST", "/tags", { name });
-  return tag;
+  const created = await senderRequest("POST", "/groups", { title });
+  return created.data;
+}
+
+async function senderAddToGroup(email, groupId, firstName) {
+  await senderRequest("POST", "/subscribers", {
+    email,
+    groups: [groupId],
+    ...(firstName ? { firstname: firstName } : {}),
+    trigger_automation: false,
+  });
 }
 
 // ─── CSV parser (respeta comillas) ─────────────────────────────
@@ -118,7 +114,7 @@ async function main() {
 
   const supabaseUrl = process.env.PUBLIC_SUPABASE_URL;
   const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const kitKey = process.env.KIT_API_KEY;
+  const senderKey = process.env.SENDER_API_KEY;
 
   if (!supabaseUrl || !serviceKey) {
     console.error("Error: PUBLIC_SUPABASE_URL y SUPABASE_SERVICE_ROLE_KEY deben estar en .env");
@@ -147,15 +143,15 @@ async function main() {
     process.exit(0);
   }
 
-  // ─── Setup Kit tag ────────────────────────────────────────────
-  let kitTagId = null;
-  if (kitKey) {
-    console.log("🏷️  Buscando/creando tag 'suscriptora-paga' en Kit...");
-    const tag = await kitGetOrCreateTag("suscriptora-paga");
-    kitTagId = tag.id;
-    console.log(`   OK: tag #${kitTagId} — "${tag.name}"\n`);
+  // ─── Setup Sender group ────────────────────────────────────────
+  let senderGroupId = null;
+  if (senderKey) {
+    console.log("🏷️  Buscando/creando grupo 'suscriptora-paga' en Sender...");
+    const group = await senderGetOrCreateGroup("suscriptora-paga");
+    senderGroupId = group.id;
+    console.log(`   OK: grupo #${senderGroupId} — "${group.title}"\n`);
   } else {
-    console.log("⚠️  KIT_API_KEY no configurada — se saltea Kit\n");
+    console.log("⚠️  SENDER_API_KEY no configurada — se saltea Sender\n");
   }
 
   // ─── Importar ──────────────────────────────────────────────────
@@ -172,27 +168,23 @@ async function main() {
         .from("subscriber_migrations")
         .insert({ email: row.email, old_subscription_data: { imported_at: new Date().toISOString() } });
 
-      if (insertErr) {
-        if (insertErr.code === "23505") {
-          skipped++;
-          console.log(`⏭️  ya migrado`);
-          continue;
-        }
+      if (insertErr && insertErr.code !== "23505") {
         throw insertErr;
       }
+      const alreadyMigrated = insertErr?.code === "23505";
+      if (alreadyMigrated) skipped++;
 
-      // 2. Sync a Kit
-      if (kitTagId) {
+      // 2. Sync a Sender (siempre, incluso si ya estaba migrado)
+      if (senderGroupId) {
         try {
-          const sub = await kitAddSubscriber(row.email, row.nombre);
-          await kitTagSubscriber(row.email, kitTagId);
-        } catch (kitErr) {
-          console.log(`⚠️  Kit error: ${kitErr.message}`);
+          await senderAddToGroup(row.email, senderGroupId, row.nombre);
+        } catch (senderErr) {
+          console.log(`⚠️  Sender error: ${senderErr.message}`);
         }
       }
 
       imported++;
-      console.log(`✅`);
+      console.log(alreadyMigrated ? `✅ (ya migrado, sync a Sender)` : `✅`);
     } catch (err) {
       errors++;
       console.log(`❌ ${err.message}`);
@@ -201,19 +193,19 @@ async function main() {
 
   // ─── Resumen ────────────────────────────────────────────────────
   console.log(`\n━━━ Importación completa ━━━`);
-  console.log(`  ✅ Importados:  ${imported}`);
-  console.log(`  ⏭️  Ya existían: ${skipped}`);
-  console.log(`  ❌ Errores:     ${errors}`);
-  console.log(`  📊 Total:       ${rows.length}`);
+  console.log(`  ✅ Sincronizados a Sender:  ${imported}`);
+  console.log(`  ⏭️  Ya migrados (DB):       ${skipped}`);
+  console.log(`  ❌ Errores:                 ${errors}`);
+  console.log(`  📊 Total:                   ${rows.length}`);
 
   if (imported > 0) {
-    console.log(`\n📝 Los ${imported} suscriptores nuevos:`);
+    console.log(`\n📝 Los ${rows.length} suscriptores:`);
     console.log(`   • Están en subscriber_migrations → si se registran en la nueva web`);
     console.log(`     con el mismo email, obtendrán role='subscriber' automáticamente`);
-    if (kitTagId) {
-      console.log(`   • Están en Kit con tag "suscriptora-paga"`);
+    if (senderGroupId) {
+      console.log(`   • Están en Sender con grupo "suscriptora-paga"`);
     }
-    console.log(`\n🔜 Próximo paso: enviar email masivo desde Kit avisando`);
+    console.log(`\n🔜 Próximo paso: enviar email masivo desde Sender avisando`);
     console.log(`   que la plataforma se mudó y cómo crear su cuenta.`);
   }
 }
