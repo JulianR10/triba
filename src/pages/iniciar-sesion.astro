@@ -313,6 +313,12 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
         return;
       }
 
+      if (data.user && data.user.identities.length === 0) {
+        signupError.textContent = "Ya existe una cuenta con este email. Iniciá sesión para continuar.";
+        signupError.classList.remove("hidden");
+        return;
+      }
+
       showCard(checkEmailCard);
     });
   }
