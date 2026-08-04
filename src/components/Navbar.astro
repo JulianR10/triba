@@ -17,6 +17,7 @@ const publicLinks = [
 ];
 
 const authLinks = [
+  { href: "/", label: "Inicio" },
   { href: "/mi-cuenta", label: "Mi perfil" },
   { href: "/revista", label: "Revista" },
   { href: "/triba-creators", label: "Triba Creators" },
@@ -79,9 +80,7 @@ const authLinks = [
 <nav id="navbar" data-logo-always={showLogoAlways ? "1" : "0"} class="hidden md:flex fixed top-0 left-0 right-0 z-40 items-center px-5 py-4 md:px-10 lg:px-20 bg-triba-bone/80 backdrop-blur-sm">
   <div class="grid grid-cols-3 items-center w-full max-w-6xl mx-auto">
     <div class="flex items-center">
-      <a href="/" id="nav-logo" class={`opacity-0 transition-opacity duration-300${showLogoAlways ? ' visible' : ''}`}>
-        <img src="/logo-triba.svg" alt="Triba" class="h-8" />
-      </a>
+      <span></span>
     </div>
 
     <div class="flex items-center justify-center gap-8">
@@ -95,7 +94,7 @@ const authLinks = [
                 {link.label}
               </a>
             ))
-          : publicLinks.filter((l) => l.label !== "Inicio").map((link) => (
+          : publicLinks.map((link) => (
               <a
                 href={link.href}
                 class="font-heading text-sm font-medium uppercase tracking-wide text-triba-red transition-colors hover:text-triba-brown focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded"

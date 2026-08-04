@@ -79,7 +79,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       status: "migrated",
       plan_currency: "USD",
       current_period_start: new Date().toISOString(),
-      current_period_end: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+      current_period_end: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
     })
     .select("id")
     .single();
@@ -107,6 +107,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     migrated: true,
     accountCreated: true,
     alreadyMigrated,
-    note: `${email} actualizada a subscriber con acceso por 90 días.`,
+    note: `${email} actualizada a subscriber con acceso por 7 días.`,
   });
 };

@@ -221,7 +221,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
 
       const confirmed = await (window as any).adminConfirm?.(
         "Migrar suscriptora",
-        `¿Migrar ${email}? Se registrará en subscriber_migrations y, si ya tiene cuenta, se le asignará role subscriber con 90 días de acceso.`
+        `¿Migrar ${email}? Se registrará en subscriber_migrations y, si ya tiene cuenta, se le asignará role subscriber con 7 días de acceso.`
       );
       if (!confirmed) return;
 

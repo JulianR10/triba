@@ -275,18 +275,24 @@ export interface Database {
           id: string;
           email: string;
           old_subscription_data: Json | null;
+          stripe_subscription_id: string | null;
+          stripe_customer_id: string | null;
           migrated_at: string;
         };
         Insert: {
           id?: string;
           email: string;
           old_subscription_data?: Json | null;
+          stripe_subscription_id?: string | null;
+          stripe_customer_id?: string | null;
           migrated_at?: string;
         };
         Update: {
           id?: string;
           email?: string;
           old_subscription_data?: Json | null;
+          stripe_subscription_id?: string | null;
+          stripe_customer_id?: string | null;
           migrated_at?: string;
         };
         Relationships: [];

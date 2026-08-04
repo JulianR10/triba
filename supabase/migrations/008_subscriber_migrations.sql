@@ -8,10 +8,12 @@ create table if not exists public.subscriber_migrations (
 
 alter table public.subscriber_migrations enable row level security;
 
+drop policy if exists "Only admins can read subscriber_migrations" on public.subscriber_migrations;
 create policy "Only admins can read subscriber_migrations"
   on public.subscriber_migrations for select
   using (auth.jwt() ->> 'role' = 'admin');
 
+drop policy if exists "Only admins can insert subscriber_migrations" on public.subscriber_migrations;
 create policy "Only admins can insert subscriber_migrations"
   on public.subscriber_migrations for insert
   with check (auth.jwt() ->> 'role' = 'admin');

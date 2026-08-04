@@ -15,6 +15,27 @@ type StripeSubWithPeriod = Stripe.Subscription & {
   current_period_end: number;
 };
 
+function periodRange(sub: Stripe.Subscription) {
+  // This Stripe account (new billing model) does NOT expose current_period_start/end
+  // on the subscription object, so fall back to start_date/created.
+  const startSec = (sub as any).current_period_start ?? (sub as any).start_date ?? sub.created;
+  const endSec =
+    (sub as any).current_period_end ?? (startSec ? startSec + 30 * 24 * 60 * 60 : undefined);
+  return {
+    start: startSec ? new Date(startSec * 1000).toISOString() : undefined,
+    end: endSec ? new Date(endSec * 1000).toISOString() : undefined,
+  };
+}
+
+async function supersedeMigratedSub(userId: string) {
+  if (!userId) return;
+  await supabaseAdmin
+    .from("subscriptions")
+    .update({ status: "canceled", updated_at: new Date().toISOString() })
+    .eq("user_id", userId)
+    .eq("provider", "migrated");
+}
+
 export const POST: APIRoute = async ({ request }) => {
   if (!stripe || !STRIPE_WEBHOOK_SECRET) {
     return error("Stripe not configured", 500);
@@ -44,6 +65,7 @@ export const POST: APIRoute = async ({ request }) => {
         const stripeSub = (await stripe.subscriptions.retrieve(
           session.subscription as string,
         )) as unknown as StripeSubWithPeriod;
+        const period = periodRange(stripeSub);
         const userId = session.client_reference_id || session.metadata?.user_id || "";
 
         let email = session.customer_email || session.customer_details?.email || undefined;
@@ -58,8 +80,8 @@ export const POST: APIRoute = async ({ request }) => {
           provider_subscription_id: stripeSub.id,
           status: stripeSub.status as "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated",
           plan_currency: (session.metadata?.currency || "USD") as "EUR" | "USD" | "ARS",
-          current_period_start: new Date(stripeSub.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(stripeSub.current_period_end * 1000).toISOString(),
+          ...(period.start ? { current_period_start: period.start } : {}),
+          ...(period.end ? { current_period_end: period.end } : {}),
         }, { onConflict: "provider, provider_subscription_id" }).select("id").single();
 
           await supabaseAdmin.from("profiles").upsert({
@@ -69,6 +91,8 @@ export const POST: APIRoute = async ({ request }) => {
             subscription_id: subs?.id || null,
             updated_at: new Date().toISOString(),
           } as Database["public"]["Tables"]["profiles"]["Insert"], { onConflict: "id" });
+
+          await supersedeMigratedSub(userId);
 
           if (email) {
             syncPaidSubscriber(email).catch((err) =>
@@ -85,11 +109,12 @@ export const POST: APIRoute = async ({ request }) => {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object as StripeSubWithPeriod;
+        const period = periodRange(sub);
 
         await supabaseAdmin.from("subscriptions").update({
           status: sub.status as "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated",
-          current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
-          current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
+          ...(period.start ? { current_period_start: period.start } : {}),
+          ...(period.end ? { current_period_end: period.end } : {}),
           updated_at: new Date().toISOString(),
         }).eq("provider_subscription_id", sub.id).eq("provider", "stripe");
 

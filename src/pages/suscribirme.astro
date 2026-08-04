@@ -43,23 +43,23 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
       <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 md:h-[900px]">
         <!-- Col izq: Suscripción Triba -->
         <div class="reveal-stagger" data-reveal>
-          <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-8 text-center flex flex-col justify-center h-full">
-            <div class="self-center inline-block bg-triba-red text-triba-white font-heading text-xl uppercase tracking-wider px-6 py-2 rounded-full border border-triba-black mb-10 shadow-[1px_1px_0_rgba(0,0,0,0.15)]">Recomendado</div>
-            <h3 class="font-heading text-lg font-bold text-triba-brown mb-4 uppercase tracking-wider">Suscripción Triba</h3>
-            <ul class="space-y-2 font-sans text-base text-triba-brown mb-4 text-left">
+          <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-8 md:p-12 text-center flex flex-col h-full">
+            <div class="self-center inline-block bg-triba-red text-triba-white font-heading text-2xl uppercase tracking-wider px-8 py-3 rounded-full border border-triba-black mb-12 shadow-[1px_1px_0_rgba(0,0,0,0.15)]">Recomendado</div>
+            <h3 class="font-heading text-xl font-bold text-triba-brown mb-6 uppercase tracking-wider">Suscripción Triba</h3>
+            <ul class="space-y-3 font-sans text-lg text-triba-brown mb-8 text-left">
               <li class="flex justify-start gap-2">✦ NEWSLETTER INCLUIDO</li>
               <li class="flex justify-start gap-2">✦ Nuestra revista completa (+15 artículos) todos los meses</li>
               <li class="flex justify-start gap-2">✦ ACCESO AL ARCHIVO DE TODAS LAS EDICIONES</li>
               <li class="flex justify-start gap-2">✦ DESCARGA LA REVISTA CON TU NOMBRE</li>
             </ul>
-            <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">Accedés a través de tu perfil de usuario en nuestro sitio web</p>
+            <p class="font-sans text-xs text-triba-brown/70 mb-10 leading-relaxed text-balance">Accedés a través de tu perfil de usuario en nuestro sitio web</p>
 
-            <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8">
+            <div class="bg-triba-white rounded-xl border-2 border-triba-black p-8 md:p-10 mt-auto">
               <div class="flex border-2 border-triba-black rounded-full overflow-hidden mb-6 w-full max-w-xs mx-auto" id="currency-segments">
                 {plans.map((p, i) => (
                   <button
                     data-currency={p.moneda}
-                    class={"flex-1 py-4 font-heading text-sm uppercase tracking-wider transition-all " + (i < plans.length - 1 ? "border-r-2 border-triba-black " : "") + (p.moneda === "EUR" ? "bg-triba-red text-triba-white" : "bg-triba-white text-triba-brown hover:bg-triba-cream")}
+                    class={"flex-1 py-5 font-heading text-sm uppercase tracking-wider transition-all " + (i < plans.length - 1 ? "border-r-2 border-triba-black " : "") + (p.moneda === "EUR" ? "bg-triba-red text-triba-white" : "bg-triba-white text-triba-brown hover:bg-triba-cream")}
                   >
                     {p.moneda}
                   </button>
@@ -68,10 +68,10 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 
               {plans.map((p) => (
                 <div data-plan={p.moneda} class={p.moneda === "EUR" ? "" : "hidden"}>
-                  <p class="font-heading text-4xl md:text-6xl font-bold text-triba-red mb-1">{p.simbolo}{p.precio}</p>
-                  <p class="font-sans text-base text-triba-brown/60 mb-6">{p.periodo}</p>
+                  <p class="font-heading text-5xl md:text-7xl font-bold text-triba-red mb-1">{p.simbolo}{p.precio}</p>
+                  <p class="font-sans text-base text-triba-brown/60 mb-8">{p.periodo}</p>
 
-                  <div class="space-y-3 mb-4">
+                  <div class="space-y-3 mb-6">
                     {p.moneda !== "ARS" && <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth />}
                     {p.moneda === "ARS" && <CheckoutButton provider="mercadopago" currency={p.moneda} variant="default" fullWidth />}
                   </div>

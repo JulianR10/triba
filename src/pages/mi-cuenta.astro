@@ -215,9 +215,23 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
         !(subscription?.status === "active") && (
           <div class="max-w-lg mx-auto mt-10 text-center reveal px-5" data-reveal>
             <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8">
-              <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">Todavía no tenés suscripción</h2>
-              <p class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">Suscribite para acceder a la revista completa, el archivo histórico y la descarga PDF.</p>
-              <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+              {
+                checkoutStatus === "success" ? (
+                  <>
+                    <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">Procesando tu pago...</h2>
+                    <p class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">Estamos confirmando tu suscripción. Esto puede tardar unos segundos.</p>
+                    <div class="flex justify-center">
+                      <div class="w-6 h-6 border-2 border-triba-red border-t-2 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">Todavía no tenés suscripción</h2>
+                    <p class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">Suscribite para acceder a la revista completa, el archivo histórico y la descarga PDF.</p>
+                    <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+                  </>
+                )
+              }
             </div>
           </div>
         )
@@ -254,7 +268,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
           headers: { Authorization: "Bearer " + session.access_token },
         });
         var data = await res.json();
-        if (data.role === "subscriber") {
+        if (data.subscription?.status === "active") {
           if (pollInterval) clearInterval(pollInterval);
           window.location.reload();
         }

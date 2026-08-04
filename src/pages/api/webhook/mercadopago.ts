@@ -72,6 +72,12 @@ async function handlePreApprovalEvent(
       subscription_id: subs.id,
       updated_at: now,
     }, { onConflict: "id" });
+
+    await supabase
+      .from("subscriptions")
+      .update({ status: "canceled", updated_at: now })
+      .eq("user_id", userId)
+      .eq("provider", "migrated");
   }
 
   const email = preapproval.payer_email;
