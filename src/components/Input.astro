@@ -2,7 +2,7 @@
 export interface Props {
   label: string;
   name: string;
-  type?: string;
+  type?: "text" | "email" | "password" | "url" | "tel" | "number" | "search";
   required?: boolean;
   placeholder?: string;
   rows?: number;

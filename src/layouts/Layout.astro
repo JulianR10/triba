@@ -5,7 +5,7 @@ import "./global.css";
 import { ClientRouter } from "astro:transitions";
 import { SITE_URL } from "../lib/site-url";
 
-const { title, description, image, canonical } = Astro.props;
+const { title, description, image, canonical, navLogoAlways } = Astro.props;
 
 const siteTitle = title
   ? `${title} — Triba`
@@ -74,7 +74,7 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
     </script>
   </head>
   <body class="bg-triba-bone text-triba-black text-pretty flex flex-col min-h-screen">
-    <Navbar />
+    <Navbar showLogoAlways={navLogoAlways} />
     <main class="relative z-0 flex-1 flex flex-col">
       <slot />
     </main>
@@ -90,7 +90,7 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
           function (entries) {
             entries.forEach(function (entry) {
               if (!entry.isIntersecting) return;
-              var el = entry.target;
+              var el = entry.target as HTMLElement & { _revealSplit?: boolean };
 
               if (el.hasAttribute("data-reveal-text") && !el._revealSplit) {
                 el._revealSplit = true;

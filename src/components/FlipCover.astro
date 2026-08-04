@@ -1,0 +1,61 @@
+---
+export interface Props {
+  image: string;
+  alt: string;
+  flipColor?: string;
+  backTextClass?: string;
+  rounded?: "rounded-lg" | "rounded-xl";
+  textSize?: "text-sm" | "text-base";
+  pad?: "p-4" | "p-6";
+  badge?: string | null;
+}
+
+const {
+  image,
+  alt,
+  flipColor = "bg-triba-pink/80",
+  backTextClass = "text-triba-brown",
+  rounded = "rounded-lg",
+  textSize = "text-base",
+  pad = "p-6",
+  badge = null,
+} = Astro.props;
+---
+
+<div class="card-flip relative aspect-[3/4] cursor-pointer">
+  <div class="card-flip-inner relative w-full h-full">
+    <div class={`card-flip-front absolute inset-0 ${rounded} overflow-hidden border-2 border-triba-black shadow-md`}>
+      <img src={image} alt={alt} loading="lazy" class="w-full h-full object-cover" />
+      {badge && (
+        <span class="absolute -top-3 -right-3 bg-triba-red text-triba-white font-heading text-xs uppercase px-3 py-1 rounded-full border-2 border-triba-black shadow-[2px_2px_0_rgba(0,0,0,0.15)]">
+          {badge}
+        </span>
+      )}
+    </div>
+    <div class={`card-flip-back absolute inset-0 ${rounded} border-2 border-triba-black flex flex-col items-center justify-center ${pad} text-center ${flipColor}`}>
+      <p class={`font-sans ${backTextClass} ${textSize} leading-relaxed`}>Para ver la revista debes <a href="/suscribirme" class="font-bold underline hover:text-triba-red transition-colors">suscribirte</a></p>
+    </div>
+  </div>
+</div>
+
+<style>
+  .card-flip {
+    perspective: 800px;
+  }
+  .card-flip-inner {
+    transform-style: preserve-3d;
+    transition: transform 0.5s ease;
+  }
+  .card-flip-front {
+    backface-visibility: hidden;
+    z-index: 1;
+  }
+  .card-flip-back {
+    backface-visibility: hidden;
+    transform: rotateY(180deg);
+    z-index: 2;
+  }
+  .card-flip:hover .card-flip-inner {
+    transform: rotateY(180deg);
+  }
+</style>

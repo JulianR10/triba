@@ -10,7 +10,7 @@ const description = "Elegí tu plan de suscripción a Triba: newsletter gratuito
 const canonical = "/suscribirme";
 
 const faqs = [
-  { q: "¿Cuándo llega la revista?", a: "La revista se publica el primer día de cada mes. La recibís automáticamente en tu correo y en tu dashboard." },
+  { q: "¿Cuándo llega la revista?", a: "La subimos siempre a mitad de mes, pero nos gusta jugar con la sorpresa así que nunca repetimos un día exacto. Lo mejor sucede cuando no te lo esperas!" },
   { q: "¿Puedo cancelar mi suscripción?", a: "Sí, podés cancelar en cualquier momento desde tu cuenta. Sin preguntas ni complicaciones." },
   { q: "¿Cómo accedo a la revista?", a: "Una vez suscripta, vas a poder leerla online desde nuestro visor o descargarla en PDF." },
 ];
@@ -18,20 +18,20 @@ const faqs = [
 const checkoutStatus = Astro.url.searchParams.get("checkout");
 ---
 
-<Layout title={title} description={description} canonical={canonical}>
+<Layout title={title} description={description} canonical={canonical} navLogoAlways>
   <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
       <div class="max-w-6xl mx-auto">
 
       {checkoutStatus === "canceled" && (
         <div data-banner="checkout-canceled" class="mb-8 p-4 bg-triba-red/10 border-2 border-triba-red rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
-          <p class="font-sans text-sm text-triba-brown">Pago cancelado. No se realizó ningún cargo. Podés intentar de nuevo cuando quieras.</p>
+          <p class="font-sans text-base text-triba-brown">Pago cancelado. No se realizó ningún cargo. Podés intentar de nuevo cuando quieras.</p>
           <button type="button" data-dismiss-banner class="shrink-0 text-triba-brown hover:text-triba-red text-xl leading-none" aria-label="Cerrar">×</button>
         </div>
       )}
 
       {checkoutStatus === "pending" && (
         <div data-banner="checkout-pending" class="mb-8 p-4 bg-triba-blue/10 border-2 border-triba-blue rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
-          <p class="font-sans text-sm text-triba-brown">Tu pago está siendo procesado. Te avisaremos por email cuando se confirme.</p>
+          <p class="font-sans text-base text-triba-brown">Tu pago está siendo procesado. Te avisaremos por email cuando se confirme.</p>
           <button type="button" data-dismiss-banner class="shrink-0 text-triba-brown hover:text-triba-red text-xl leading-none" aria-label="Cerrar">×</button>
         </div>
       )}
@@ -40,17 +40,17 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
         <PatchTitle content="Nuestra suscripción" tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-8 md:gap-12 md:h-[900px]">
         <!-- Col izq: Suscripción Triba -->
         <div class="reveal-stagger" data-reveal>
-          <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-8 text-center h-full">
-            <div class="inline-block bg-triba-red text-triba-white font-heading text-[10px] uppercase tracking-wider px-3 py-1 rounded-full border border-triba-black mb-3 shadow-[1px_1px_0_rgba(0,0,0,0.15)]">Recomendado</div>
+          <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-8 text-center flex flex-col justify-center h-full">
+            <div class="self-center inline-block bg-triba-red text-triba-white font-heading text-xl uppercase tracking-wider px-6 py-2 rounded-full border border-triba-black mb-10 shadow-[1px_1px_0_rgba(0,0,0,0.15)]">Recomendado</div>
             <h3 class="font-heading text-lg font-bold text-triba-brown mb-4 uppercase tracking-wider">Suscripción Triba</h3>
-            <ul class="space-y-2 font-sans text-sm text-triba-brown mb-4">
-              <li class="flex justify-center gap-2">✦ NEWSLETTER INCLUIDO</li>
-              <li class="flex justify-center gap-2">✦ REVISTA COMPLETA (+15 ARTÍCULOS)</li>
-              <li class="flex justify-center gap-2">✦ ACCESO AL ARCHIVO DE TODAS LAS EDICIONES</li>
-              <li class="flex justify-center gap-2">✦ DESCARGA LA REVISTA CON TU NOMBRE</li>
+            <ul class="space-y-2 font-sans text-base text-triba-brown mb-4 text-left">
+              <li class="flex justify-start gap-2">✦ NEWSLETTER INCLUIDO</li>
+              <li class="flex justify-start gap-2">✦ Nuestra revista completa (+15 artículos) todos los meses</li>
+              <li class="flex justify-start gap-2">✦ ACCESO AL ARCHIVO DE TODAS LAS EDICIONES</li>
+              <li class="flex justify-start gap-2">✦ DESCARGA LA REVISTA CON TU NOMBRE</li>
             </ul>
             <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">Accedés a través de tu perfil de usuario en nuestro sitio web</p>
 
@@ -69,7 +69,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
               {plans.map((p) => (
                 <div data-plan={p.moneda} class={p.moneda === "EUR" ? "" : "hidden"}>
                   <p class="font-heading text-4xl md:text-6xl font-bold text-triba-red mb-1">{p.simbolo}{p.precio}</p>
-                  <p class="font-sans text-sm text-triba-brown/60 mb-6">{p.periodo}</p>
+                  <p class="font-sans text-base text-triba-brown/60 mb-6">{p.periodo}</p>
 
                   <div class="space-y-3 mb-4">
                     {p.moneda !== "ARS" && <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth />}
@@ -84,12 +84,12 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
         </div>
 
         <!-- Col der: Newsletter gratuito + Social proof -->
-        <div class="reveal" data-reveal>
+        <div class="reveal h-full flex flex-col justify-center" data-reveal>
           <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 text-center mb-8">
-            <h3 class="font-heading text-base font-bold text-triba-brown mb-3 uppercase tracking-wider">Newsletter gratuito</h3>
-            <ul class="space-y-2 font-sans text-sm text-triba-brown">
-              <li class="flex justify-center gap-2">✦ 2 ARTÍCULOS PERIODÍSTICOS POR MES</li>
-              <li class="flex justify-center gap-2">✦ 1 ARTÍCULO SELECTO DE NUESTRA REVISTA</li>
+            <h3 class="font-heading text-lg font-bold text-triba-brown mb-3 uppercase tracking-wider">Newsletter gratuito</h3>
+            <ul class="space-y-2 font-sans text-base text-triba-brown text-left">
+              <li class="flex justify-start gap-2">✦ 2 ARTÍCULOS PERIODÍSTICOS POR MES</li>
+              <li class="flex justify-start gap-2">✦ 1 ARTÍCULO SELECTO DE NUESTRA REVISTA</li>
             </ul>
             <p class="font-sans text-xs text-triba-brown/70 mt-4 leading-relaxed text-balance">Te llega a tu correo todos los meses, como un blog de noticias</p>
             <form class="mt-4 space-y-4" id="newsletter-form-card">
@@ -111,15 +111,15 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 
           <!-- FAQ -->
           <div class="reveal mt-12" data-reveal>
-            <h2 class="font-heading text-xl uppercase tracking-wide text-triba-brown mb-8 text-center">Preguntas frecuentes</h2>
+            <h2 class="font-heading text-2xl md:text-3xl uppercase tracking-wide text-triba-brown mb-8 text-center">Preguntas frecuentes</h2>
             <div class="space-y-4 reveal-stagger" data-reveal>
               {faqs.map((faq) => (
-                <details class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group transition-all duration-300 hover:shadow-md">
+                <details data-faq class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group transition-all duration-300 hover:shadow-md">
                   <summary class="px-5 py-4 font-heading text-sm font-medium uppercase tracking-wider text-triba-brown cursor-pointer list-none flex items-center justify-between">
                     {faq.q}
                     <span class="text-triba-red text-lg transition-transform duration-300 group-open:rotate-45 shrink-0 ml-3">+</span>
                   </summary>
-                  <div class="px-5 pb-4 font-sans text-sm text-triba-brown leading-relaxed">
+                  <div class="px-5 pb-4 font-sans text-base text-triba-brown leading-relaxed">
                     {faq.a}
                   </div>
                 </details>
@@ -140,7 +140,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
 
   function selectCurrency(currency: string) {
     var tabs = document.querySelectorAll("[data-currency]");
-    var planEls = document.querySelectorAll("[data-plan]");
+    var planEls = document.querySelectorAll("[data-plan]") as NodeListOf<HTMLElement>;
 
     tabs.forEach(function (t) {
       t.classList.remove("bg-triba-red", "text-triba-white");
@@ -176,25 +176,36 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
     if (!btn) return;
 
     btn.scrollIntoView({ behavior: "smooth", block: "center" });
-    setTimeout(function () { btn.click(); }, 400);
+    setTimeout(function () { btn!.click(); }, 400);
   }
 
   function setup() {
-    var tabs = document.querySelectorAll("[data-currency]");
+    var tabs = document.querySelectorAll("[data-currency]") as NodeListOf<HTMLElement>;
     var urlParams = new URLSearchParams(window.location.search);
     var urlCurrency = urlParams.get("currency");
     if (urlCurrency) selectCurrency(urlCurrency);
 
     tabs.forEach(function (btn) {
       btn.addEventListener("click", function () {
-        selectCurrency(btn.dataset.currency);
+        selectCurrency(btn.dataset.currency!);
       });
     });
 
     document.querySelectorAll("[data-dismiss-banner]").forEach(function (btn) {
       btn.addEventListener("click", function () {
-        var banner = btn.closest("[data-banner]");
+        var banner = btn.closest("[data-banner]") as HTMLElement;
         if (banner) banner.style.display = "none";
+      });
+    });
+
+    var faqDetails = document.querySelectorAll<HTMLElement>("details[data-faq]");
+    faqDetails.forEach(function (detail) {
+      detail.addEventListener("toggle", function () {
+        if (detail.open) {
+          faqDetails.forEach(function (other) {
+            if (other !== detail) other.open = false;
+          });
+        }
       });
     });
 

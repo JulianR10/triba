@@ -3,7 +3,6 @@ import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
 import { SITE_URL } from "../lib/site-url";
 import MagazineCarousel from "../components/MagazineCarousel.astro";
-import MagazineSlider from "../components/MagazineSlider.astro";
 import PDFViewer from "../components/PDFViewer.tsx";
 import PatchTitle from "../components/PatchTitle.astro";
 
@@ -16,7 +15,7 @@ import { getSignedPdfUrl } from "../lib/storage";
 const allEditions = await getEditions();
 const featuredEdition = await getFeaturedEdition();
 
-const editions = allEditions.map((e) => ({
+const editions = allEditions.map((e, i) => ({
   id: e.id,
   edition: `#${e.edition_number}`,
   title: e.title,
@@ -26,6 +25,8 @@ const editions = allEditions.map((e) => ({
   featured: e.featured,
   badge: e.badge,
   previewArticle: e.edition_number === (featuredEdition?.edition_number || 3),
+  flipColor: ["bg-triba-pink/80", "bg-triba-blue/80", "bg-triba-red/80"][i % 3],
+  backTextClass: ["text-triba-brown", "text-triba-white", "text-triba-brown"][i % 3],
 }));
 
 const featured = editions.find((e) => e.featured) || editions[0];
@@ -35,7 +36,35 @@ const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
   : undefined;
 ---
 
-<Layout title={title} description={description} canonical={canonical}>
+<Layout title={title} description={description} canonical={canonical} navLogoAlways>
+  <style>
+    .edition-ribbon {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 20;
+      width: clamp(100px, 30vw, 150px);
+      height: clamp(100px, 30vw, 150px);
+      background: #E91A39;
+      clip-path: polygon(100% 0, 0 0, 100% 100%);
+      overflow: hidden;
+    }
+    .edition-ribbon span {
+      position: absolute;
+      top: 40%;
+      left: 60%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      color: white;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      text-align: center;
+      white-space: nowrap;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+  </style>
   <script type="application/ld+json" set:html={JSON.stringify({
     "@context": "https://schema.org",
     "@type": "Periodical",
@@ -57,45 +86,39 @@ const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
         <PatchTitle content="Nuestra revista" tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
       </div>
 
-      <!-- Bloque 1: Edición destacada -->
-      <div class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 mb-8 md:mb-20 reveal-stagger" data-reveal>
-        <div class="flex-1 flex flex-col justify-center order-1 text-center md:text-left">
-          <p id="featured-desc" class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8">
-            {featured.description}
+      <!-- Bloque 1: Edición destacada — dos columnas -->
+      <div class="flex flex-col md:flex-row gap-8 md:gap-12 mb-8 md:mb-20 reveal-stagger" data-reveal>
+        <!-- Columna izquierda: texto -->
+        <div class="flex-1 flex flex-col justify-center text-center md:text-left order-2 md:order-1">
+          <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">
+            Todos los meses publicamos una nueva edición de nuestra revista, hecha por y para mujeres. Estamos felices de compartir con ustedes la tercer edición!
           </p>
-          <div class="flex flex-wrap justify-center md:justify-start gap-4">
-            {featured.pdf !== "#" && (
-              <Button variant="primary" href="#visor-revista">Leer aquí</Button>
-            )}
-            <Button variant="default" id="featured-cta" href={featured.pdf !== "#" ? featured.pdf : "/suscribirme"}>
-              {featured.pdf !== "#" ? "LA QUIERO!" : "Suscribirme"}
+          <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">
+            Con la participación de las colaboradoras fundadoras y algunas Triba Creators que se suman este mes. "El show debe continuar" viene a recordarnos un poco quienes fuimos y quienes somos hoy, transitando por 15 artículos diferentes pero igual de inspiradores.
+          </p>
+          <p class="font-sans text-base text-triba-brown leading-relaxed mb-8">
+            Esperamos que disfrutes tu lectura, nos vemos el mes que viene.
+          </p>
+          <div class="flex justify-center md:justify-start">
+            <Button variant="default" id="featured-cta" href="/suscribirme" class="px-10 py-4 text-base">
+              LA QUIERO!
             </Button>
           </div>
         </div>
-        <div class="hidden md:block flex-1 order-2 md:order-2">
-          <div class="relative max-w-sm mx-auto md:mx-auto">
+        <!-- Columna derecha: portada -->
+        <div class="flex-1 flex items-center justify-center relative order-1 md:order-2">
+          <div class="relative w-full max-w-sm overflow-hidden rounded-xl">
             <img id="featured-cover" src={featured.cover} alt={`Portada de ${featured.title}`} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-lg hover:scale-[1.02] transition-transform duration-500" />
-            <span id="featured-badge" class={"absolute -top-3 -right-3 bg-triba-red text-triba-white font-heading text-xs uppercase px-3 py-1 rounded-full border-2 border-triba-black shadow-[2px_2px_0_rgba(0,0,0,0.15)] " + (featured.badge ? "" : "hidden")}>
-              {featured.badge}
-            </span>
+            <!-- Badge ribbon "Última edición" -->
+            <div class="edition-ribbon absolute top-0 right-0 z-20">
+              <span>Última edición</span>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Bloque 1.5: Slider mobile con las 3 portadas (primera con sticker) -->
-      <div class="md:hidden mb-12 reveal" data-reveal>
-        <MagazineSlider
-          items={editions.map((ed) => ({
-            id: ed.id,
-            cover: ed.cover,
-            badge: ed.id === featured.id ? ed.badge : null,
-          }))}
-          selectedId={featured.id}
-        />
-      </div>
-
-      <!-- Bloque 2: Carrusel de ediciones (solo desktop) -->
-      <div class="relative bg-white w-full px-5 md:px-10 lg:px-20 py-8 md:py-14 rounded-[20px] mx-auto mb-12 md:mb-20 reveal hidden md:block" data-reveal>
+      <!-- Bloque 2: Carrusel de ediciones -->
+      <div class="relative bg-white w-full px-5 md:px-10 lg:px-20 py-8 md:py-14 rounded-[20px] mx-auto mb-12 md:mb-20 reveal" data-reveal>
         <div class="max-w-6xl mx-auto">
           <MagazineCarousel editions={editions} selectedId={featured.id} />
         </div>
@@ -141,40 +164,38 @@ const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
 
 <script>
   function setup() {
-    var featuredCover = document.getElementById("featured-cover");
-    var featuredBadge = document.getElementById("featured-badge");
-    var featuredDesc = document.getElementById("featured-desc");
-    var featuredCta = document.getElementById("featured-cta");
-    var carousel = document.querySelector("[data-carousel]");
+    var featuredCover = document.getElementById("featured-cover") as HTMLImageElement | null;
+    var featuredCta = document.getElementById("featured-cta") as HTMLAnchorElement | null;
+    var carousel = document.querySelector("[data-carousel]")!;
 
-    var featuredEl = document.querySelector("[data-featured]");
+    var featuredEl = document.querySelector("[data-featured]") as HTMLElement | null;
     var currentId = featuredEl ? parseInt(featuredEl.dataset.editionId || "0") : 0;
 
-    function readEdition(card) {
+    function readEdition(card: HTMLElement) {
       return {
-        id: parseInt(card.dataset.editionId),
-        edition: card.dataset.editionName,
-        title: card.dataset.title,
-        description: card.dataset.description,
-        cover: card.dataset.cover,
-        pdf: card.dataset.pdf,
+        id: parseInt(card.dataset.editionId!),
+        edition: card.dataset.editionName!,
+        title: card.dataset.title!,
+        description: card.dataset.description!,
+        cover: card.dataset.cover!,
+        pdf: card.dataset.pdf!,
         badge: card.dataset.badge || null,
       };
     }
 
-    function setActiveCard(id) {
+    function setActiveCard(id: number) {
       if (!carousel) return;
-      var cards = carousel.querySelectorAll("[data-edition-id]");
+      var cards = carousel.querySelectorAll<HTMLElement>("[data-edition-id]");
       for (var i = 0; i < cards.length; i++) {
-        var cardId = parseInt(cards[i].dataset.editionId);
+        var cardId = parseInt(cards[i].dataset.editionId!);
         var isSelected = cardId === id;
-        cards[i].setAttribute("aria-selected", isSelected);
+        cards[i].setAttribute("aria-selected", String(isSelected));
       }
     }
 
-    function selectEdition(id) {
+    function selectEdition(id: number) {
       if (id === currentId) return;
-      var card = carousel.querySelector('[data-edition-id="' + id + '"]');
+      var card = carousel.querySelector<HTMLElement>('[data-edition-id="' + id + '"]');
       if (!card) return;
       var ed = readEdition(card);
       currentId = id;
@@ -184,22 +205,7 @@ const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
         featuredCover.alt = "Portada de " + ed.title;
       }
       if (featuredCta) {
-        featuredCta.href = ed.pdf && ed.pdf !== "#" ? ed.pdf : "/suscribirme";
-        featuredCta.textContent = ed.pdf && ed.pdf !== "#" ? "LA QUIERO!" : "Suscribirme";
-      }
-      if (featuredDesc) {
-        featuredDesc.textContent = ed.description || "";
-      }
-
-      if (ed.badge) {
-        if (featuredBadge) {
-          featuredBadge.textContent = ed.badge;
-          featuredBadge.classList.remove("hidden");
-        }
-      } else {
-        if (featuredBadge) {
-          featuredBadge.classList.add("hidden");
-        }
+        featuredCta.href = "/suscribirme";
       }
 
       setActiveCard(id);
@@ -207,9 +213,10 @@ const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
 
     if (carousel) {
       carousel.addEventListener("click", function (e) {
-        var card = e.target.closest("[data-edition-id]");
+        var target = e.target as HTMLElement | null;
+        var card = target ? target.closest<HTMLElement>("[data-edition-id]") : null;
         if (card) {
-          var id = parseInt(card.dataset.editionId);
+          var id = parseInt(card.dataset.editionId!);
           selectEdition(id);
         }
       });

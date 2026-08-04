@@ -5,7 +5,7 @@ import Input from "../components/Input.astro";
 import PatchTitle from "../components/PatchTitle.astro";
 ---
 
-<Layout title="Triba Creators" description="Sumate como Triba Creator: escribí, diseñá, fotografiá o aportá tu arte a nuestra revista digital. ¡Te esperamos!" canonical="/triba-creators">
+<Layout title="Triba Creators" description="Sumate como Triba Creator: escribí, diseñá, fotografiá o aportá tu arte a nuestra revista digital. ¡Te esperamos!" canonical="/triba-creators" navLogoAlways>
   <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
     <div class="max-w-6xl mx-auto">
 
@@ -14,10 +14,10 @@ import PatchTitle from "../components/PatchTitle.astro";
       </div>
 
       <div class="flex flex-col md:flex-row gap-8 md:gap-12 items-center mb-12 reveal-stagger" data-reveal>
-        <div class="flex-1">
+        <div class="w-full md:w-[42%] shrink-0">
           <img src="/post-triba-creators.webp" alt="Creatividad sin límites" class="w-full h-auto rounded-xl object-cover transition-transform duration-500 hover:scale-[1.03]" />
         </div>
-        <div class="flex-1 text-center md:text-left">
+        <div class="flex-1 text-center md:text-left md:max-w-[44%]">
           <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">
             A Triba la construimos entre todas y es por eso que todos los meses sumamos nuevas Triba Creator a nuestro equipo de colaboradoras.
           </p>
@@ -40,7 +40,7 @@ import PatchTitle from "../components/PatchTitle.astro";
             <span class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">¿Qué querés aportar?</span>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {["Escritura", "Producción", "Fotografía", "Diseño gráfico", "Arte", "Otros"].map((area) => (
-                <label class="flex items-center gap-2 font-sans text-sm text-triba-brown cursor-pointer">
+                <label class="flex items-center gap-2 font-sans text-base text-triba-brown cursor-pointer">
                   <input type="checkbox" name="area" value={area} class="accent-triba-red" />
                   {area}
                 </label>
@@ -49,7 +49,7 @@ import PatchTitle from "../components/PatchTitle.astro";
           </div>
           <Input label="Contanos tu propuesta" name="propuesta" isTextarea required />
           <Input label="¿Dónde podemos ver tu trabajo?" name="trabajo" type="url" placeholder="https://..." />
-          <p id="creators-msg" class="font-sans text-sm text-center hidden"></p>
+          <p id="creators-msg" class="font-sans text-base text-center hidden"></p>
           <Button variant="primary" fullWidth type="submit">Enviar postulación</Button>
         </form>
       </div>
@@ -62,8 +62,8 @@ import PatchTitle from "../components/PatchTitle.astro";
   import { supabase } from "../lib/supabase";
 
   function setup() {
-    const form = document.getElementById("creators-form");
-    const msg = document.getElementById("creators-msg");
+    const form = document.getElementById("creators-form") as HTMLFormElement;
+    const msg = document.getElementById("creators-msg")!;
 
     if (!form) return;
 
@@ -72,15 +72,17 @@ import PatchTitle from "../components/PatchTitle.astro";
       msg.classList.add("hidden");
 
       const data = new FormData(form);
-      const areas = Array.from(form.querySelectorAll("[name=area]:checked")).map(cb => cb.value);
+      const areas = Array.from(form.querySelectorAll("[name=area]:checked")).map(cb => (cb as HTMLInputElement).value);
+      const toStr = (v: FormDataEntryValue | null) => (typeof v === "string" ? v : "");
+      const trabajo = data.get("trabajo");
 
-      const { error } = await supabase.from("creator_applications").insert({
-        nombre: data.get("nombre"),
-        email: data.get("email"),
-        pais: data.get("pais"),
+      const { error } = await supabase!.from("creator_applications").insert({
+        nombre: toStr(data.get("nombre")),
+        email: toStr(data.get("email")),
+        pais: toStr(data.get("pais")),
         areas,
-        propuesta: data.get("propuesta"),
-        trabajo_url: data.get("trabajo") || null,
+        propuesta: toStr(data.get("propuesta")),
+        trabajo_url: typeof trabajo === "string" && trabajo ? trabajo : null,
       });
 
       if (error) {

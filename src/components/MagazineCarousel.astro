@@ -1,4 +1,6 @@
 ---
+import FlipCover from "./FlipCover.astro";
+
 export interface Edition {
   id: number;
   edition: string;
@@ -9,6 +11,8 @@ export interface Edition {
   featured: boolean;
   badge: string | null;
   previewArticle: boolean;
+  flipColor?: string;
+  backTextClass?: string;
 }
 
 export interface Props {
@@ -38,11 +42,18 @@ const { editions, selectedId } = Astro.props;
           role="option"
           aria-selected={ed.id === selectedId}
           tabindex="0"
-          class={"snap-center shrink-0 w-[72vw] sm:w-[40vw] md:w-[30%] cursor-pointer transition-all duration-300 hover:scale-[1.02] focus-visible:outline-2 focus-visible:outline-triba-red focus-visible:outline-offset-2 rounded-xl"}
+          class="snap-center shrink-0 w-[72vw] sm:w-[40vw] md:w-[30%] cursor-pointer focus-visible:outline-2 focus-visible:outline-triba-red focus-visible:outline-offset-2 rounded-xl"
         >
-          <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black">
-            <img src={ed.cover} alt={`Portada de edición ${ed.edition}`} class="w-full h-full object-cover" loading="lazy" />
-          </div>
+          <FlipCover
+            image={ed.cover}
+            alt={`Portada de edición ${ed.edition}`}
+            flipColor={ed.flipColor}
+            backTextClass={ed.backTextClass}
+            rounded="rounded-xl"
+            textSize="text-sm"
+            pad="p-4"
+            badge={ed.badge}
+          />
         </div>
       ))}
     </div>
@@ -57,14 +68,14 @@ const { editions, selectedId } = Astro.props;
     var carousel = document.querySelector("[data-carousel]");
     if (!carousel) return;
 
-    var scroll = carousel.querySelector("[data-carousel-scroll]");
-    var prev = carousel.querySelector("[data-carousel-prev]");
-    var next = carousel.querySelector("[data-carousel-next]");
+    var scroll = carousel.querySelector("[data-carousel-scroll]") as HTMLElement;
+    var prev = carousel.querySelector("[data-carousel-prev]") as HTMLElement;
+    var next = carousel.querySelector("[data-carousel-next]") as HTMLElement;
 
     if (!scroll) return;
 
     function getCardWidth() {
-      var first = scroll.querySelector("[data-edition-id]");
+      var first = scroll.querySelector("[data-edition-id]") as HTMLElement;
       if (!first) return 200;
       var gap = 16;
       return first.offsetWidth + gap;
@@ -82,19 +93,19 @@ const { editions, selectedId } = Astro.props;
       });
     }
 
-    scroll.addEventListener("keydown", function (e) {
-      var focused = scroll.querySelector("[data-edition-id]:focus");
+    scroll.addEventListener("keydown", function (e: KeyboardEvent) {
+      var focused = scroll.querySelector("[data-edition-id]:focus") as HTMLElement;
       if (!focused) return;
       if (e.key === "ArrowLeft") {
         e.preventDefault();
-        var prevCard = focused.previousElementSibling;
+        var prevCard = focused.previousElementSibling as HTMLElement;
         if (prevCard && prevCard.hasAttribute("data-edition-id")) {
           prevCard.focus();
           prevCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
         }
       } else if (e.key === "ArrowRight") {
         e.preventDefault();
-        var nextCard = focused.nextElementSibling;
+        var nextCard = focused.nextElementSibling as HTMLElement;
         if (nextCard && nextCard.hasAttribute("data-edition-id")) {
           nextCard.focus();
           nextCard.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });

@@ -5,10 +5,11 @@ export interface Props {
   href?: string;
   fullWidth?: boolean;
   type?: "button" | "submit" | "reset";
+  id?: string;
   class?: string;
 }
 
-const { variant = "default", size = "md", href, fullWidth = false, type = "button" } = Astro.props;
+const { variant = "default", size = "md", href, fullWidth = false, type = "button", id, } = Astro.props;
 
 const base = "rounded-button font-heading font-medium uppercase border-2 border-triba-black transition-all hover:scale-[1.02] active:scale-[0.98] inline-block";
 
@@ -28,11 +29,11 @@ const classes = `${base} ${variants[variant]} ${sizes[size]} ${fullWidth ? "w-fu
 
 {
   href ? (
-    <a href={href} class={classes} data-magnetic>
+    <a href={href} id={id} class={classes} data-magnetic>
       <slot />
     </a>
   ) : (
-    <button type={type} class={classes} data-magnetic>
+    <button type={type} id={id} class={classes} data-magnetic>
       <slot />
     </button>
   )

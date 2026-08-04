@@ -1,10 +1,14 @@
 ---
+import FlipCover from "./FlipCover.astro";
+
 export interface SliderItem {
   id: number;
   cover: string;
   badge?: string | null;
   title?: string;
   description?: string;
+  flipColor?: string;
+  backTextClass?: string;
 }
 
 export interface Props {
@@ -29,26 +33,23 @@ const { items, selectedId } = Astro.props;
             aria-selected={isSelected}
             class="snap-center shrink-0 w-[58vw] max-w-[220px]"
           >
-            <div class="relative aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-md">
-              <img
-                src={item.cover}
-                alt={item.title ? `Portada de ${item.title}` : "Portada"}
-                class="w-full h-full object-cover"
-                loading="lazy"
-              />
-              {item.badge && (
-                <span class="absolute -top-3 -right-3 bg-triba-red text-triba-white font-heading text-xs uppercase px-3 py-1 rounded-full border-2 border-triba-black shadow-[2px_2px_0_rgba(0,0,0,0.15)]">
-                  {item.badge}
-                </span>
-              )}
-            </div>
+            <FlipCover
+              image={item.cover}
+              alt={item.title ? `Portada de ${item.title}` : "Portada"}
+              flipColor={item.flipColor}
+              backTextClass={item.backTextClass}
+              rounded="rounded-xl"
+              textSize="text-sm"
+              pad="p-4"
+              badge={item.badge}
+            />
             {item.title && (
               <h3 class="font-heading text-base uppercase tracking-wide text-triba-black font-bold mt-3 text-center">
                 {item.title}
               </h3>
             )}
             {item.description && (
-              <p class="font-sans text-triba-brown text-sm leading-relaxed mt-2 text-center">
+              <p class="font-sans text-triba-brown text-base leading-relaxed mt-2 text-center line-clamp-3">
                 {item.description}
               </p>
             )}
@@ -63,11 +64,11 @@ const { items, selectedId } = Astro.props;
 <script>
   function setup() {
     document.querySelectorAll("[data-slider-root]").forEach(function (root) {
-      const scroll = root.querySelector("[data-slider-scroll]");
-      const dotsEl = root.querySelector("[data-slider-dots]");
+      const scroll = root.querySelector("[data-slider-scroll]") as HTMLElement;
+      const dotsEl = root.querySelector("[data-slider-dots]") as HTMLElement;
       if (!scroll || !dotsEl) return;
 
-      const items = Array.from(scroll.querySelectorAll("[data-slider-item]"));
+      const items = Array.from(scroll.querySelectorAll<HTMLElement>("[data-slider-item]"));
       if (items.length === 0) return;
 
       function updateActiveDot() {
@@ -108,9 +109,9 @@ const { items, selectedId } = Astro.props;
         dotsEl.appendChild(dot);
       });
 
-      let scrollTimer;
+      let scrollTimer: ReturnType<typeof setTimeout> | undefined;
       scroll.addEventListener("scroll", function () {
-        clearTimeout(scrollTimer);
+        if (scrollTimer) clearTimeout(scrollTimer);
         scrollTimer = setTimeout(updateActiveDot, 50);
       });
 
