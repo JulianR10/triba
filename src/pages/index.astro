@@ -16,7 +16,13 @@ const magazines = editions.map((e) => ({
   id: e.id,
   number: String(e.edition_number),
   title: e.title,
-  description: e.description,
+  description: e.edition_number === 1
+    ? "Felices de lanzar con ustedes nuestra primer edición de la revista y la posibilidad de hacer realidad un sueño por el que venimos trabajando hace tantos meses! El universo de Triba abre sus puertas y tiene ganas de recibirlas a todas, esperamos que disfruten de la lectura!"
+    : e.edition_number === 2
+      ? "Llegó nuestra segunda edición de la revista y con ella la ilusión de compartirles los 16 artículos que van a encontrar escritos. Por primera vez se suman algunas de ustedes como Triba Creators, escribiendo y diseñando algunas de las columnas. Creamos porque creemos viene a reforzar el desafío que iniciamos en Instagram y a recordarnos la confianza en nuestro arte y voz propias. Esperamos que disfrutes de esta edición, tanto como nosotras disfrutamos de hacerla."
+      : e.edition_number === 3
+        ? "Estamos felices de compartir con ustedes la tercer edición de nuestra revista! Con la participación de las colaboradoras fundadoras y algunas Triba Creators que se suman este mes. “El show debe continuar” viene a recordarnos un poco quienes fuimos y quienes somos hoy, transitando por 15 artículos diferentes pero igual de inspiradores. Esperamos que disfrutes tu lectura, nos vemos el mes que viene!"
+        : e.description,
   image: e.cover_url,
 }));
 
@@ -211,7 +217,7 @@ if (magazines.length >= 3) {
       </div>
     </div>
 
-    <div id="scroll-cards" class="relative bg-white px-0 md:px-10 lg:px-20 xl:px-32 2xl:px-48 py-10 md:py-14 mt-8 md:mt-12 rounded-[20px] mx-auto reveal" data-reveal>
+    <div id="scroll-cards" class="relative bg-white px-0 md:px-10 lg:px-20 xl:px-32 2xl:px-48 py-8 md:py-12 mt-8 md:mt-12 rounded-[20px] reveal" data-reveal>
       <MagazineSlider
         items={magazines.map((m, i) => ({
           id: m.id,
@@ -222,7 +228,7 @@ if (magazines.length >= 3) {
           backTextClass: backTextClasses[i] || backTextClasses[0],
         }))}
       />
-      <div class="hidden md:grid max-w-6xl mx-auto grid-cols-3 gap-6 md:gap-8">
+      <div class="hidden md:grid max-w-6xl mx-auto grid-cols-3 gap-8">
         {magazines.map((m, i) => (
           <MagazineCard
             number={m.number}
@@ -233,6 +239,9 @@ if (magazines.length >= 3) {
             backTextClass={backTextClasses[i] || backTextClasses[0]}
           />
         ))}
+      </div>
+      <div class="flex justify-center mt-10">
+        <Button variant="primary" href="/suscribirme" class="px-10 py-4 text-base">Ver más</Button>
       </div>
     </div>
   </section>

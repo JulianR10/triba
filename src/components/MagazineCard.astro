@@ -14,7 +14,9 @@ const { number, title, description, image, flipColor, backTextClass } = Astro.pr
 ---
 
 <div class="flex flex-col gap-4">
-  <FlipCover image={image} alt={`Triba Tomo ${number}`} flipColor={flipColor} backTextClass={backTextClass} rounded="rounded-lg" textSize="text-base" pad="p-6" />
+  <div class="w-[90%] mx-auto">
+    <FlipCover image={image} alt={`Triba Tomo ${number}`} flipColor={flipColor} backTextClass={backTextClass} rounded="rounded-lg" textSize="text-base" pad="p-6" />
+  </div>
   <h2 class="font-heading text-lg uppercase tracking-wide text-triba-black font-bold">#{number} {title}</h2>
   <p class="font-sans text-triba-brown text-base leading-relaxed line-clamp-3">{description}</p>
 </div>

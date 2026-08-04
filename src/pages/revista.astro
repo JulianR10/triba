@@ -11,7 +11,6 @@ const description = "Explorá las ediciones de Triba, nuestra revista digital me
 const canonical = "/revista";
 
 import { getEditions, getFeaturedEdition } from "../lib/editions";
-import { getSignedPdfUrl } from "../lib/storage";
 const allEditions = await getEditions();
 const featuredEdition = await getFeaturedEdition();
 
@@ -30,10 +29,6 @@ const editions = allEditions.map((e, i) => ({
 }));
 
 const featured = editions.find((e) => e.featured) || editions[0];
-const featuredEditionRaw = featuredEdition ?? allEditions[0];
-const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
-  ? await getSignedPdfUrl(featuredEditionRaw.pdf_url).catch(() => null) ?? featured.pdf
-  : undefined;
 ---
 
 <Layout title={title} description={description} canonical={canonical} navLogoAlways>
@@ -128,7 +123,7 @@ const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
       {featured.pdf !== "#" && (
       <div id="visor-revista" class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 reveal-stagger" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" data-reveal>
         <div class="flex-1 order-2 md:order-1">
-          <PDFViewer pdfUrl={featuredPdfSignedUrl || ''} client:visible />
+          <PDFViewer pdfUrl="/articulo-gratis.pdf" client:visible />
         </div>
         <div class="flex-1 flex flex-col justify-center order-1 md:order-2 text-center md:text-left">
           <PatchTitle tag="h2" class="mb-4 text-2xl md:text-3xl" lines={[

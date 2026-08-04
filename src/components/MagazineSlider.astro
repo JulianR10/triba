@@ -33,23 +33,25 @@ const { items, selectedId } = Astro.props;
             aria-selected={isSelected}
             class="snap-center shrink-0 w-[58vw] max-w-[220px]"
           >
-            <FlipCover
-              image={item.cover}
-              alt={item.title ? `Portada de ${item.title}` : "Portada"}
-              flipColor={item.flipColor}
-              backTextClass={item.backTextClass}
-              rounded="rounded-xl"
-              textSize="text-sm"
-              pad="p-4"
-              badge={item.badge}
-            />
+            <div class="w-[90%] mx-auto">
+              <FlipCover
+                image={item.cover}
+                alt={item.title ? `Portada de ${item.title}` : "Portada"}
+                flipColor={item.flipColor}
+                backTextClass={item.backTextClass}
+                rounded="rounded-xl"
+                textSize="text-sm"
+                pad="p-4"
+                badge={item.badge}
+              />
+            </div>
             {item.title && (
-              <h3 class="font-heading text-base uppercase tracking-wide text-triba-black font-bold mt-3 text-center">
+              <h3 class="font-heading text-base uppercase tracking-wide text-triba-black font-bold mt-4 text-center">
                 {item.title}
               </h3>
             )}
             {item.description && (
-              <p class="font-sans text-triba-brown text-base leading-relaxed mt-2 text-center line-clamp-3">
+              <p class="font-sans text-triba-brown text-base leading-relaxed mt-4 text-center line-clamp-3">
                 {item.description}
               </p>
             )}
