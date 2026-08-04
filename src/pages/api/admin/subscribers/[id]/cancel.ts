@@ -15,7 +15,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
   const { data: profile, error: profileErr } = await supabaseAdmin
     .from("profiles")
-    .select("id, subscription_id")
+    .select("id, email, subscription_id")
     .eq("id", userId)
     .single();
 

@@ -21,14 +21,14 @@ const actionLabels: Record<string, string> = {
 ---
 
 <AdminLayout title="Actividad" active="audit-log">
-  <p class="font-sans text-sm text-triba-brown/70 mb-6">
+  <p class="font-sans text-base text-triba-brown/70 mb-6">
     Registro de acciones administrativas. {total} {total === 1 ? "entrada" : "entradas"} en total.
   </p>
 
   {
     logs.length === 0 ? (
       <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 text-center">
-        <p class="font-sans text-sm text-triba-brown">Todavía no hay actividad registrada.</p>
+        <p class="font-sans text-base text-triba-brown">Todavía no hay actividad registrada.</p>
       </div>
     ) : (
       <>

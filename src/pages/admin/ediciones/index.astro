@@ -7,7 +7,7 @@ const editions = await listEditionsForAdmin();
 
 <AdminLayout title="Ediciones" active="ediciones">
   <div class="flex items-center justify-between mb-6">
-    <p class="font-sans text-sm text-triba-brown/70">
+    <p class="font-sans text-base text-triba-brown/70">
       {editions.length} {editions.length === 1 ? "edición" : "ediciones"} publicadas
     </p>
     <a href="/admin/ediciones/nuevo" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">+ Nueva edición</a>
@@ -16,7 +16,7 @@ const editions = await listEditionsForAdmin();
   {
     editions.length === 0 ? (
       <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 text-center">
-        <p class="font-sans text-sm text-triba-brown mb-4">Todavía no hay ediciones.</p>
+        <p class="font-sans text-base text-triba-brown mb-4">Todavía no hay ediciones.</p>
         <a href="/admin/ediciones/nuevo" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider inline-block hover:scale-[1.02] transition-all">Crear la primera</a>
       </div>
     ) : (

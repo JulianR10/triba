@@ -67,7 +67,7 @@ export async function exportSubscribersCSV(
     const email = escapeCSV(r.profile.email);
     const role = r.profile.role;
     const provider = s?.provider || "";
-    const planId = s?.plan_id || "";
+    const planId = "";
     const currency = s?.plan_currency || "";
     const statusVal = s?.status || "none";
     const periodEnd = s?.current_period_end

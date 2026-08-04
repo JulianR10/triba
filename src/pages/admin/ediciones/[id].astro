@@ -18,7 +18,7 @@ if (!edition) {
 
 <AdminLayout title={`Editar #${edition.edition_number} — ${edition.title}`} active="ediciones">
   {edition.featured && (
-    <p class="font-sans text-sm text-triba-brown/70 mb-6">
+    <p class="font-sans text-base text-triba-brown/70 mb-6">
       <span class="inline-block px-2 py-0.5 rounded-full bg-triba-green text-triba-brown font-heading text-[10px] uppercase tracking-wider">Destacada</span>
     </p>
   )}
@@ -29,7 +29,7 @@ if (!edition) {
 
   <div class="mt-6 p-6 bg-triba-cream rounded-xl border-2 border-triba-black">
     <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">Notificar suscriptoras</p>
-    <p class="font-sans text-sm text-triba-brown/70 mb-4">Envía un email a todas las suscriptoras activas avisando que esta edición ya está disponible.</p>
+    <p class="font-sans text-base text-triba-brown/70 mb-4">Envía un email a todas las suscriptoras activas avisando que esta edición ya está disponible.</p>
     <button id="notify-subscribers-btn" data-edition-id={edition.id} type="button" class="rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-6 py-3 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
       Notificar suscriptoras
     </button>

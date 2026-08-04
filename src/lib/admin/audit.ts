@@ -1,4 +1,5 @@
 import { supabaseAdmin } from "../supabase-admin";
+import type { Json } from "../database.types";
 
 export interface AdminLogRow {
   id: string;
@@ -25,7 +26,7 @@ export async function logAdminAction(
     action,
     entity_type: entityType,
     entity_id: entityId || null,
-    details: details || null,
+    details: (details || null) as unknown as Json,
   });
 }
 

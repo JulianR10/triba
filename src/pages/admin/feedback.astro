@@ -6,14 +6,14 @@ const feedback = await listFeedbackForAdmin();
 ---
 
 <AdminLayout title="Feedback" active="feedback">
-  <p class="font-sans text-sm text-triba-brown/70 mb-6">
+  <p class="font-sans text-base text-triba-brown/70 mb-6">
     Últimos {feedback.length} {feedback.length === 1 ? "mensaje" : "mensajes"} recibidos. Mostrando los más recientes.
   </p>
 
   {
     feedback.length === 0 ? (
       <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 text-center">
-        <p class="font-sans text-sm text-triba-brown">Todavía no hay feedback.</p>
+        <p class="font-sans text-base text-triba-brown">Todavía no hay feedback.</p>
       </div>
     ) : (
       <div class="space-y-3">
@@ -27,7 +27,7 @@ const feedback = await listFeedbackForAdmin();
                 </p>
               </div>
             </div>
-            <p class="font-sans text-sm text-triba-brown whitespace-pre-wrap">{f.mensaje}</p>
+            <p class="font-sans text-base text-triba-brown whitespace-pre-wrap">{f.mensaje}</p>
           </div>
         ))}
       </div>

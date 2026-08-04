@@ -10,7 +10,7 @@ export {
   getEditionForAdmin,
   validateEditionInput,
 } from "./editions";
-export type { AdminEditionRow, EditionInput } from "./editions";
+export type { EditionInput } from "./editions";
 
 export {
   listSubscribersForAdmin,

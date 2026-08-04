@@ -39,12 +39,13 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     return error("id es requerido", 400);
   }
 
-  const status = body?.status;
+  const status = body?.status as "pending" | "approved" | "rejected";
   if (status !== "pending" && status !== "approved" && status !== "rejected") {
     return error("status debe ser 'pending', 'approved' o 'rejected'", 400);
   }
 
-  const update: Record<string, any> = { status };
+  const update: { status?: "pending" | "approved" | "rejected"; admin_notes?: string | null } =
+    { status };
   if (typeof body?.admin_notes === "string") {
     update.admin_notes = body.admin_notes.trim() || null;
   }
