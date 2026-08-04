@@ -1,4 +1,6 @@
 import type { APIRoute } from "astro";
+import type Stripe from "stripe";
+import type { Database } from "../../../lib/database.types";
 import { stripe, STRIPE_WEBHOOK_SECRET } from "../../../lib/stripe";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { ok, error } from "../../../lib/response";
@@ -7,6 +9,11 @@ import { syncPaidSubscriber } from "../../../lib/sender";
 import { sendWelcomeEmail } from "../../../lib/email";
 
 const VERIFY_SIGNATURES = true;
+
+type StripeSubWithPeriod = Stripe.Subscription & {
+  current_period_start: number;
+  current_period_end: number;
+};
 
 export const POST: APIRoute = async ({ request }) => {
   if (!stripe || !STRIPE_WEBHOOK_SECRET) {
@@ -30,14 +37,16 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     switch (event.type) {
       case "checkout.session.completed": {
-        const session = event.data.object as any;
+        const session = event.data.object as Stripe.Checkout.Session;
 
         if (session.mode !== "subscription") break;
 
-        const stripeSub = await stripe.subscriptions.retrieve(session.subscription);
-        const userId = session.client_reference_id || session.metadata?.user_id;
+        const stripeSub = (await stripe.subscriptions.retrieve(
+          session.subscription as string,
+        )) as unknown as StripeSubWithPeriod;
+        const userId = session.client_reference_id || session.metadata?.user_id || "";
 
-        let email = session.customer_email || session.customer_details?.email;
+        let email = session.customer_email || session.customer_details?.email || undefined;
         if (!email && userId) {
           const { data: user } = await supabaseAdmin.auth.admin.getUserById(userId);
           email = user?.user?.email;
@@ -47,19 +56,19 @@ export const POST: APIRoute = async ({ request }) => {
           user_id: userId,
           provider: "stripe",
           provider_subscription_id: stripeSub.id,
-          status: stripeSub.status,
-          plan_currency: session.metadata?.currency || "USD",
+          status: stripeSub.status as "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated",
+          plan_currency: (session.metadata?.currency || "USD") as "EUR" | "USD" | "ARS",
           current_period_start: new Date(stripeSub.current_period_start * 1000).toISOString(),
           current_period_end: new Date(stripeSub.current_period_end * 1000).toISOString(),
         }, { onConflict: "provider, provider_subscription_id" }).select("id").single();
 
           await supabaseAdmin.from("profiles").upsert({
-          id: userId,
-          ...(email ? { email } : {}),
-          role: "subscriber",
-          subscription_id: subs?.id || null,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "id" });
+            id: userId,
+            ...(email ? { email } : {}),
+            role: "subscriber",
+            subscription_id: subs?.id || null,
+            updated_at: new Date().toISOString(),
+          } as Database["public"]["Tables"]["profiles"]["Insert"], { onConflict: "id" });
 
           if (email) {
             syncPaidSubscriber(email).catch((err) =>
@@ -75,10 +84,10 @@ export const POST: APIRoute = async ({ request }) => {
 
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
-        const sub = event.data.object as any;
+        const sub = event.data.object as StripeSubWithPeriod;
 
         await supabaseAdmin.from("subscriptions").update({
-          status: sub.status,
+          status: sub.status as "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated",
           current_period_start: new Date(sub.current_period_start * 1000).toISOString(),
           current_period_end: new Date(sub.current_period_end * 1000).toISOString(),
           updated_at: new Date().toISOString(),

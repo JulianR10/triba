@@ -7,7 +7,9 @@ import { logger } from "../../lib/logger";
 import { getSiteOrigin } from "../../lib/site-url";
 
 const validProviders = ["stripe", "mercadopago"] as const;
+type Provider = (typeof validProviders)[number];
 const validCurrencies = ["EUR", "USD", "ARS"] as const;
+type Currency = (typeof validCurrencies)[number];
 
 export const POST: APIRoute = async ({ request }) => {
   const ip =
@@ -26,29 +28,29 @@ export const POST: APIRoute = async ({ request }) => {
   if (auth instanceof Response) return auth;
   const user = auth.user;
 
-  let body: { provider: string; currency: string };
+  let body: { provider?: unknown; currency?: unknown };
   try {
     body = await request.json();
   } catch {
     return error("Invalid body", 400);
   }
 
-  if (!validProviders.includes(body.provider as any)) {
+  const provider = body.provider as Provider;
+  const currency = body.currency as Currency;
+  if (!validProviders.includes(provider)) {
     return error("Invalid provider", 400);
   }
-  if (!validCurrencies.includes(body.currency as any)) {
+  if (!validCurrencies.includes(currency)) {
     return error("Invalid currency", 400);
   }
-
-  const { provider, currency } = body;
 
   try {
     const paymentProvider = getPaymentProvider(provider);
     const origin = getSiteOrigin();
     const result = await paymentProvider.createCheckout({
       userId: user.id,
-      userEmail: user.email,
-      currency: currency,
+      userEmail: user.email || "",
+      currency,
       origin,
     });
     return ok(result);
