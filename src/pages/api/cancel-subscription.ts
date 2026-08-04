@@ -22,7 +22,7 @@ export const POST: APIRoute = async ({ request }) => {
       return error("No active subscription found", 404);
     }
 
-    const provider = getPaymentProvider(subscription.provider);
+    const provider = getPaymentProvider(subscription.provider as "stripe" | "mercadopago");
     const providerWarnings: string[] = [];
 
     try {

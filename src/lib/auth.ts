@@ -10,6 +10,9 @@ export async function requireUser(request: Request, opts?: { useAdmin?: boolean 
 
   const token = authHeader.slice(7);
   const client = opts?.useAdmin ? supabaseAdmin : supabase;
+  if (!client) {
+    return error("Unauthorized", 401);
+  }
   const { data: { user }, error: authError } = await client.auth.getUser(token);
 
   if (authError || !user) {

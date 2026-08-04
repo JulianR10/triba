@@ -10,9 +10,11 @@ export interface Edition {
   featured: boolean;
   badge: string | null;
   published_at: string;
+  created_at: string;
 }
 
 export async function getEditions(): Promise<Edition[]> {
+  if (!supabase) return [];
   const { data } = await supabase
     .from("editions")
     .select("*")
@@ -21,6 +23,7 @@ export async function getEditions(): Promise<Edition[]> {
 }
 
 export async function getFeaturedEdition(): Promise<Edition | null> {
+  if (!supabase) return null;
   const { data } = await supabase
     .from("editions")
     .select("*")
@@ -30,6 +33,7 @@ export async function getFeaturedEdition(): Promise<Edition | null> {
 }
 
 export async function getEditionBySlug(slug: string): Promise<Edition | null> {
+  if (!supabase) return null;
   const editionNumber = parseInt(slug.replace("edicion-", ""), 10);
   const { data } = await supabase
     .from("editions")

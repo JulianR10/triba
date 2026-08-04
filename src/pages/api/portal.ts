@@ -11,6 +11,10 @@ export const POST: APIRoute = async ({ request }) => {
   if (auth instanceof Response) return auth;
   const user = auth.user;
 
+  if (!supabase) {
+    return error("Internal server error", 500);
+  }
+
   const { data: sub } = await supabase
     .from("subscriptions")
     .select("provider, provider_subscription_id")
@@ -23,7 +27,7 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   try {
-    const provider = getPaymentProvider(sub.provider);
+    const provider = getPaymentProvider(sub.provider as "stripe" | "mercadopago");
     const origin = getSiteOrigin();
     const result = await provider.getPortalUrl(sub.provider_subscription_id, origin);
     return ok(result);

@@ -15,13 +15,13 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
   }
 </style>
 
-<Layout title="Iniciar sesión" description="Accedé a tu cuenta de Triba para leer la revista, gestionar tu suscripción y acceder al archivo." canonical="/iniciar-sesion">
+<Layout title="Iniciar sesión" description="Accedé a tu cuenta de Triba para leer la revista, gestionar tu suscripción y acceder al archivo." canonical="/iniciar-sesion" navLogoAlways>
   <section class="flex-1 flex items-center justify-center px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone py-10">
     <div class="w-full max-w-md">
 
       <div id="checkout-pending-banner" class="hidden bg-triba-green/30 border-2 border-triba-green rounded-xl p-4 mb-4 text-center relative" data-checkout-pending>
         <button type="button" class="absolute top-2 right-3 font-sans text-triba-brown/60 hover:text-triba-brown transition-colors" data-dismiss-banner aria-label="Cerrar">×</button>
-        <p class="font-sans text-sm text-triba-brown">
+        <p class="font-sans text-base text-triba-brown">
           Estás por suscribirte a la revista. <strong class="text-triba-brown">Creá tu cuenta gratis</strong> para continuar con el pago.
         </p>
       </div>
@@ -35,8 +35,8 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
           <Button variant="primary" fullWidth type="submit">Ingresar</Button>
         </form>
         <div class="mt-6 text-center space-y-2">
-          <button type="button" class="font-sans text-sm text-triba-red hover:text-triba-brown transition-colors" id="forgot-password">Olvidé mi contraseña</button>
-          <p class="font-sans text-sm text-triba-brown/60">
+          <button type="button" class="font-sans text-base text-triba-red hover:text-triba-brown transition-colors" id="forgot-password">Olvidé mi contraseña</button>
+          <p class="font-sans text-base text-triba-brown/60">
             No tenés cuenta?{" "}
             <button type="button" id="go-signup" class="text-triba-red hover:text-triba-brown transition-colors font-medium">Crear cuenta</button>
           </p>
@@ -54,7 +54,7 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
           <Button variant="primary" fullWidth type="submit">Crear cuenta</Button>
         </form>
         <div class="mt-6 text-center">
-          <p class="font-sans text-sm text-triba-brown/60">
+          <p class="font-sans text-base text-triba-brown/60">
             Ya tenés cuenta?{" "}
             <button type="button" id="go-login" class="text-triba-red hover:text-triba-brown transition-colors font-medium">Iniciar sesión</button>
           </p>
@@ -63,33 +63,33 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
 
       <div id="forgot-card" class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 hidden reveal" data-reveal>
         <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">Recuperar contraseña</h2>
-        <p class="font-sans text-sm text-triba-brown/70 text-center mb-6">Ingresá tu email y te enviaremos un link para restablecer tu contraseña.</p>
+        <p class="font-sans text-base text-triba-brown/70 text-center mb-6">Ingresá tu email y te enviaremos un link para restablecer tu contraseña.</p>
         <form class="space-y-5" id="forgot-form">
           <Input label="Email" name="email" type="email" required />
           <div id="forgot-error" class="font-sans text-sm text-triba-red hidden"></div>
           <Button variant="primary" fullWidth type="submit">Enviar link</Button>
         </form>
         <div class="mt-4 text-center">
-          <button type="button" class="font-sans text-sm text-triba-brown/60 hover:text-triba-brown transition-colors" id="back-to-login">Volver al login</button>
+          <button type="button" class="font-sans text-base text-triba-brown/60 hover:text-triba-brown transition-colors" id="back-to-login">Volver al login</button>
         </div>
       </div>
 
       <div id="recovery-success" class="hidden max-w-md mx-auto mt-8 p-6 bg-triba-green/30 border-2 border-triba-green rounded-xl text-center">
-        <p class="font-sans text-triba-brown text-sm">Te enviamos un email para restablecer tu contraseña. Revisá tu bandeja de entrada.</p>
+        <p class="font-sans text-triba-brown text-base">Te enviamos un email para restablecer tu contraseña. Revisá tu bandeja de entrada.</p>
       </div>
 
       <div id="check-email-card" class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 hidden reveal" data-reveal>
         <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">Revisá tu email</h2>
-        <p class="font-sans text-sm text-triba-brown/80 text-center mb-2">Te enviamos un link de confirmación.</p>
-        <p class="font-sans text-sm text-triba-brown/60 text-center mb-6">Hacé click en el link que te llegó por email para activar tu cuenta y continuar con tu suscripción.</p>
+        <p class="font-sans text-base text-triba-brown/80 text-center mb-2">Te enviamos un link de confirmación.</p>
+        <p class="font-sans text-base text-triba-brown/60 text-center mb-6">Hacé click en el link que te llegó por email para activar tu cuenta y continuar con tu suscripción.</p>
         <div class="text-center">
-          <button type="button" class="font-sans text-sm text-triba-red hover:text-triba-brown transition-colors" id="check-email-back">Volver al login</button>
+          <button type="button" class="font-sans text-base text-triba-red hover:text-triba-brown transition-colors" id="check-email-back">Volver al login</button>
         </div>
       </div>
 
       <div id="reset-card" class={"bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 reveal " + (isRecovery ? "" : "hidden")} data-reveal>
         <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">Nueva contraseña</h2>
-        <p class="font-sans text-sm text-triba-brown/70 text-center mb-6">Ingresá tu nueva contraseña para acceder a tu cuenta.</p>
+        <p class="font-sans text-base text-triba-brown/70 text-center mb-6">Ingresá tu nueva contraseña para acceder a tu cuenta.</p>
         <form class="space-y-5" id="reset-form">
           <Input label="Nueva contraseña" name="password" type="password" required />
           <Input label="Confirmar contraseña" name="confirm" type="password" required />
@@ -107,6 +107,7 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
   import { getCheckoutIntent } from "../lib/checkout-intent";
 
   function setup() {
+  if (!supabase) return;
 
   const pendingBanner = document.getElementById("checkout-pending-banner");
   const pending = getCheckoutIntent();
@@ -127,7 +128,7 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
   const forgotCard = document.getElementById("forgot-card");
   const resetCard = document.getElementById("reset-card");
   const checkEmailCard = document.getElementById("check-email-card");
-  const recoverySuccess = document.getElementById("recovery-success");
+  const recoverySuccess = document.getElementById("recovery-success")!;
 
   const allCards = [loginCard, signupCard, forgotCard, resetCard, checkEmailCard];
 
@@ -138,18 +139,18 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
   const checkEmailBackBtn = document.getElementById("check-email-back");
 
   const loginForm = document.getElementById("login-form");
-  const loginError = document.getElementById("login-error");
+  const loginError = document.getElementById("login-error")!;
 
   const signupForm = document.getElementById("signup-form");
-  const signupError = document.getElementById("signup-error");
+  const signupError = document.getElementById("signup-error")!;
 
   const forgotForm = document.getElementById("forgot-form");
-  const forgotError = document.getElementById("forgot-error");
+  const forgotError = document.getElementById("forgot-error")!;
 
   const resetForm = document.getElementById("reset-form");
-  const resetError = document.getElementById("reset-error");
+  const resetError = document.getElementById("reset-error")!;
 
-  function showCard(card) {
+  function showCard(card: HTMLElement | null) {
     allCards.forEach((c) => {
       if (c) c.classList.add("hidden");
     });
@@ -157,7 +158,7 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
     if (card) card.classList.remove("hidden");
   }
 
-  function isSafeRedirect(url) {
+  function isSafeRedirect(url: string | null) {
     if (!url) return false;
     try {
       const parsed = new URL(url, window.location.origin);
@@ -170,7 +171,7 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
   function getSafeRedirect() {
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get("redirect");
-    return isSafeRedirect(redirect) ? redirect : "/mi-cuenta";
+    return isSafeRedirect(redirect) && redirect ? redirect : "/mi-cuenta";
   }
 
   if (forgotBtn) {
@@ -199,11 +200,11 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
       loginError.classList.add("hidden");
       loginError.textContent = "";
 
-      const email = loginForm.querySelector("[name=email]").value;
-      const password = loginForm.querySelector("[name=password]").value;
-      const submitBtn = loginForm.querySelector("button[type=submit]");
+      const email = (loginForm.querySelector("[name=email]") as HTMLInputElement).value;
+      const password = (loginForm.querySelector("[name=password]") as HTMLInputElement).value;
+      const submitBtn = loginForm.querySelector("button[type=submit]") as HTMLButtonElement | null;
       const defaultLabel = submitBtn?.textContent || "Ingresar";
-      const setBusy = (label) => {
+      const setBusy = (label: string) => {
         if (submitBtn) {
           submitBtn.disabled = true;
           submitBtn.textContent = label;
@@ -219,7 +220,7 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
       setBusy("Ingresando...");
 
       try {
-        const { error: authError } = await supabase.auth.signInWithPassword({ email, password });
+        const { error: authError } = await supabase!.auth.signInWithPassword({ email, password });
         if (authError) {
           loginError.textContent = authError.message;
           loginError.classList.remove("hidden");
@@ -237,9 +238,9 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
 
         let role = null;
         try {
-          const { data: { user } } = await supabase.auth.getUser();
+          const { data: { user } } = await supabase!.auth.getUser();
           if (user) {
-            const { data: profile } = await supabase
+            const { data: profile } = await supabase!
               .from("profiles")
               .select("role")
               .eq("id", user.id)
@@ -266,9 +267,9 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
       signupError.classList.add("hidden");
       signupError.textContent = "";
 
-      const email = signupForm.querySelector("[name=email]").value;
-      const password = signupForm.querySelector("[name=password]").value;
-      const confirm = signupForm.querySelector("[name=confirm]").value;
+      const email = (signupForm.querySelector("[name=email]") as HTMLInputElement).value;
+      const password = (signupForm.querySelector("[name=password]") as HTMLInputElement).value;
+      const confirm = (signupForm.querySelector("[name=confirm]") as HTMLInputElement).value;
 
       if (password !== confirm) {
         signupError.textContent = "Las contraseñas no coinciden";
@@ -285,13 +286,13 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
       const redirect = getSafeRedirect();
       const emailRedirectTo = window.location.origin + redirect;
 
-      const submitBtn = signupForm.querySelector("button[type=submit]");
+      const submitBtn = signupForm.querySelector("button[type=submit]") as HTMLButtonElement | null;
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = "Creando cuenta...";
       }
 
-      const { data, error } = await supabase.auth.signUp({
+      const { data, error } = await supabase!.auth.signUp({
         email,
         password,
         options: { emailRedirectTo },
@@ -315,7 +316,7 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
         return;
       }
 
-      if (data.user && data.user.identities.length === 0) {
+      if (data.user && (data.user.identities || []).length === 0) {
         signupError.textContent = "Ya existe una cuenta con este email. Iniciá sesión para continuar.";
         signupError.classList.remove("hidden");
         return;
@@ -331,14 +332,14 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
       forgotError.classList.add("hidden");
       forgotError.textContent = "";
 
-      const email = forgotForm.querySelector("[name=email]").value;
+      const email = (forgotForm.querySelector("[name=email]") as HTMLInputElement).value;
       if (!email) {
         forgotError.textContent = "Ingresá tu email";
         forgotError.classList.remove("hidden");
         return;
       }
 
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      const { error } = await supabase!.auth.resetPasswordForEmail(email, {
         redirectTo: window.location.origin + "/iniciar-sesion?recovery=true",
       });
       if (error) {
@@ -357,8 +358,8 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
       resetError.classList.add("hidden");
       resetError.textContent = "";
 
-      const password = resetForm.querySelector("[name=password]").value;
-      const confirm = resetForm.querySelector("[name=confirm]").value;
+      const password = (resetForm.querySelector("[name=password]") as HTMLInputElement).value;
+      const confirm = (resetForm.querySelector("[name=confirm]") as HTMLInputElement).value;
 
       if (password !== confirm) {
         resetError.textContent = "Las contraseñas no coinciden";
@@ -372,7 +373,7 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
         return;
       }
 
-      const { error } = await supabase.auth.updateUser({ password });
+      const { error } = await supabase!.auth.updateUser({ password });
       if (error) {
         resetError.textContent = error.message;
         resetError.classList.remove("hidden");

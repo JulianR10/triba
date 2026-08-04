@@ -1,6 +1,6 @@
-export type SubscriptionStatus = "active" | "canceled" | "past_due" | "trialing" | "incomplete";
+export type SubscriptionStatus = "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated";
 
-export type PaymentProvider = "stripe" | "mercadopago";
+export type PaymentProvider = "stripe" | "mercadopago" | "migrated";
 
 export interface Profile {
   id: string;

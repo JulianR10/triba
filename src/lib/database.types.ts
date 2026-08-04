@@ -28,14 +28,15 @@ export interface Database {
           created_at?: string;
           updated_at?: string;
         };
+        Relationships: [];
       };
       subscriptions: {
         Row: {
           id: string;
           user_id: string;
-          provider: "stripe" | "mercadopago";
+          provider: "stripe" | "mercadopago" | "migrated";
           provider_subscription_id: string;
-          status: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
+          status: "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated";
           plan_currency: "EUR" | "USD" | "ARS";
           current_period_start: string | null;
           current_period_end: string | null;
@@ -46,9 +47,9 @@ export interface Database {
         Insert: {
           id?: string;
           user_id: string;
-          provider: "stripe" | "mercadopago";
+          provider: "stripe" | "mercadopago" | "migrated";
           provider_subscription_id: string;
-          status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
+          status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated";
           plan_currency: "EUR" | "USD" | "ARS";
           current_period_start?: string | null;
           current_period_end?: string | null;
@@ -59,9 +60,9 @@ export interface Database {
         Update: {
           id?: string;
           user_id?: string;
-          provider?: "stripe" | "mercadopago";
+          provider?: "stripe" | "mercadopago" | "migrated";
           provider_subscription_id?: string;
-          status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete";
+          status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated";
           plan_currency?: "EUR" | "USD" | "ARS";
           current_period_start?: string | null;
           current_period_end?: string | null;
@@ -69,6 +70,7 @@ export interface Database {
           updated_at?: string;
           canceled_at?: string | null;
         };
+        Relationships: [];
       };
       editions: {
         Row: {
@@ -107,6 +109,7 @@ export interface Database {
           published_at?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       edition_pages: {
         Row: {
@@ -133,6 +136,7 @@ export interface Database {
           alt_text?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       newsletters: {
         Row: {
@@ -150,6 +154,7 @@ export interface Database {
           email?: string;
           subscribed_at?: string;
         };
+        Relationships: [];
       };
       creator_applications: {
         Row: {
@@ -188,6 +193,7 @@ export interface Database {
           admin_notes?: string | null;
           created_at?: string;
         };
+        Relationships: [];
       };
       feedback: {
         Row: {
@@ -208,6 +214,7 @@ export interface Database {
           mensaje?: string;
           created_at?: string;
         };
+        Relationships: [];
       };
       admin_audit_log: {
         Row: {
@@ -240,13 +247,69 @@ export interface Database {
           details?: Json | null;
           created_at?: string;
         };
+        Relationships: [];
       };
+      rate_limits: {
+        Row: {
+          id: number;
+          ip: string;
+          endpoint: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          ip: string;
+          endpoint: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          ip?: string;
+          endpoint?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      subscriber_migrations: {
+        Row: {
+          id: string;
+          email: string;
+          old_subscription_data: Json | null;
+          migrated_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          old_subscription_data?: Json | null;
+          migrated_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          old_subscription_data?: Json | null;
+          migrated_at?: string;
+        };
+        Relationships: [];
+      };
+    };
+    Views: {
+      [_ in never]: never;
     };
     Functions: {
       cancel_subscription: {
         Args: { p_user_id: string };
-        Returns: void;
+        Returns: undefined;
       };
+      cleanup_rate_limits: {
+        Args: Record<PropertyKey, never>;
+        Returns: undefined;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
     };
   };
 }

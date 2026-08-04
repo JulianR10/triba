@@ -106,4 +106,16 @@ triba/
 
 ## Deuda de tipos
 
-`astro check`: **271 errores TS, todos en scripts client-side** de `.astro`. No rompen build ni runtime; se arreglan al tocar cada archivo. Dominantes: 18047 (DOM null, 97) · 2339 (propiedad inexistente / `never[]` de Supabase, 96) · 7006 (any implícito, 20) · 2345 (argumento mal tipado, 18) · 6133 (var sin usar, 10). Archivos: `iniciar-sesion.astro` (61) · `Navbar.astro` (47) · `mi-cuenta.astro` (25) · `revista.astro` (14) · `triba-creators.astro` (11) · `index.astro` (10) · carouseles y resto menor.
+**`npx astro check` → 0 errores** (4-Ago-2026, Tier 2 completo). `npm run build` OK.
+
+**Server-side queda en 0** (Ago 2026). El problema raíz era `src/lib/database.types.ts`: le faltaban `Views`/`Enums`/`CompositeTypes`, `rate_limits`, `subscriber_migrations` y los valores `'migrated'` → el genérico `createClient<Database>` no satisfacía `GenericSchema` y **todo `.from()` resolvía a `never[]`**. ⚠️ Mantener `database.types.ts` en formato canónico y sincronizado con `supabase/migrations/` (agregar cada tabla/función/columna nueva): si vuelve a faltar una clave o se desfasa, reaparece el `never[]` masivo.
+
+### Cierre Tier 2 (4-Ago-2026): 0 errores
+
+Limpios: `iniciar-sesion.astro`, `Navbar.astro`, `mi-cuenta.astro`, `triba-creators.astro`, `revista.astro`, `index.astro`, `MagazineCarousel.astro`, `MagazineSlider.astro`, `suscribirme.astro`, `Layout.astro`, `Input.astro` (prop `type?: "text"|"email"|"password"|"url"|"tel"|"number"|"search"`), `Button.astro` (prop `id?`).
+
+**⚠️ Lecciones aprendidas (evitar regresión):**
+- En callbacks de `NodeListOf.forEach`, **no tipar el parámetro** como `HTMLElement` (2345: `Element` no acepta parámetro `HTMLElement`) — tipar la variable con `querySelectorAll(...) as NodeListOf<HTMLElement>` en la declaración.
+- No referenciar tipos `HTML*Attribute` en templates `.astro` (2304): usar unión literal en `Props` en su lugar.
+- Propiedades custom de DOM (`_revealSplit`): tipar con intersección `as HTMLElement & { _revealSplit?: boolean }`.
+- El narrowing de guards NO propaga a closures/handlers: usar `!` (`btn!.click()`, `selectCurrency(btn.dataset.currency!)`).
