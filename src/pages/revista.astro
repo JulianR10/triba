@@ -75,7 +75,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
     "inLanguage": "es",
     "numberOfIssues": allEditions.length,
   })} />
-  <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
+  <section class="page-shell page-gutter bg-triba-bone">
     <div class="max-w-6xl mx-auto">
       <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
         <PatchTitle content="Nuestra revista" tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
@@ -86,7 +86,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
         <!-- Columna izquierda: texto -->
         <div class="flex-1 flex flex-col justify-center text-center md:text-left order-2 md:order-1">
           <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">
-            Todos los meses publicamos una nueva edición de nuestra revista, hecha por y para mujeres. Estamos felices de compartir con ustedes la tercer edición!
+            Todos los meses publicamos una nueva edición de nuestra revista, hecha por y para mujeres. Estamos felices de compartir con ustedes la tercera edición!
           </p>
           <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">
             Con la participación de las colaboradoras fundadoras y algunas Triba Creators que se suman este mes. "El show debe continuar" viene a recordarnos un poco quienes fuimos y quienes somos hoy, transitando por 15 artículos diferentes pero igual de inspiradores.
@@ -121,7 +121,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
 
       <!-- Bloque 3: Vista previa de artículo -->
       {featured.pdf !== "#" && (
-      <div id="visor-revista" class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 reveal-stagger" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" data-reveal>
+      <div id="visor-revista" class="scroll-anchor flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 reveal-stagger" data-reveal>
         <div class="flex-1 order-2 md:order-1">
           <PDFViewer pdfUrl="/articulo-gratis.pdf" client:visible />
         </div>

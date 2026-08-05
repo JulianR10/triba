@@ -14,11 +14,17 @@ const cards = [
     color: "bg-triba-green/30",
   },
   {
+    label: "Suscriptoras migradas",
+    value: stats.migrated_subscribers,
+    href: "/admin/suscriptoras",
+    color: "bg-triba-pink",
+  },
+  {
     label: "Ediciones totales",
     value: stats.editions_total,
     sub: stats.editions_featured === 1 ? "1 destacada" : `${stats.editions_featured} destacadas`,
     href: "/admin/ediciones",
-    color: "bg-triba-pink",
+    color: "bg-triba-light-cream",
   },
   {
     label: "Feedback recibido",

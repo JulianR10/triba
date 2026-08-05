@@ -3,7 +3,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
 ---
 
 <AdminLayout title="Suscriptoras" active="suscriptoras">
-  <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+  <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
     <div class="bg-triba-green/30 rounded-xl border-2 border-triba-black p-4">
       <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/80">Activas</p>
       <p class="font-heading text-2xl text-triba-brown" id="stat-active">—</p>
@@ -15,6 +15,14 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     <div class="bg-triba-bone rounded-xl border-2 border-triba-black p-4">
       <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/80">Sin sub</p>
       <p class="font-heading text-2xl text-triba-brown" id="stat-nosub">—</p>
+    </div>
+    <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-4">
+      <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/80">Pend. registro</p>
+      <p class="font-heading text-2xl text-triba-brown" id="stat-pending">—</p>
+    </div>
+    <div class="bg-triba-red/20 rounded-xl border-2 border-triba-black p-4">
+      <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/80">Reembolsadas</p>
+      <p class="font-heading text-2xl text-triba-brown" id="stat-refunded">—</p>
     </div>
   </div>
 
@@ -39,6 +47,8 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
         { key: "active", label: "Activas" },
         { key: "canceled", label: "Canceladas" },
         { key: "none", label: "Sin sub" },
+        { key: "pending", label: "Pend. registro" },
+        { key: "refunded", label: "Reembolsadas" },
       ].map((tab) => (
         <button
           class="sub-filter-btn rounded-button border-2 px-4 py-1.5 font-heading text-xs uppercase tracking-wider transition-all"
@@ -102,6 +112,8 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
   const statActive = document.getElementById("stat-active")!;
   const statCanceled = document.getElementById("stat-canceled")!;
   const statNosub = document.getElementById("stat-nosub")!;
+  const statPending = document.getElementById("stat-pending")!;
+  const statRefunded = document.getElementById("stat-refunded")!;
 
   let searchTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -121,10 +133,65 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       currentTotal = total;
       currentTotalPages = totalPages;
 
+      if (typeof data.totalPending === "number") {
+        statPending.textContent = String(data.totalPending);
+      }
+      if (typeof data.totalRefunded === "number") {
+        statRefunded.textContent = String(data.totalRefunded);
+      }
+
       if (rows.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-triba-brown/50 font-sans text-sm">No se encontraron suscriptoras.</td></tr>`;
       } else {
         tbody.innerHTML = rows.map((row: any) => {
+          if (row.migrationId) {
+            const email = row.migrationEmail || "";
+            const isRefunded = row.migrationRefunded;
+            const stripeStatus = row.migrationStripeStatus;
+            const hasStripeSub = !!row.migrationStripeSubId;
+
+            let statusLabel: string;
+            let statusClass: string;
+            if (isRefunded) {
+              statusLabel = "Reembolsada";
+              statusClass = "bg-triba-red/20 text-triba-red";
+            } else if (stripeStatus === "active") {
+              statusLabel = "Sub activa";
+              statusClass = "bg-triba-green text-triba-brown";
+            } else if (stripeStatus === "incomplete") {
+              statusLabel = "Sub incompleta";
+              statusClass = "bg-triba-cream text-triba-brown";
+            } else if (stripeStatus === "canceled") {
+              statusLabel = "Sub cancelada";
+              statusClass = "bg-triba-bone text-triba-brown/60";
+            } else if (hasStripeSub) {
+              statusLabel = "Con Stripe";
+              statusClass = "bg-triba-pink text-triba-brown";
+            } else {
+              statusLabel = "Sin billing";
+              statusClass = "bg-triba-bone text-triba-brown/60";
+            }
+
+            const provider = hasStripeSub ? "Stripe" : "CSV";
+            const canAct = hasStripeSub && !isRefunded && stripeStatus === "active";
+            const refundBtn = canAct
+              ? `<button class="refund-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-migration-id="${row.migrationId}" data-email="${escapeHtml(email)}">Reembolsar</button>`
+              : "";
+            const cancelBtn = canAct
+              ? `<button class="cancel-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-migration-id="${row.migrationId}" data-email="${escapeHtml(email)}">Cancelar</button>`
+              : "";
+            const actionsContent = [refundBtn, cancelBtn].filter(Boolean).join('<span class="text-triba-brown/20 mx-1">|</span>') || "—";
+
+            return `<tr class="border-b border-triba-black/10 last:border-0 hover:bg-triba-bone/50">
+              <td class="px-4 py-3"><p class="font-sans">${escapeHtml(email)}</p><p class="font-sans text-xs text-triba-brown/60">pend. registro</p></td>
+              <td class="px-4 py-3 capitalize">${provider}</td>
+              <td class="px-4 py-3">—</td>
+              <td class="px-4 py-3"><span class="inline-block px-2 py-0.5 rounded-full ${statusClass} font-heading text-[10px] uppercase tracking-wider">${statusLabel}</span></td>
+              <td class="px-4 py-3 text-triba-brown/70 hidden md:table-cell">—</td>
+              <td class="px-4 py-3 text-right"><div class="flex items-center justify-end gap-1">${actionsContent}</div></td>
+            </tr>`;
+          }
+
           const s = row.subscription;
           const statusClass = s?.status === "active"
             ? "bg-triba-green text-triba-brown"
@@ -135,16 +202,26 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
           const periodEnd = s?.current_period_end
             ? new Date(s.current_period_end).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
             : "—";
-          const cancelBtn = s?.status === "active"
+          const canRefund = s?.status === "active" && (s?.provider === "stripe" || s?.provider === "mercadopago");
+          const canCancel = s?.status === "active";
+          const cancelBtn = canCancel
             ? `<button class="cancel-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-email="${row.profile.email}">Cancelar</button>`
             : "";
+          const refundBtn = canRefund
+            ? `<button class="refund-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-email="${row.profile.email}">Reembolsar</button>`
+            : "";
+          const actionsContent = [cancelBtn, refundBtn].filter(Boolean).join('<span class="text-triba-brown/20 mx-1">|</span>') || "—";
           return `<tr class="border-b border-triba-black/10 last:border-0 hover:bg-triba-bone/50">
             <td class="px-4 py-3"><p class="font-sans">${escapeHtml(row.profile.email)}</p><p class="font-sans text-xs text-triba-brown/60">${row.profile.role}</p></td>
             <td class="px-4 py-3 capitalize">${s?.provider || "—"}</td>
             <td class="px-4 py-3">${s?.plan_currency || "—"}</td>
             <td class="px-4 py-3">${statusLabel !== "—" ? `<span class="inline-block px-2 py-0.5 rounded-full ${statusClass} font-heading text-[10px] uppercase tracking-wider">${statusLabel}</span>` : statusLabel}</td>
             <td class="px-4 py-3 text-triba-brown/70 hidden md:table-cell">${periodEnd}</td>
-            <td class="px-4 py-3 text-right">${cancelBtn}</td>
+            <td class="px-4 py-3 text-right">
+              <div class="flex items-center justify-end gap-1">
+                ${actionsContent}
+              </div>
+            </td>
           </tr>`;
         }).join("");
       }
@@ -155,15 +232,22 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
 
       updateStats(rows);
       bindCancelButtons();
+      bindRefundButtons();
     } catch {
       tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-triba-red/70 font-sans text-sm">Error al cargar</td></tr>`;
     }
   }
 
   function updateStats(rows: any[]) {
+    if (currentFilter === "pending" || currentFilter === "refunded") {
+      statActive.textContent = "—";
+      statCanceled.textContent = "—";
+      statNosub.textContent = "—";
+      return;
+    }
     const active = rows.filter((r: any) => r.subscription?.status === "active").length;
     const canceled = rows.filter((r: any) => r.subscription?.status === "canceled").length;
-    const none = rows.filter((r: any) => !r.subscription).length;
+    const none = rows.filter((r: any) => r.profile && !r.subscription).length;
     statActive.textContent = String(active);
     statCanceled.textContent = String(canceled);
     statNosub.textContent = String(none);
@@ -174,7 +258,9 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       if (btn.dataset.bound === "1") return;
       btn.dataset.bound = "1";
       btn.addEventListener("click", async () => {
-        const userId = btn.dataset.userId!;
+        const userId = btn.dataset.userId;
+        const migrationId = btn.dataset.migrationId;
+        const id = userId || migrationId;
         const email = btn.dataset.email!;
         const confirmed = await (window as any).adminConfirm?.(
           "Cancelar suscripción",
@@ -185,7 +271,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
         const original = btn.textContent;
         btn.textContent = "Cancelando...";
         try {
-          const res = await fetch(`/api/admin/subscribers/${userId}/cancel`, { method: "POST" });
+          const res = await fetch(`/api/admin/subscribers/${id}/cancel`, { method: "POST" });
           const data = await res.json().catch(() => ({}));
           if (!res.ok) {
             (window as any).adminToast?.(data.error || "Error cancelando", "error");
@@ -194,6 +280,47 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             return;
           }
           (window as any).adminToast?.("Suscripción cancelada", "success");
+          loadSubscribers();
+        } catch {
+          (window as any).adminToast?.("Error de conexión", "error");
+          btn.disabled = false;
+          btn.textContent = original;
+        }
+      });
+    });
+  }
+
+  function bindRefundButtons() {
+    document.querySelectorAll<HTMLButtonElement>(".refund-btn").forEach((btn) => {
+      if (btn.dataset.bound === "1") return;
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", async () => {
+        const userId = btn.dataset.userId;
+        const migrationId = btn.dataset.migrationId;
+        const id = userId || migrationId;
+        const email = btn.dataset.email!;
+        const confirmed = await (window as any).adminConfirm?.(
+          "Reembolsar y Cancelar",
+          `¿Reembolsar el último cobro de ${email} y cancelar su suscripción? Esto no se puede deshacer.`
+        );
+        if (!confirmed) return;
+        btn.disabled = true;
+        const original = btn.textContent;
+        btn.textContent = "Reembolsando...";
+        try {
+          const res = await fetch(`/api/admin/subscribers/${id}/refund`, { method: "POST" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            (window as any).adminToast?.(data.error || "Error al reembolsar", "error");
+            btn.disabled = false;
+            btn.textContent = original;
+            return;
+          }
+          if (data.warnings && data.warnings.length > 0) {
+            (window as any).adminToast?.(`Reembolso OK con advertencias: ${data.warnings.join(", ")}`, "warning");
+          } else {
+            (window as any).adminToast?.("Reembolso procesado correctamente", "success");
+          }
           loadSubscribers();
         } catch {
           (window as any).adminToast?.("Error de conexión", "error");

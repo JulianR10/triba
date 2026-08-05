@@ -46,7 +46,7 @@ const structuredData = {
 
 <Layout {title} {description} {canonical} navLogoAlways>
   <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
-  <section class="py-12 md:py-24 px-5 md:px-10 lg:px-20 xl:px-32 2xl:px-48 bg-triba-bone" style="padding-top: max(1rem, var(--nav-height, 64px))">
+  <section class="page-shell page-gutter bg-triba-bone">
     <div class="max-w-6xl mx-auto">
       <div class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 mb-16 md:mb-20 reveal" data-reveal>
         <div class="flex-1 flex flex-col justify-center">
@@ -70,7 +70,7 @@ const structuredData = {
       </div>
 
       {edition.pdf_url && (
-        <div class="mb-16 md:mb-20 reveal" id="visor-revista" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" data-reveal>
+        <div class="mb-16 md:mb-20 scroll-anchor reveal" id="visor-revista" data-reveal>
           <PatchTitle content="Previsualización" tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
           <PDFViewer pdfUrl={edition.pdf_url ? (await getSignedPdfUrl(edition.pdf_url).catch(() => edition.pdf_url)) ?? edition.pdf_url : ''} client:visible />
         </div>

@@ -1,8 +1,10 @@
 import type { APIRoute } from "astro";
 import { requireAdmin } from "../../../../lib/auth";
-import { exportSubscribersCSV } from "../../../../lib/admin/subscribers";
+import { exportSubscribersCSV, type AdminSubscriberStatus } from "../../../../lib/admin/subscribers";
 
 export const prerender = false;
+
+const VALID_STATUSES: AdminSubscriberStatus[] = ["all", "active", "canceled", "none", "pending", "refunded"];
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const admin = requireAdmin(locals);
@@ -10,11 +12,12 @@ export const GET: APIRoute = async ({ request, locals }) => {
 
   const url = new URL(request.url);
   const search = url.searchParams.get("search") || "";
-  const status = (url.searchParams.get("status") || "all") as "all" | "active" | "canceled" | "none";
-  const validStatuses = ["all", "active", "canceled", "none"] as const;
-  const statusFilter = validStatuses.includes(status as any) ? status : "all";
+  const rawStatus = url.searchParams.get("status") || "all";
+  const status: AdminSubscriberStatus = VALID_STATUSES.includes(rawStatus as AdminSubscriberStatus)
+    ? (rawStatus as AdminSubscriberStatus)
+    : "all";
 
-  const csv = await exportSubscribersCSV(search, statusFilter);
+  const csv = await exportSubscribersCSV(search, status);
 
   return new Response(csv, {
     status: 200,

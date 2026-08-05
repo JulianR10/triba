@@ -1,13 +1,39 @@
 import { supabaseAdmin } from "../supabase-admin";
+import { stripe } from "../stripe";
 import type { Profile, Subscription } from "../types";
 
 export interface AdminSubscriberRow {
-  profile: Profile;
+  profile: Profile | null;
   subscription: Subscription | null;
+  migrationId?: string;
+  migrationEmail?: string;
+  migrationStripeSubId?: string | null;
+  migrationStripeStatus?: string;
+  migrationRefunded?: boolean;
 }
+
+export type AdminSubscriberStatus = "all" | "active" | "canceled" | "none" | "pending" | "refunded";
 
 export interface SearchSubscribersResult {
   rows: AdminSubscriberRow[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+  totalMigrated: number;
+  totalPending: number;
+  totalRefunded: number;
+}
+
+export interface MigratedSubscriberRow {
+  email: string;
+  migratedAt: string;
+  hasAccount: boolean;
+  hasStripe: boolean;
+}
+
+export interface SearchMigratedResult {
+  rows: MigratedSubscriberRow[];
   total: number;
   page: number;
   pageSize: number;
@@ -56,7 +82,7 @@ function escapeCSV(val: string): string {
 
 export async function exportSubscribersCSV(
   search: string,
-  status: "all" | "active" | "canceled" | "none",
+  status: AdminSubscriberStatus,
 ): Promise<string> {
   const result = await searchSubscribersForAdmin(search, status, 1, 999999);
   const rows = result.rows;
@@ -64,27 +90,66 @@ export async function exportSubscribersCSV(
   const header = "Email,Rol,Provider,Plan,Moneda,Estado,Vence,Creada";
   const lines = rows.map((r) => {
     const s = r.subscription;
-    const email = escapeCSV(r.profile.email);
-    const role = r.profile.role;
-    const provider = s?.provider || "";
-    const planId = "";
+    const email = escapeCSV(r.profile?.email || r.migrationId || "");
+    const role = r.profile?.role || "migrated";
+    const provider = s?.provider || (r.migrationId ? "migrado" : "");
     const currency = s?.plan_currency || "";
-    const statusVal = s?.status || "none";
+    const statusVal = s?.status || (r.migrationId ? "pending" : "none");
     const periodEnd = s?.current_period_end
       ? new Date(s.current_period_end).toISOString()
       : "";
-    const createdAt = r.profile.created_at
+    const createdAt = r.profile?.created_at
       ? new Date(r.profile.created_at).toISOString()
       : "";
-    return `${email},${role},${provider},${planId},${currency},${statusVal},${periodEnd},${createdAt}`;
+    return `${email},${role},${provider},,${currency},${statusVal},${periodEnd},${createdAt}`;
   });
 
   return [header, ...lines].join("\n");
 }
 
+export async function searchMigratedSubscribersForAdmin(
+  search: string,
+  page: number,
+  pageSize: number,
+): Promise<SearchMigratedResult> {
+  let query = supabaseAdmin
+    .from("subscriber_migrations")
+    .select("email, migrated_at, stripe_subscription_id", { count: "exact", head: false });
+
+  if (search) {
+    query = query.ilike("email", `%${search}%`);
+  }
+
+  const { data: migs, error, count } = await query
+    .order("migrated_at", { ascending: false })
+    .range((page - 1) * pageSize, page * pageSize - 1);
+
+  if (error || !migs) {
+    return { rows: [], total: 0, page, pageSize, totalPages: 0 };
+  }
+
+  const { data: profiles } = await supabaseAdmin
+    .from("profiles")
+    .select("email");
+
+  const accountEmails = new Set((profiles || []).map((p) => p.email));
+
+  const rows = (migs as { email: string; migrated_at: string; stripe_subscription_id: string | null }[]).map((m) => ({
+    email: m.email,
+    migratedAt: m.migrated_at,
+    hasAccount: accountEmails.has(m.email),
+    hasStripe: !!m.stripe_subscription_id,
+  }));
+
+  const total = count || 0;
+  const totalPages = Math.ceil(total / pageSize);
+
+  return { rows, total, page, pageSize, totalPages };
+}
+
 export async function searchSubscribersForAdmin(
   search: string,
-  status: "all" | "active" | "canceled" | "none",
+  status: AdminSubscriberStatus,
   page: number,
   pageSize: number,
 ): Promise<SearchSubscribersResult> {
@@ -96,13 +161,56 @@ export async function searchSubscribersForAdmin(
     query = query.ilike("email", `%${search}%`);
   }
 
-  const { data: allProfiles, error, count } = await query
+  const { data: allProfiles, error } = await query
     .order("created_at", { ascending: false });
-  if (error || !allProfiles) {
-    return { rows: [], total: 0, page, pageSize, totalPages: 0 };
+
+  const profiles = (error || !allProfiles) ? [] : (allProfiles as Profile[]);
+
+  const { count: totalMigrated } = await supabaseAdmin
+    .from("subscriber_migrations")
+    .select("id", { count: "exact", head: true });
+
+  const profileEmails = new Set(profiles.map((p) => p.email));
+
+  let migQuery = supabaseAdmin
+    .from("subscriber_migrations")
+    .select("id, email, migrated_at, stripe_subscription_id, old_subscription_data", { count: "exact", head: false });
+
+  if (search) {
+    migQuery = migQuery.ilike("email", `%${search}%`);
   }
 
-  const subIds = (allProfiles as Profile[])
+  const { data: migs } = await migQuery.order("migrated_at", { ascending: false });
+
+  const pendingMigrations = (migs || []).filter((m) => !profileEmails.has(m.email));
+  const totalPending = pendingMigrations.length;
+
+  // Fetch real-time Stripe status for migrations with stripe_subscription_id
+  const stripeSubIds = pendingMigrations
+    .map((m) => m.stripe_subscription_id)
+    .filter((id): id is string => !!id);
+
+  const stripeStatusMap = new Map<string, string>();
+  if (stripeSubIds.length > 0 && stripe) {
+    try {
+      const stripeSubs = await stripe.subscriptions.list({ limit: 100 });
+      for (const s of stripeSubs.data) {
+        if (stripeSubIds.includes(s.id)) {
+          stripeStatusMap.set(s.id, s.status);
+        }
+      }
+    } catch {
+      // If Stripe query fails, we just won't show real-time status
+    }
+  }
+
+  // Count refunded (old_subscription_data has refunded_at, but stripe_subscription_id is null)
+  const refundedMigrations = pendingMigrations.filter((m) =>
+    !m.stripe_subscription_id && (m.old_subscription_data as any)?.refunded_at
+  );
+  const totalRefunded = refundedMigrations.length;
+
+  const subIds = profiles
     .map((p) => p.subscription_id)
     .filter((id): id is string => !!id);
 
@@ -117,22 +225,42 @@ export async function searchSubscribersForAdmin(
     }
   }
 
-  let allRows = (allProfiles as Profile[]).map((p) => ({
+  const profileRows: AdminSubscriberRow[] = profiles.map((p) => ({
     profile: p,
     subscription: p.subscription_id ? subMap.get(p.subscription_id) || null : null,
   }));
+
+  const pendingRows: AdminSubscriberRow[] = pendingMigrations.map((m) => {
+    const refunded = !m.stripe_subscription_id && !!(m.old_subscription_data as any)?.refunded_at;
+    const stripeStatus = m.stripe_subscription_id ? stripeStatusMap.get(m.stripe_subscription_id) : undefined;
+    return {
+      profile: null,
+      subscription: null,
+      migrationId: m.id,
+      migrationEmail: m.email,
+      migrationStripeSubId: m.stripe_subscription_id,
+      migrationStripeStatus: stripeStatus,
+      migrationRefunded: refunded,
+    };
+  });
+
+  let allRows = [...profileRows, ...pendingRows];
 
   if (status === "active") {
     allRows = allRows.filter((r) => r.subscription?.status === "active" || r.subscription?.status === "migrated");
   } else if (status === "canceled") {
     allRows = allRows.filter((r) => r.subscription?.status === "canceled");
   } else if (status === "none") {
-    allRows = allRows.filter((r) => !r.subscription);
+    allRows = allRows.filter((r) => !!r.profile && !r.subscription);
+  } else if (status === "pending") {
+    allRows = allRows.filter((r) => !!r.migrationId && !r.migrationRefunded);
+  } else if (status === "refunded") {
+    allRows = allRows.filter((r) => !!r.migrationId && !!r.migrationRefunded);
   }
 
   const total = allRows.length;
   const totalPages = Math.ceil(total / pageSize);
   const rows = allRows.slice((page - 1) * pageSize, page * pageSize);
 
-  return { rows, total, page, pageSize, totalPages };
+  return { rows, total, page, pageSize, totalPages, totalMigrated: totalMigrated || 0, totalPending, totalRefunded };
 }

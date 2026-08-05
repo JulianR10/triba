@@ -1,0 +1,80 @@
+@layer trb-ui {
+  /* === Patch / recorte word effects === */
+  .word-dog-ear-tr {
+    clip-path: polygon(0 0, calc(100% - 8px) 0, 100% 8px, 100% 100%, 0 100%);
+  }
+  .word-dog-ear-br {
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%);
+  }
+  .word-dog-ear-bl {
+    clip-path: polygon(0 0, 100% 0, 100% 100%, 8px 100%, 0 calc(100% - 8px));
+  }
+  .word-crease::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(50% - 1px);
+    height: 2px;
+    background: linear-gradient(to right, transparent, rgba(0,0,0,0.1) 20%, rgba(0,0,0,0.18) 50%, rgba(0,0,0,0.1) 80%, transparent);
+    pointer-events: none;
+  }
+  .word-crease::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(50% + 1px);
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.35) 20%, rgba(255,255,255,0.55) 50%, rgba(255,255,255,0.35) 80%, transparent);
+    pointer-events: none;
+  }
+  .word-cut-slant {
+    clip-path: polygon(0% 0%, 100% 0%, 96% 100%, 4% 100%);
+  }
+  .word-cut-notch {
+    clip-path: polygon(0% 0%, 100% 0%, 100% 82%, 96% 88%, 100% 94%, 100% 100%, 0% 100%);
+  }
+
+  /* === Edition Ribbon === */
+  .edition-ribbon {
+    position: absolute;
+    top: 0;
+    right: 0;
+    z-index: 20;
+    width: clamp(100px, 30vw, 150px);
+    height: clamp(100px, 30vw, 150px);
+    background: #E91A39;
+    clip-path: polygon(100% 0, 0 0, 100% 100%);
+    overflow: hidden;
+  }
+  .edition-ribbon span {
+    position: absolute;
+    top: 40%;
+    left: 60%;
+    transform: translate(-50%, -50%) rotate(45deg);
+    color: white;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    text-align: center;
+    white-space: nowrap;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+  }
+
+  /* === FAQ Accordion === */
+  details[data-faq] .faq-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  details[data-faq][open] .faq-content {
+    grid-template-rows: 1fr;
+  }
+  details[data-faq] .faq-content-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+}

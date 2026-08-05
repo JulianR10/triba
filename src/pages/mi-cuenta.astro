@@ -172,7 +172,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
       <div class="bg-triba-cream w-full px-5 md:px-14 lg:px-20 xl:px-32 2xl:px-48 py-12 md:py-20">
         <div class="max-w-6xl mx-auto">
           {featured.pdf !== "#" && (
-          <div id="visor-revista" style="scroll-margin-top: calc(var(--nav-height, 64px) + 1rem)" class="reveal" data-reveal>
+          <div id="visor-revista" class="scroll-anchor reveal" data-reveal>
             <PatchTitle content={`${featured.edition} ${featured.title}`} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
             <div class="-mx-5 md:mx-0">

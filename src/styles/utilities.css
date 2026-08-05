@@ -1,0 +1,39 @@
+@layer trb-utils {
+  .page-gutter {
+    padding-left: var(--page-gutter);
+    padding-right: var(--page-gutter);
+  }
+
+  .page-shell {
+    padding-top: max(1rem, var(--nav-height, 64px));
+    padding-bottom: 3rem;
+  }
+  
+  @media (min-width: 768px) {
+    .page-shell {
+      padding-bottom: 6rem;
+    }
+  }
+
+  .scroll-anchor {
+    scroll-margin-top: calc(var(--nav-height, 64px) + 1rem);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .mobile-center {
+    @media (max-width: 767px) {
+      text-align: center;
+      
+      h1, h2, h3, p {
+        text-align: center;
+      }
+      
+      [class*="flex"] {
+        justify-content: center;
+      }
+    }
+  }
+}

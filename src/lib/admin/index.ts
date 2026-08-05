@@ -17,7 +17,7 @@ export {
   searchSubscribersForAdmin,
   exportSubscribersCSV,
 } from "./subscribers";
-export type { AdminSubscriberRow, SearchSubscribersResult } from "./subscribers";
+export type { AdminSubscriberRow, SearchSubscribersResult, AdminSubscriberStatus } from "./subscribers";
 
 export {
   listCreatorApplicationsForAdmin,
@@ -34,6 +34,7 @@ import { supabaseAdmin } from "../supabase-admin";
 export interface AdminDashboardStats {
   active_subscribers: number;
   canceled_subscribers: number;
+  migrated_subscribers: number;
   editions_total: number;
   editions_featured: number;
   feedback_count: number;
@@ -46,6 +47,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   const [
     { count: activeSubs },
     { count: canceledSubs },
+    { count: migratedSubs },
     { count: editionsTotal },
     { count: editionsFeatured },
     { count: feedbackCount },
@@ -61,6 +63,9 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       .from("subscriptions")
       .select("*", { count: "exact", head: true })
       .eq("status", "canceled"),
+    supabaseAdmin
+      .from("subscriber_migrations")
+      .select("id", { count: "exact", head: true }),
     supabaseAdmin
       .from("editions")
       .select("*", { count: "exact", head: true }),
@@ -86,6 +91,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   return {
     active_subscribers: activeSubs || 0,
     canceled_subscribers: canceledSubs || 0,
+    migrated_subscribers: migratedSubs || 0,
     editions_total: editionsTotal || 0,
     editions_featured: editionsFeatured || 0,
     feedback_count: feedbackCount || 0,

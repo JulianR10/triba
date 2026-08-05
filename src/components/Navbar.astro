@@ -25,10 +25,6 @@ const authLinks = [
 ---
 
 <style>
-  :root {
-    --nav-height: calc(64px + env(safe-area-inset-top, 0px));
-  }
-
   .slide-in {
     transform: translateX(0);
   }
@@ -68,13 +64,7 @@ const authLinks = [
     pointer-events: auto;
   }
 
-  #nav-logo {
-    transition: opacity 1s ease;
-  }
-
-  #nav-logo.visible {
-    opacity: 1;
-  }
+  
 </style>
 
 <nav id="navbar" data-logo-always={showLogoAlways ? "1" : "0"} class="hidden md:flex fixed top-0 left-0 right-0 z-40 items-center px-5 py-4 md:px-10 lg:px-20 bg-triba-bone/80 backdrop-blur-sm">
@@ -196,9 +186,6 @@ const authLinks = [
     var nav = document.getElementById("navbar")!;
     if (!nav) return;
 
-    var navLogo = document.getElementById("nav-logo");
-    var logoAlways = nav.dataset.logoAlways === "1";
-
     var root = document.documentElement;
 
     function updateNavHeight() {
@@ -225,14 +212,6 @@ const authLinks = [
             }
           } else {
             nav.classList.remove("nav-hidden");
-          }
-
-          if (navLogo && !logoAlways) {
-            if (currentScrollY > 80) {
-              navLogo.classList.add("visible");
-            } else {
-              navLogo.classList.remove("visible");
-            }
           }
 
           lastScrollY = currentScrollY;

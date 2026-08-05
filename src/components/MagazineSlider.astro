@@ -72,6 +72,8 @@ const { items, selectedId } = Astro.props;
 
       const items = Array.from(scroll.querySelectorAll<HTMLElement>("[data-slider-item]"));
       if (items.length === 0) return;
+      if (dotsEl.dataset.bound) return;
+      dotsEl.dataset.bound = "1";
 
       function updateActiveDot() {
         const scrollLeft = scroll.scrollLeft;

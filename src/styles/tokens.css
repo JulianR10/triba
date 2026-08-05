@@ -1,0 +1,36 @@
+@layer trb-tokens {
+  :root {
+    /* Layout */
+    --nav-height: 64px;
+    --page-gutter: 1.25rem; /* px-5 */
+
+    /* Motion */
+    --transition-reveal: 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    --transition-fast: 0.3s ease;
+    --transition-standard: 0.5s ease;
+  }
+
+  @media (min-width: 768px) {
+    :root {
+      --page-gutter: 2.5rem; /* md:px-10 */
+    }
+  }
+
+  @media (min-width: 1024px) {
+    :root {
+      --page-gutter: 5rem; /* lg:px-20 */
+    }
+  }
+
+  @media (min-width: 1280px) {
+    :root {
+      --page-gutter: 8rem; /* xl:px-32 */
+    }
+  }
+
+  @media (min-width: 1536px) {
+    :root {
+      --page-gutter: 12rem; /* 2xl:px-48 */
+    }
+  }
+}
