@@ -7,6 +7,9 @@ import vercel from "@astrojs/vercel";
 export default defineConfig({
   site: "https://www.comunidadtriba.com",
   devToolbar: { enabled: false },
+  vite: {
+    esbuild: { jsxDev: false },
+  },
   integrations: [
     tailwind(),
     react(),

@@ -10,9 +10,8 @@ const title = "Revista";
 const description = "Explorá las ediciones de Triba, nuestra revista digital mensual. Leé online, descargá PDF y descubrí artículos de cultura, arte e identidad.";
 const canonical = "/revista";
 
-import { getEditions, getFeaturedEdition } from "../lib/editions";
+import { getEditions } from "../lib/editions";
 const allEditions = await getEditions();
-const featuredEdition = await getFeaturedEdition();
 
 const editions = allEditions.map((e, i) => ({
   id: e.id,
@@ -23,7 +22,6 @@ const editions = allEditions.map((e, i) => ({
   pdf: e.pdf_url ? `/api/pdf/${e.id}` : "#",
   featured: e.featured,
   badge: e.badge,
-  previewArticle: e.edition_number === (featuredEdition?.edition_number || 3),
   flipColor: ["bg-triba-pink/80", "bg-triba-blue/80", "bg-triba-red/80"][i % 3],
   backTextClass: ["text-triba-brown", "text-triba-white", "text-triba-brown"][i % 3],
 }));
@@ -120,8 +118,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
       </div>
 
       <!-- Bloque 3: Vista previa de artículo -->
-      {featured.pdf !== "#" && (
-      <div id="visor-revista" class="scroll-anchor flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 reveal-stagger" data-reveal>
+      <div id="visor-revista" class="scroll-anchor flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16">
         <div class="flex-1 order-2 md:order-1">
           <PDFViewer pdfUrl="/articulo-gratis.pdf" client:visible />
         </div>
@@ -152,7 +149,6 @@ const featured = editions.find((e) => e.featured) || editions[0];
           </div>
         </div>
       </div>
-      )}
     </div>
   </section>
 </Layout>

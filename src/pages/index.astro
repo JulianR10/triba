@@ -48,13 +48,6 @@ const scatter = [
   { w: "w-[157px]", top: "42%", left: "70%", rotate: "5deg", z: 3 },
   { w: "w-[134px]", top: "50%", left: "32%", rotate: "-4deg", z: 1 },
 ];
-
-// Reorder: 3 → 1, 2 queda, 1 → 3
-if (magazines.length >= 3) {
-  const temp = magazines[0];
-  magazines[0] = magazines[2];
-  magazines[2] = temp;
-}
 ---
 
 <Layout title={title} description={description} canonical={canonical}>
