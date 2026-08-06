@@ -79,6 +79,7 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
     <!-- Animation scripts -->
     <script src="/scripts/magnetic.js" is:inline></script>
     <script>
+      import { onPageCycle } from "../lib/onPageCycle";
       (function () {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
@@ -118,8 +119,7 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
           });
         }
 
-        observeAll();
-        document.addEventListener("astro:page-load", observeAll);
+        onPageCycle(observeAll);
       })();
     </script>
   </body>

@@ -25,7 +25,7 @@ Revista digital mensual — newsletter gratuito + suscripción paga, escrita por
 
 ## Convenciones
 - Naming: kebab archivos, PascalCase componentes, camelCase vars
-- Astro: Layout + SEO; scripts `setup(); document.addEventListener("astro:page-load", setup)` (llamar `setup()` directo ES OBLIGATORIO: sin View Transitions `astro:page-load` nunca dispara y el form queda sin handlers → submit nativo sin `preventDefault`. El listener queda inerte; no causa doble binding)
+- Astro: scripts SIEMPRE vía el helper `onPageCycle(fn)` de `src/lib/onPageCycle.ts` (`fn()` directo + `document.addEventListener("astro:page-load", fn)`). NO usar `addEventListener("astro:page-load", ...)` solo: sin View Transitions ese evento nunca dispara y los forms quedan sin handlers → submit nativo sin `preventDefault` (este bug pasó en `NewsletterForm` y se solventó migrando todo a `onPageCycle`). El `fn()` directo cubre la carga inicial; el listener es redundante/inerte (no duplica).
 - Server routes: `APIRoute`, auth `requireUser`/`requireAdmin`
 - UI español rioplatense, código/logs inglés
 - Migraciones SQL en `supabase/migrations/`, secuenciales, idempotentes
@@ -73,7 +73,7 @@ triba/
 ```
 
 ## Newsletter / Sender
-- Flujo: `POST /api/newsletter` → `newsletters` → `{ok:true}` / `{existing:true}` (código 23505). Welcome gratuito = automatización de Sender (no en la app); pagos → `sendWelcomeEmail(email,false)`. `.env`: `PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SENDER_API_KEY`, `SENDER_FROM_EMAIL`, `SENDER_FROM_NAME`.
+- Flujo: `POST /api/newsletter` → `newsletters` → `{ok:true}` / `{existing:true}` (código 23505). **Idempotente:** en `existing` lee `sender_synced`; si el welcome nunca llegó (`sender_synced=false`) re-hace el alta en Sender (re-dispara la automatización de bienvenida) devolviendo `{existing:true, resynced}`; para ya sync'eados no re-dispara (`resynced:false`). El handler `setupNewsletterForm` deshabilita el botón en vuelo + `aria-live` en el mensaje. Welcome gratuito = automatización de Sender (no en la app); pagos → `sendWelcomeEmail(email,false)`. `.env`: `PUBLIC_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SENDER_API_KEY`, `SENDER_FROM_EMAIL`, `SENDER_FROM_NAME`.
 - Sender API v2, `Authorization: Bearer`. **Alta a grupo en UNA llamada:** `POST /subscribers` con `groups:[id]` + `trigger_automation` (NO usar `/subscribers/groups/{id}` para nuevos: 400 hasta ~15s de propagación). Emails transaccionales: `POST /message/send`.
 - Grupos: `newsletter-gratuito` / `suscriptora-paga`. Automatización welcome ACTIVE; newsletter mensual = broadcast manual.
 - Dominio verificado; `SENDER_FROM_EMAIL: hola@comunidadtriba.com`. Plan free: **429 a nivel cuenta** al superar cuota. Cliente central: `src/lib/sender.ts`.
@@ -95,7 +95,7 @@ triba/
 ⚠️ `src/lib/database.types.ts` debe mantenerse en formato canónico y sincronizado con `supabase/migrations/` (tablas, columnas, funciones): si falta una clave, todo `.from()` resuelve a `never[]`.
 
 Lecciones (evitar regresión):
-- Scripts Astro: SIEMPRE llamar `setup()` directo además de `addEventListener("astro:page-load", setup)`. Sin View Transitions (sacadas por CSP `frame-src 'none'`, ver commit `2499658`) `astro:page-load` NUNCA dispara; el `setup()` directo es lo que corre en la carga inicial. Quitarlo deja los forms sin handlers (submit nativo sin `preventDefault`) → "no ingresa / no aparece cartel". El listener inerte NO duplica (los duplicados reales venían de doble-click, resueltos con triggers de migración `015` + botón deshabilitado).
+- Scripts Astro: usar SIEMPRE `onPageCycle(fn)` (`src/lib/onPageCycle.ts`), que llama `fn()` directo + suscribe `astro:page-load`. Sin View Transitions (CSP `frame-src 'none'`, commit `2499658`) `astro:page-load` NUNCA dispara; el `fn()` directo es lo que corre en carga inicial. Usar solo `addEventListener("astro:page-load", ...)` deja los forms sin handlers (submit nativo sin `preventDefault`) → "no ingresa / no aparece cartel" (bug que pasó en `NewsletterForm`, 6-Ago). El listener inerte NO duplica (los duplicados reales venían de doble-click, resueltos con triggers de migración `015` + botón deshabilitado).
 - En `NodeListOf.forEach` NO tipar el parámetro como `HTMLElement` (2345): tipar la variable en la declaración (`querySelectorAll<HTMLDetailsElement>`); para `.open` de `<details>` usar `HTMLDetailsElement`.
 - No usar tipos `HTML*Attribute` en templates `.astro` (2304): unión literal en `Props`.
 - Custom DOM props: intersección `as HTMLElement & { _revealSplit?: boolean }`.

@@ -312,6 +312,7 @@ const scatter = [
 </Layout>
 
 <script>
+  import { onPageCycle } from "../lib/onPageCycle";
   function setup() {
     var container = document.getElementById("card-stack");
     if (!container) return;
@@ -494,6 +495,5 @@ const scatter = [
     });
   }
 
-  setup();
-  document.addEventListener("astro:page-load", setup);
+  onPageCycle(setup);
 </script>

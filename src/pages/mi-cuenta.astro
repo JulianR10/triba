@@ -218,6 +218,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
 
 <script>
   import { supabase } from "../lib/supabase";
+  import { onPageCycle } from "../lib/onPageCycle";
 
   function setup() {
 
@@ -366,6 +367,5 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
 
   }
 
-  setup();
-  document.addEventListener("astro:page-load", setup);
+  onPageCycle(setup);
 </script>

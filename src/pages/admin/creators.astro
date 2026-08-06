@@ -116,6 +116,7 @@ const counts = {
 </AdminLayout>
 
 <script>
+  import { onPageCycle } from "../../lib/onPageCycle";
   function setupCreatorActions() {
     document.querySelectorAll<HTMLButtonElement>(".creator-action-btn").forEach((btn) => {
       if (btn.dataset.bound === "1") return;
@@ -151,6 +152,5 @@ const counts = {
       });
     });
   }
-  setupCreatorActions();
-  document.addEventListener("astro:page-load", setupCreatorActions);
+  onPageCycle(setupCreatorActions);
 </script>

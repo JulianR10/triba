@@ -63,6 +63,7 @@ const { editions, selectedId } = Astro.props;
 </div>
 
 <script>
+  import { onPageCycle } from "../lib/onPageCycle";
   function setup() {
     var carousel = document.querySelector("[data-carousel]") as HTMLElement | null;
     if (!carousel) return;
@@ -120,6 +121,5 @@ const { editions, selectedId } = Astro.props;
     });
   }
 
-  setup();
-  document.addEventListener("astro:page-load", setup);
+  onPageCycle(setup);
 </script>

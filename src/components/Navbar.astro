@@ -187,6 +187,7 @@ const authLinks = [
 <script>
   import { supabase } from "../lib/supabase";
   import { showConfirm } from "./admin/AdminUI";
+  import { onPageCycle } from "../lib/onPageCycle";
 
   declare global {
     interface Window {
@@ -416,6 +417,5 @@ const authLinks = [
   }
 
   bindAccountActions();
-  setupNav();
-  document.addEventListener("astro:page-load", setupNav);
+  onPageCycle(setupNav);
 </script>

@@ -38,6 +38,7 @@ if (!edition) {
 </AdminLayout>
 
 <script>
+  import { onPageCycle } from "../../../lib/onPageCycle";
   function setupNotifyButton() {
     const btn = document.getElementById("notify-subscribers-btn") as HTMLButtonElement | null;
     const msg = document.getElementById("notify-msg");
@@ -85,6 +86,5 @@ if (!edition) {
     });
   }
 
-  setupNotifyButton();
-  document.addEventListener("astro:page-load", setupNotifyButton);
+  onPageCycle(setupNotifyButton);
 </script>

@@ -105,6 +105,7 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
 <script>
   import { supabase } from "../lib/supabase";
   import { getCheckoutIntent } from "../lib/checkout-intent";
+  import { onPageCycle } from "../lib/onPageCycle";
 
   function setup() {
   if (!supabase) return;
@@ -391,6 +392,5 @@ const initialMode = params.get("signup") === "true" ? "signup" : "login";
 
   }
 
-  setup();
-  document.addEventListener("astro:page-load", setup);
+  onPageCycle(setup);
 </script>

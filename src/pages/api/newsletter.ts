@@ -36,7 +36,20 @@ export const POST: APIRoute = async ({ request }) => {
 
   if (dbError) {
     if (dbError.code === "23505") {
-      return ok({ existing: true });
+      const { data: existing } = await supabaseAdmin
+        .from("newsletters")
+        .select("sender_synced")
+        .eq("email", email)
+        .maybeSingle();
+
+      // El subscriptor ya existía. Si el welcome nunca llegó (sync a Sender falló en
+      // silencio), reintentamos el alta en Sender para que la automatización de bienvenida
+      // se dispare. Idempotente: para los ya sync'eados no re-dispara nada.
+      if (existing && !existing.sender_synced) {
+        const resynced = await syncSenderForEmail(email);
+        return ok({ existing: true, resynced });
+      }
+      return ok({ existing: true, resynced: false });
     }
     logger.error({ err: dbError, email }, "Newsletter subscribe error");
     return new Response(
@@ -54,18 +67,19 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  await recordSenderSync(email);
+  await syncSenderForEmail(email);
 
   return ok();
 };
 
-async function recordSenderSync(email: string): Promise<void> {
+async function syncSenderForEmail(email: string): Promise<boolean> {
   try {
     await syncFreeSubscriber(email);
     await supabaseAdmin
       .from("newsletters")
       .update({ sender_synced: true, sender_synced_at: new Date().toISOString(), sender_sync_error: null })
       .eq("email", email);
+    return true;
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     logger.error({ err, email }, "Sender sync error");
@@ -73,5 +87,6 @@ async function recordSenderSync(email: string): Promise<void> {
       .from("newsletters")
       .update({ sender_synced: false, sender_sync_error: message.slice(0, 500) })
       .eq("email", email);
+    return false;
   }
 }

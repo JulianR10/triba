@@ -64,6 +64,7 @@ const { items, selectedId } = Astro.props;
 </div>
 
 <script>
+  import { onPageCycle } from "../lib/onPageCycle";
   function setup() {
     document.querySelectorAll("[data-slider-root]").forEach(function (root) {
       const scroll = root.querySelector("[data-slider-scroll]") as HTMLElement;
@@ -123,6 +124,5 @@ const { items, selectedId } = Astro.props;
     });
   }
 
-  setup();
-  document.addEventListener("astro:page-load", setup);
+  onPageCycle(setup);
 </script>

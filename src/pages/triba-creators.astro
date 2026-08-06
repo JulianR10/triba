@@ -60,7 +60,8 @@ import PatchTitle from "../components/PatchTitle.astro";
   </section>
 </Layout>
 
-<script>
+  <script>
+  import { onPageCycle } from "../lib/onPageCycle";
   function setup() {
     const form = document.getElementById("creators-form") as HTMLFormElement;
     const msg = document.getElementById("creators-msg")!;
@@ -120,6 +121,5 @@ import PatchTitle from "../components/PatchTitle.astro";
     });
   }
 
-  setup();
-  document.addEventListener("astro:page-load", setup);
+  onPageCycle(setup);
 </script>

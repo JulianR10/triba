@@ -134,6 +134,7 @@ const formMsgId = "form-msg";
 </form>
 
 <script>
+  import { onPageCycle } from "../../lib/onPageCycle";
   function setupEditionForm() {
     const form = document.querySelector<HTMLFormElement>("form[id^=edition-form-]");
     if (!form) return;
@@ -219,6 +220,5 @@ const formMsgId = "form-msg";
     }
   }
 
-  setupEditionForm();
-  document.addEventListener("astro:page-load", setupEditionForm);
+  onPageCycle(setupEditionForm);
 </script>

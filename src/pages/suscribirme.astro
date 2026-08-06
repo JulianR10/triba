@@ -154,6 +154,7 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
   import { supabase } from "../lib/supabase";
   import { setupNewsletterForm } from "../scripts/newsletter-handler";
   import { getCheckoutIntent, clearCheckoutIntent } from "../lib/checkout-intent";
+  import { onPageCycle } from "../lib/onPageCycle";
 
   function selectCurrency(currency: string) {
     var tabs = document.querySelectorAll("[data-currency]");
@@ -233,6 +234,5 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
     flushPendingCheckout();
   }
 
-  setup();
-  document.addEventListener("astro:page-load", setup);
+  onPageCycle(setup);
 </script>

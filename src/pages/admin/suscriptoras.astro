@@ -98,6 +98,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
 
 <script>
   import { escapeHtml } from "../../lib/escape";
+  import { onPageCycle } from "../../lib/onPageCycle";
   let currentPage = 1;
   let currentFilter = "all";
   let currentSearch = "";
@@ -437,6 +438,5 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     loadSubscribers();
   }
 
-  initSubscribers();
-  document.addEventListener("astro:page-load", initSubscribers);
+  onPageCycle(initSubscribers);
 </script>

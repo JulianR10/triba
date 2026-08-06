@@ -1,10 +1,22 @@
 const BASE_CLASSES = "font-sans text-sm text-triba-red whitespace-nowrap";
 
 export function setupNewsletterForm(formEl: HTMLFormElement, msgEl: HTMLElement) {
+  msgEl.setAttribute("aria-live", "polite");
+
   formEl.addEventListener("submit", async (e) => {
     e.preventDefault();
     const input = formEl.querySelector<HTMLInputElement>("[name=email]");
+    const btn = formEl.querySelector<HTMLButtonElement>("[type=submit]");
     if (!input) return;
+    if (btn) {
+      btn.disabled = true;
+    }
+
+    const setMsg = (text: string, cls = BASE_CLASSES) => {
+      msgEl.classList.remove("hidden");
+      msgEl.textContent = text;
+      msgEl.className = cls;
+    };
 
     try {
       const res = await fetch("/api/newsletter", {
@@ -14,23 +26,24 @@ export function setupNewsletterForm(formEl: HTMLFormElement, msgEl: HTMLElement)
       });
       const data = await res.json();
 
-      msgEl.classList.remove("hidden");
-
       if (data.ok) {
-        msgEl.textContent = "¡Gracias por suscribirte!";
-        msgEl.className = BASE_CLASSES;
+        setMsg("¡Gracias por suscribirte!");
         input.value = "";
       } else if (data.existing) {
-        msgEl.textContent = "Ya estás suscripta";
-        msgEl.className = BASE_CLASSES;
+        setMsg(
+          data.resynced
+            ? "Ya estás suscripta — te reenviamos la bienvenida"
+            : "Ya estás suscripta",
+        );
       } else {
-        msgEl.textContent = "Error al suscribirte. Intentalo de nuevo.";
-        msgEl.className = BASE_CLASSES;
+        setMsg("Error al suscribirte. Intentalo de nuevo.");
       }
     } catch {
-      msgEl.classList.remove("hidden");
-      msgEl.textContent = "Error de conexión. Intentalo de nuevo.";
-      msgEl.className = BASE_CLASSES;
+      setMsg("Error de conexión. Intentalo de nuevo.");
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+      }
     }
   });
 }

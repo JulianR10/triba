@@ -30,6 +30,7 @@ const btnClass = `
 <script>
   import { supabase } from "../lib/supabase";
   import { saveCheckoutIntent } from "../lib/checkout-intent";
+  import { onPageCycle } from "../lib/onPageCycle";
 
   function attachCheckoutHandlers() {
     document.querySelectorAll("button[data-provider]").forEach((btn) => {
@@ -77,6 +78,5 @@ const btnClass = `
     });
   }
 
-  attachCheckoutHandlers();
-  document.addEventListener("astro:page-load", attachCheckoutHandlers);
+  onPageCycle(attachCheckoutHandlers);
 </script>

@@ -154,6 +154,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
 </Layout>
 
 <script>
+  import { onPageCycle } from "../lib/onPageCycle";
   function setup() {
     var featuredCover = document.getElementById("featured-cover") as HTMLImageElement | null;
     var featuredCta = document.getElementById("featured-cta") as HTMLAnchorElement | null;
@@ -214,6 +215,5 @@ const featured = editions.find((e) => e.featured) || editions[0];
     }
   }
 
-  setup();
-  document.addEventListener("astro:page-load", setup);
+  onPageCycle(setup);
 </script>

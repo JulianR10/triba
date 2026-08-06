@@ -18,10 +18,13 @@ import Button from "./Button.astro";
 
 <script>
   import { setupNewsletterForm } from "../scripts/newsletter-handler";
+  import { onPageCycle } from "../lib/onPageCycle";
 
-  document.addEventListener("astro:page-load", () => {
+  function setup() {
     const form = document.getElementById("newsletter-form") as HTMLFormElement | null;
     const msg = document.getElementById("newsletter-msg");
     if (form && msg) setupNewsletterForm(form, msg);
-  });
+  }
+
+  onPageCycle(setup);
 </script>
