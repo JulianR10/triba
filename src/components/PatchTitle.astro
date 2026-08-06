@@ -13,10 +13,11 @@ export interface Props {
   content?: string;
   tag?: "h1" | "h2" | "h3";
   centered?: boolean;
+  plain?: boolean;
   class?: string;
 }
 
-const { lines, content, tag: Tag = "h2", centered = true, class: className = "" } = Astro.props;
+const { lines, content, tag: Tag = "h2", centered = true, plain = false, class: className = "" } = Astro.props;
 
 const palette = [
   { bg: "bg-triba-cream",     rot: "-1.5deg", cls: "word-cut-slant",              sh: "1px 1px 0 rgba(0,0,0,0.06)" },
@@ -50,13 +51,17 @@ const alignClass = centered ? "text-center" : "text-left";
 ---
 
 <Tag class={"font-heading uppercase tracking-wide leading-snug " + alignClass + " " + className} style="text-wrap: balance">
-  {allWords.map((word, wi) => {
-    const s = getStyle(word, wi);
-    return (
-      <span
-        class={"inline-block align-middle leading-none px-3 py-1.5 rounded-sm mr-2 mb-2 " + s.bg + " " + s.tx + " " + s.cls}
-        style={"transform: rotate(" + s.rot + "); box-shadow: " + s.sh}
-      >{word.t}</span>
-    );
-  })}
+  {plain
+    ? allWords.map((word, wi) => (
+        <span>{word.t}{wi < allWords.length - 1 ? "\u00A0" : ""}</span>
+      ))
+    : allWords.map((word, wi) => {
+        const s = getStyle(word, wi);
+        return (
+          <span
+            class={"inline-block align-middle leading-none px-3 py-1.5 rounded-sm mr-2 mb-2 " + s.bg + " " + s.tx + " " + s.cls}
+            style={"transform: rotate(" + s.rot + "); box-shadow: " + s.sh}
+          >{word.t}</span>
+        );
+      })}
 </Tag>

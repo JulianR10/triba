@@ -85,6 +85,10 @@ const scatter = [
       0.2% calc(100% - 1px), 0.5% calc(100% - 3px)
     );
   }
+  .washi-tape.washi-tape-solid {
+    background-color: #FFCCE4;
+    transform: rotate(-0.8deg) scale(0.85);
+  }
   .washi-tape::before {
     content: '';
     position: absolute;
@@ -142,21 +146,21 @@ const scatter = [
 
   <section class="relative pb-12 md:pb-20 page-gutter overflow-x-hidden md:min-h-screen hero-section">
 
-    <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 items-center gap-8 md:gap-12 mb-10 md:mb-14">
+    <div class="relative z-10 grid grid-cols-1 md:grid-cols-2 items-center gap-[1.6rem] md:gap-[2.4rem] mb-10 md:mb-14">
       <!-- Soft glow behind -->
       <div class="absolute inset-0 flex items-center justify-center pointer-events-none -z-0">
         <div class="w-[500px] h-[150px] bg-triba-pink/25 blur-[80px] rounded-full"></div>
       </div>
 
       <!-- Logo -->
-      <a href="/" class="flex justify-center reveal" data-reveal>
-        <img src="/logo-triba.svg" alt="Triba" class="h-32 md:h-[180px] w-auto transition-transform duration-300 hover:scale-105" />
+      <a href="/" class="flex justify-center md:justify-center md:ml-5 reveal" data-reveal>
+        <img src="/logo-triba.svg" alt="Triba" class="h-[9.2rem] md:h-[207px] w-auto transition-transform duration-300 hover:scale-105" />
       </a>
 
       <!-- Tagline - washi tape -->
-      <div class="relative z-10 flex items-center justify-center w-[min(92vw,44rem)] reveal" data-reveal>
-        <div class="washi-tape relative">
-          <p class="font-sans italic text-[clamp(1.125rem,6vw,2.875rem)] text-triba-brown leading-[1.15] text-center px-5 py-3 md:px-10 md:py-5" style="text-wrap: balance">
+      <div class="relative z-10 flex items-center justify-center md:justify-start justify-self-center md:justify-self-start w-fit max-w-[min(92vw,44rem)] reveal" data-reveal>
+        <div class="washi-tape washi-tape-solid relative">
+          <p class="font-sans font-semibold uppercase text-[clamp(0.792rem,4.224vw,2.024rem)] text-triba-brown leading-[1.15] text-center p-[5px]" style="text-wrap: balance">
             Tu nueva lectura favorita<br />en forma de revista digital
           </p>
         </div>
@@ -190,7 +194,7 @@ const scatter = [
 
     <div class="relative z-10 max-w-6xl mx-auto flex flex-col md:flex-row gap-8 md:gap-12 pb-8 md:pb-16">
       <div class="w-full md:w-[42%] reveal mobile-center" data-reveal>
-        <PatchTitle content="¿Qué somos?" tag="h1" centered={false} class="text-3xl sm:text-4xl md:text-7xl text-triba-black font-bold mb-6" />
+        <PatchTitle content="¿Qué somos?" tag="h1" centered={false} plain class="text-3xl sm:text-4xl md:text-7xl text-triba-black font-bold mb-6" />
         <div class="flex flex-col items-center md:items-start gap-3 mb-6">
           {["Una revista digital mensual", "Escrita por mujeres de todo el mundo", "Cultura, arte, identidad, y todo lo que nos interesa"].map((item, i) => (
             <div class="washi-tape">
@@ -320,6 +324,7 @@ const scatter = [
 
     var dotsEl = document.getElementById("stack-dots")!;
     if (!dotsEl) return;
+    dotsEl.innerHTML = "";
 
     var current = 0;
     var total = cards.length;

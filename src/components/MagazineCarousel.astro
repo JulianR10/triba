@@ -27,7 +27,7 @@ const { editions, selectedId } = Astro.props;
     <span class="text-xl font-heading text-triba-white -mt-0.5">‹</span>
   </button>
   <div data-carousel-scroll class="overflow-x-auto scrollbar-hide snap-x snap-mandatory py-1">
-    <div class="flex justify-center gap-4 md:gap-6">
+    <div class="flex gap-4 md:gap-6 [&>*:first-child]:ml-auto [&>*:last-child]:mr-auto">
       {editions.map((ed) => (
         <div
           data-edition-id={ed.id}
@@ -64,8 +64,10 @@ const { editions, selectedId } = Astro.props;
 
 <script>
   function setup() {
-    var carousel = document.querySelector("[data-carousel]");
+    var carousel = document.querySelector("[data-carousel]") as HTMLElement | null;
     if (!carousel) return;
+    if (carousel.dataset.carouselInit) return;
+    carousel.dataset.carouselInit = "1";
 
     var scroll = carousel.querySelector("[data-carousel-scroll]") as HTMLElement;
     var prev = carousel.querySelector("[data-carousel-prev]") as HTMLElement;
@@ -75,8 +77,13 @@ const { editions, selectedId } = Astro.props;
 
     function getCardWidth() {
       var first = scroll.querySelector("[data-edition-id]") as HTMLElement;
+      var track = first ? (first.parentElement as HTMLElement) : null;
       if (!first) return 200;
       var gap = 16;
+      if (track) {
+        var gapValue = parseFloat(getComputedStyle(track).columnGap);
+        if (!isNaN(gapValue)) gap = gapValue;
+      }
       return first.offsetWidth + gap;
     }
 
