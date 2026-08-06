@@ -1,5 +1,32 @@
 import { useState, useRef, useCallback, useEffect } from "react";
-import type { DocumentProps, PageProps } from "react-pdf";
+import { Document, Page, pdfjs } from "react-pdf";
+import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+
+pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
+
+function useIsVisible(ref: React.RefObject<HTMLDivElement | null>) {
+  const [visible, setVisible] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          obs.disconnect();
+        }
+      },
+      { rootMargin: "240px 0px" }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, [ref]);
+  return visible;
+}
 
 interface Props {
   pdfUrl: string;
@@ -11,56 +38,74 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [nativeFs, setNativeFs] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(0);
   const [viewportHeight, setViewportHeight] = useState(0);
   const aspectRatioRef = useRef(0.707);
   const [aspectRatio, setAspectRatio] = useState(0.707);
-  const [Components, setComponents] = useState<{
-    Document: React.ComponentType<DocumentProps>;
-    Page: React.ComponentType<PageProps>;
-  } | null>(null);
   const [pageHeight, setPageHeight] = useState<number>(0);
+  const [err, setErr] = useState<string>("");
+  const [retryKey, setRetryKey] = useState(0);
+  const visible = useIsVisible(containerRef);
+
+  useEffect(() => {
+    if (err || numPages > 0) return;
+    const timer = setTimeout(() => {
+      setErr("La revista tardó demasiado en cargar. Revisá tu conexión e intentá de nuevo.");
+    }, 25000);
+    return () => clearTimeout(timer);
+  }, [err, numPages]);
 
   useEffect(() => {
     setViewportWidth(window.innerWidth);
     setViewportHeight(window.innerHeight);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      try {
-        const mod = await import("react-pdf");
-        if (cancelled) return;
-        mod.pdfjs.GlobalWorkerOptions.workerSrc = "/pdf.worker.min.mjs";
-        setComponents({ Document: mod.Document, Page: mod.Page });
-      } catch {
-        // pdfjs failed to load
-      }
-    }
-    load();
-    return () => { cancelled = true; };
-  }, []);
+  function isNativeFsSupported() {
+    const doc = document as Document & { webkitFullscreenEnabled?: boolean };
+    return !!(
+      typeof document !== "undefined" &&
+      (document.fullscreenEnabled || doc.webkitFullscreenEnabled)
+    );
+  }
+
+  function currentNativeFsElement() {
+    const doc = document as Document & { webkitFullscreenElement?: Element | null };
+    return document.fullscreenElement || doc.webkitFullscreenElement || null;
+  }
+
+  function requestNativeFs(el: HTMLElement) {
+    const anyEl = el as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
+    if (el.requestFullscreen) return el.requestFullscreen();
+    if (anyEl.webkitRequestFullscreen) return anyEl.webkitRequestFullscreen();
+    return Promise.reject(new Error("fullscreen unsupported"));
+  }
+
+  function exitNativeFs() {
+    const doc = document as Document & { webkitExitFullscreen?: () => Promise<void> };
+    if (document.exitFullscreen) return document.exitFullscreen();
+    if (doc.webkitExitFullscreen) return doc.webkitExitFullscreen();
+    return Promise.resolve();
+  }
 
   useEffect(() => {
-    const handler = () => {
-      const inFullscreen = document.fullscreenElement === containerRef.current;
-      setIsFullscreen(inFullscreen);
-      if (!inFullscreen) {
-        setScale(1);
-        setViewportWidth(0);
-        setViewportHeight(0);
-        const ar = aspectRatioRef.current;
-        setPageHeight(ar > 0 ? Math.round(340 / ar) : 0);
-      }
+    const syncNativeFs = () => {
+      const inFs = currentNativeFsElement() === containerRef.current;
+      setNativeFs(inFs);
+      setExpanded(inFs);
+      if (!inFs) resetInline();
     };
-    document.addEventListener("fullscreenchange", handler);
-    return () => document.removeEventListener("fullscreenchange", handler);
+    document.addEventListener("fullscreenchange", syncNativeFs);
+    document.addEventListener("webkitfullscreenchange", syncNativeFs);
+    return () => {
+      document.removeEventListener("fullscreenchange", syncNativeFs);
+      document.removeEventListener("webkitfullscreenchange", syncNativeFs);
+    };
   }, []);
 
   useEffect(() => {
-    if (!isFullscreen) return;
+    if (!expanded) return;
     function updateDimensions() {
       setViewportWidth(window.innerWidth);
       setViewportHeight(window.innerHeight);
@@ -68,24 +113,44 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
     return () => window.removeEventListener("resize", updateDimensions);
-  }, [isFullscreen]);
+  }, [expanded]);
+
+  const resetInline = () => {
+    setScale(1);
+    setViewportWidth(0);
+    setViewportHeight(0);
+    const ar = aspectRatioRef.current;
+    setPageHeight(ar > 0 ? Math.round(340 / ar) : 0);
+  };
 
   const toggleFullscreen = useCallback(async () => {
     if (!containerRef.current) return;
     try {
-      if (isFullscreen) {
-        await document.exitFullscreen();
+      if (expanded) {
+        if (nativeFs) {
+          await exitNativeFs();
+        } else {
+          setExpanded(false);
+          resetInline();
+        }
+      } else if (isNativeFsSupported()) {
+        try {
+          await requestNativeFs(containerRef.current);
+        } catch {
+          setExpanded(true);
+        }
       } else {
-        await containerRef.current.requestFullscreen();
+        setExpanded(true);
       }
     } catch {}
-  }, [isFullscreen]);
+  }, [expanded, nativeFs]);
 
   const handleDocumentLoadSuccess = useCallback(({ numPages: n }: { numPages: number }) => {
     setNumPages(n);
     setPageNumber(1);
     setScale(1);
     setPageHeight(0);
+    setErr("");
   }, []);
 
   const handlePageLoadSuccess = useCallback((page: any) => {
@@ -93,11 +158,11 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
     const ar = vp.width / vp.height;
     aspectRatioRef.current = ar;
     setAspectRatio(ar);
-    const pageW = isFullscreen ? Math.min(viewportWidth * 0.85, 1000) : 340;
+    const pageW = expanded ? Math.min(viewportWidth * 0.85, 1000) : 340;
     const s = pageW / vp.width;
     const h = Math.round(vp.height * s);
     if (h > 0) setPageHeight((prev) => Math.max(prev, h));
-  }, [isFullscreen, viewportWidth]);
+  }, [expanded, viewportWidth]);
 
   function changePage(offset: number) {
     setPageNumber((prev) => {
@@ -124,7 +189,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
     );
   }
 
-  const pageWidth = isFullscreen
+  const pageWidth = expanded
     ? (() => {
         const maxW = viewportWidth - 32;
         const maxH = viewportHeight > 110 ? viewportHeight - 110 : viewportHeight * 0.9;
@@ -137,7 +202,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
       })()
     : 340;
 
-  const fullscreenClasses = isFullscreen
+  const fullscreenClasses = expanded
     ? "fixed inset-0 z-50 bg-triba-bone flex flex-col"
     : "flex flex-col items-center";
 
@@ -148,25 +213,50 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
     >
       <div
         className={
-          isFullscreen
+          expanded
             ? "flex-1 flex items-center justify-center overflow-auto px-4 py-4"
             : ""
         }
       >
         <div
-          className={isFullscreen ? "" : "w-full max-w-sm mx-auto md:mx-0"}
-          style={!isFullscreen && pageHeight > 0 ? { minHeight: pageHeight + "px" } : undefined}
+          className={expanded ? "" : "w-full max-w-sm mx-auto md:mx-0"}
+          style={!expanded && pageHeight > 0 ? { minHeight: pageHeight + "px" } : undefined}
         >
-          {!Components ? (
+          {err ? (
+            <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-red/10 flex flex-col items-center justify-center gap-4 px-6 text-center">
+              <p className="font-heading text-base text-triba-red/70">
+                No se pudo cargar la revista
+              </p>
+              {err && (
+                <p className="font-sans text-xs text-triba-brown/60 max-w-[260px]">
+                  {err}
+                </p>
+              )}
+              <button
+                onClick={() => {
+                  setErr("");
+                  setPageHeight(0);
+                  setRetryKey((k) => k + 1);
+                }}
+                className="font-sans text-sm font-semibold text-triba-white bg-triba-red hover:bg-triba-red/90 rounded-full px-5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-triba-red"
+              >
+                Reintentar
+              </button>
+            </div>
+          ) : !visible ? (
             <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-cream flex items-center justify-center">
               <p className="font-heading text-base text-triba-brown/40">
                 Cargando revista...
               </p>
             </div>
           ) : (
-            <Components.Document
+            <Document
+              key={retryKey}
               file={pdfUrl}
               onLoadSuccess={handleDocumentLoadSuccess}
+              onLoadError={(e: unknown) => {
+                setErr(e instanceof Error ? e.message : "No se pudo abrir la revista");
+              }}
               loading={
                 <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-cream flex items-center justify-center">
                   <p className="font-heading text-base text-triba-brown/40">
@@ -183,10 +273,10 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
               }
               className={
                 "shadow-xl border-2 border-triba-black rounded-sm overflow-hidden" +
-                (isFullscreen ? " inline-block" : " w-full")
+                (expanded ? " inline-block" : " w-full")
               }
             >
-              <Components.Page
+              <Page
                 pageNumber={pageNumber}
                 width={pageWidth}
                 scale={scale}
@@ -196,16 +286,16 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
                 className="bg-triba-white"
                 onLoadSuccess={handlePageLoadSuccess}
               />
-            </Components.Document>
+            </Document>
           )}
         </div>
       </div>
 
-      {Components && numPages > 0 && (
+      {numPages > 0 && (
         <div
           className={
             "flex items-center justify-center gap-2 md:gap-4 py-4 px-4" +
-            (isFullscreen
+            (expanded
               ? " bg-triba-bone border-t-2 border-triba-black/10 shrink-0"
               : " mt-5")
           }
@@ -236,7 +326,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
             </span>
           </button>
 
-          {isFullscreen && (
+          {expanded && (
             <>
           <div className="w-px h-6 bg-triba-black/20 mx-1 shrink-0"></div>
 
@@ -274,7 +364,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
             onClick={toggleFullscreen}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red shrink-0"
             aria-label={
-              isFullscreen
+              expanded
                 ? "Salir de pantalla completa"
                 : "Pantalla completa"
             }
@@ -286,7 +376,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
               strokeWidth="2.5"
               className="w-4 h-4 text-triba-brown"
             >
-              {isFullscreen ? (
+              {expanded ? (
                 <>
                   <polyline points="6 15 10 15 10 19" />
                   <polyline points="18 9 14 9 14 5" />

@@ -120,7 +120,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
       <!-- Bloque 3: Vista previa de artículo -->
       <div id="visor-revista" class="scroll-anchor flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16">
         <div class="flex-1 order-2 md:order-1">
-          <PDFViewer pdfUrl="/articulo-gratis.pdf" client:visible />
+          <PDFViewer pdfUrl="/articulo-gratis.pdf" client:only="react" />
         </div>
         <div class="flex-1 flex flex-col justify-center order-1 md:order-2 text-center md:text-left">
           <PatchTitle tag="h2" class="mb-4 text-2xl md:text-3xl" lines={[

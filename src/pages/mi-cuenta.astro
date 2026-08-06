@@ -176,7 +176,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
             <PatchTitle content={`${featured.edition} ${featured.title}`} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
             <div class="-mx-5 md:mx-0">
-              <PDFViewer pdfUrl={featuredPdfSignedUrl || ''} client:visible />
+              <PDFViewer pdfUrl={featuredPdfSignedUrl || ''} client:only="react" />
             </div>
 
             <p class="font-heading text-xs uppercase tracking-[0.2em] text-triba-brown/40 text-center mt-6">Deslizá o usá los botones para pasar las páginas</p>
