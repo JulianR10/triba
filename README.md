@@ -45,6 +45,25 @@ Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABAS
 | `node --env-file=.env scripts/import-wp-subscribers.mjs <csv>` | Importa suscriptores de WooCommerce (CSV) a `subscriber_migrations` + Sender |
 | `node --env-file=.env scripts/fix-admin.mjs <email> '<password>'` | Promueve admin / fix de acceso |
 
+## Accesos de prueba
+
+**Suscriptora de prueba** (sub `stripe` activa, USD):
+
+| Rol | Email | Password |
+|---|---|---|
+| Suscriptor | `suscriptora@triba.com` | `TestTriba2026!` |
+
+> Se crea/resetea con `node --env-file=.env scripts/create-test-subscriber.mjs <email> '<password>'`.
+
+**Admin** (entran por `/iniciar-sesion` y son redirigidos a `/admin`):
+
+| Rol | Email |
+|---|---|
+| Admin | `julianrecarte@gmail.com` |
+| Admin | `comunidadtriba@gmail.com` |
+
+> Las contraseñas se guardan hasheadas en Supabase y **no son recuperables**. Para resetear una: `node --env-file=.env scripts/fix-admin.mjs <email> '<nueva-password>'`.
+
 ## Deploy
 
 Adapter `@astrojs/vercel`. Push a `main` → deploy automático en Vercel.

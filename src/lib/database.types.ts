@@ -277,6 +277,8 @@ export interface Database {
           old_subscription_data: Json | null;
           stripe_subscription_id: string | null;
           stripe_customer_id: string | null;
+          mp_preapproval_id: string | null;
+          mp_plan_currency: string | null;
           migrated_at: string;
         };
         Insert: {
@@ -285,6 +287,8 @@ export interface Database {
           old_subscription_data?: Json | null;
           stripe_subscription_id?: string | null;
           stripe_customer_id?: string | null;
+          mp_preapproval_id?: string | null;
+          mp_plan_currency?: string | null;
           migrated_at?: string;
         };
         Update: {
@@ -293,6 +297,8 @@ export interface Database {
           old_subscription_data?: Json | null;
           stripe_subscription_id?: string | null;
           stripe_customer_id?: string | null;
+          mp_preapproval_id?: string | null;
+          mp_plan_currency?: string | null;
           migrated_at?: string;
         };
         Relationships: [];

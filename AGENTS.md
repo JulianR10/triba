@@ -32,7 +32,7 @@ Revista digital mensual — newsletter gratuito + suscripción paga, escrita por
 
 ## Quirks clave (bugs ya resueltos, no reintroducir)
 - `--nav-height`: lo setea el Navbar con `ResizeObserver`; secciones usan `padding-top: max(1rem, var(--nav-height, 64px))`.
-- **PDFViewer** (`client:visible`, ~48kB, NO pasar a `client:load`): minHeight desde `page.getViewport()` + `aspectRatioRef`; fullscreen `pageWidth = viewportHeight - 110`, scale se resetea a 1 al salir.
+- **PDFViewer** (`client:only="react"`, ~48kB): import ESTÁTICO de react-pdf (`import { Document, Page, pdfjs }`) + `pdfjs.GlobalWorkerOptions.workerSrc = workerUrl` desde `import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"` (siempre la versión instalada; NO `public/pdf.worker.min.mjs`, estático, daba carga eterna al des-sincronizarse). `client:only` es OBLIGATORIO: evita SSR (react-pdf/pdfjs usa `DOMMatrix`, inexistente en Node → si se renderiza en server rompe). NO usar `client:visible` con import estático (mismo DOMMatrix). NO usar `import("react-pdf")` dinámico (pasa por el optimizador de deps de Vite → `node_modules/.vite/deps/react-pdf.js?v=...`, al re-optimizar cambia el hash → 404 "Failed to fetch dynamically imported module"). NO tocar `vite.optimizeDeps` (excluir react-pdf rompe el interop CJS de `warning` → "does not provide an export named 'default'"). Lazy: gate interno `useIsVisible` (IntersectionObserver). Carga: watchdog 25s + `onLoadError` de `<Document>` → `err` + botón "Reintentar" (remonta el Document vía `key={retryKey}`; nunca queda en "Cargando..." infinito). Fullscreen: `expanded` desacoplado de la API nativa (fallback overlay `fixed inset-0` en iOS, que no soporta Fullscreen API).
 - Rate limiting: tabla `rate_limits` (no Map en memoria).
 - MP sin portal hosted: `/api/portal` devuelve `{ note }` → se muestra con `alert()`.
 - **Webhook MP:** usar SIEMPRE `WebhookSignatureValidator` del SDK `mercadopago` (manifest `id:...;request-id:...;ts:...;`), NUNCA a mano (el formato viejo daba 401 a todo). No usar `toleranceSeconds`.
@@ -78,11 +78,14 @@ triba/
 - Dominio verificado; `SENDER_FROM_EMAIL: hola@comunidadtriba.com`. Plan free: **429 a nivel cuenta** al superar cuota. Cliente central: `src/lib/sender.ts`.
 
 ## Migración WooCommerce
-- 92 pagos en `subscriber_migrations` (CSV fuera del repo). `handle_new_user()`: email en tabla → `role=subscriber` + sub `migrated` (7 días) o sub Stripe real si `stripe_subscription_id` (26 recreadas 4-Ago: 21 activas, 6 `incomplete`). PDF access permite `status='migrated'`.
-- Imports idempotentes: `node --env-file=.env scripts/import-wp-subscribers.mjs <csv>` y `scripts/recreate-migrated-billing.mjs`. Excluidas test: `ing.azularganaras@gmail.com`, `comunidadtriba@gmail.com`. MP: 34 preaprobaciones viejas dejadas intactas.
+- 92 pagos Stripe en `subscriber_migrations` (CSV `suscriptoresViejos.csv` = export de clientes Stripe, `customer_id: cus_*`). `handle_new_user()`: email en tabla → `role=subscriber` + sub `migrated` (7 días), sub Stripe real si `stripe_subscription_id` (26 recreadas 4-Ago: 21 activas, 6 `incomplete`) o sub MP real si `mp_preapproval_id` (migración `012`). PDF access permite `status='migrated'`.
+- **MP (6 activas recuperadas 6-Ago):** las preaprobaciones viejas de WooCommerce (`reason: Pedido NNNN`/`Abono mensual`, creadas <2026-08-01) NO estaban en el CSV ni en la base; viven solo en Mercado Pago. `scripts/import-migrated-mp.mjs [--real]` las mapea a `subscriber_migrations` (`mp_preapproval_id` + `mp_plan_currency` ARS) resolviendo el email vía `GET /authorized_payments/search?preapproval_id=` → `GET /v1/payments/{id}` (la API NO expone `payer_email` en la preaprobación; `payments/search?preapproval_id=` devuelve 400). Al registrarse, `handle_new_user` crea sub `mercadopago` real renovable por el webhook. 6 emails: candecanevari06, ana_cari76@hotmail, yobelenbianco, maianeer30, agustinasafarian, victoriaguinea (gmail todos salvo indicado).
+- **Reembolso MP:** `refund.ts` usa la cadena `authorized_payments/search` → `payments/{id}/refunds` (NO `payments/search?preapproval_id=`, que MP rechaza con 400).
+- Imports idempotentes: `node --env-file=.env scripts/import-wp-subscribers.mjs <csv>` y `scripts/recreate-migrated-billing.mjs`. Excluidas test: `ing.azularganaras@gmail.com`, `comunidadtriba@gmail.com`. MP sin email vía API (10 `pending` + 2022 `Abono mensual`): no recuperables sin export de WooCommerce.
 
 ## Próximo
 - Reintentar 4 faltantes de Sender (`jimena.1310@outlook.es`, `valentinave.98@gmail.com`, `sylvanalopez45@gmail.com`, `mariaclaudiaherrera2009@hotmail.com`) con el import tras `2026-08-04T17:02:44Z` (429).
+- Avisar a las 6 MP mapeadas (candecanevari06, ana_cari76@hotmail, yobelenbianco, maianeer30, agustinasafarian, victoriaguinea) que se registren en el sitio nuevo: hasta no crear cuenta, pagan pero no tienen acceso.
 - Limpiar `comunidadtriba+liveverify1785776465@gmail.com` de Sender. Evaluar plan pago Sender si sube volumen.
 
 ## Deuda de tipos

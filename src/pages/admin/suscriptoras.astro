@@ -149,6 +149,8 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             const isRefunded = row.migrationRefunded;
             const stripeStatus = row.migrationStripeStatus;
             const hasStripeSub = !!row.migrationStripeSubId;
+            const hasMpSub = !!row.migrationMpPreapprovalId;
+            const mpCurrency = row.migrationMpCurrency || "";
 
             let statusLabel: string;
             let statusClass: string;
@@ -167,12 +169,16 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             } else if (hasStripeSub) {
               statusLabel = "Con Stripe";
               statusClass = "bg-triba-pink text-triba-brown";
+            } else if (hasMpSub) {
+              statusLabel = "MP activa";
+              statusClass = "bg-triba-green text-triba-brown";
             } else {
               statusLabel = "Sin billing";
               statusClass = "bg-triba-bone text-triba-brown/60";
             }
 
-            const provider = hasStripeSub ? "Stripe" : "CSV";
+            const provider = hasStripeSub ? "Stripe" : hasMpSub ? "Mercado Pago" : "CSV";
+            const plan = hasMpSub ? mpCurrency : "—";
             const canAct = hasStripeSub && !isRefunded && stripeStatus === "active";
             const refundBtn = canAct
               ? `<button class="refund-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-migration-id="${row.migrationId}" data-email="${escapeHtml(email)}">Reembolsar</button>`
@@ -185,7 +191,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             return `<tr class="border-b border-triba-black/10 last:border-0 hover:bg-triba-bone/50">
               <td class="px-4 py-3"><p class="font-sans">${escapeHtml(email)}</p><p class="font-sans text-xs text-triba-brown/60">pend. registro</p></td>
               <td class="px-4 py-3 capitalize">${provider}</td>
-              <td class="px-4 py-3">—</td>
+              <td class="px-4 py-3">${plan}</td>
               <td class="px-4 py-3"><span class="inline-block px-2 py-0.5 rounded-full ${statusClass} font-heading text-[10px] uppercase tracking-wider">${statusLabel}</span></td>
               <td class="px-4 py-3 text-triba-brown/70 hidden md:table-cell">—</td>
               <td class="px-4 py-3 text-right"><div class="flex items-center justify-end gap-1">${actionsContent}</div></td>

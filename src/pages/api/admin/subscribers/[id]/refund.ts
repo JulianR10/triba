@@ -47,18 +47,23 @@ async function refundMercadoPago(preapprovalId: string): Promise<{ warnings: str
   const mpAccessToken = import.meta.env.MP_ACCESS_TOKEN || "";
   if (!mpAccessToken) throw new Error("Falta MP_ACCESS_TOKEN en las variables de entorno");
 
+  // The MP payments/search API rejects `preapproval_id` as a filter. Use the
+  // subscription's authorized payments instead, which expose the real payment id.
   const searchRes = await fetch(
-    `https://api.mercadopago.com/v1/payments/search?preapproval_id=${preapprovalId}&sort=date_created&criteria=desc`,
+    `https://api.mercadopago.com/authorized_payments/search?preapproval_id=${preapprovalId}`,
     { headers: { Authorization: `Bearer ${mpAccessToken}` } },
   );
   if (!searchRes.ok) throw new Error(`Error al buscar pagos en Mercado Pago: ${await searchRes.text()}`);
 
   const searchData = await searchRes.json();
-  const approvedPayment = searchData.results?.find((p: any) => p.status === "approved");
-  if (!approvedPayment) throw new Error("No se encontró ningún pago aprobado para esta suscripción");
+  const authorizedPayment = (searchData.results || []).find(
+    (ap: any) => ap.payment && ap.payment.status === "approved",
+  );
+  const approvedPaymentId = authorizedPayment?.payment?.id;
+  if (!approvedPaymentId) throw new Error("No se encontró ningún pago aprobado para esta suscripción");
 
   const refundRes = await fetch(
-    `https://api.mercadopago.com/v1/payments/${approvedPayment.id}/refunds`,
+    `https://api.mercadopago.com/v1/payments/${approvedPaymentId}/refunds`,
     {
       method: "POST",
       headers: { Authorization: `Bearer ${mpAccessToken}`, "Content-Type": "application/json" },

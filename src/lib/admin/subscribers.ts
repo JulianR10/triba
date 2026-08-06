@@ -9,6 +9,8 @@ export interface AdminSubscriberRow {
   migrationEmail?: string;
   migrationStripeSubId?: string | null;
   migrationStripeStatus?: string;
+  migrationMpPreapprovalId?: string | null;
+  migrationMpCurrency?: string | null;
   migrationRefunded?: boolean;
 }
 
@@ -92,7 +94,7 @@ export async function exportSubscribersCSV(
     const s = r.subscription;
     const email = escapeCSV(r.profile?.email || r.migrationId || "");
     const role = r.profile?.role || "migrated";
-    const provider = s?.provider || (r.migrationId ? "migrado" : "");
+    const provider = s?.provider || (r.migrationId ? (r.migrationMpPreapprovalId ? "mercadopago" : r.migrationStripeSubId ? "stripe" : "migrado") : "");
     const currency = s?.plan_currency || "";
     const statusVal = s?.status || (r.migrationId ? "pending" : "none");
     const periodEnd = s?.current_period_end
@@ -174,7 +176,7 @@ export async function searchSubscribersForAdmin(
 
   let migQuery = supabaseAdmin
     .from("subscriber_migrations")
-    .select("id, email, migrated_at, stripe_subscription_id, old_subscription_data", { count: "exact", head: false });
+    .select("id, email, migrated_at, stripe_subscription_id, mp_preapproval_id, mp_plan_currency, old_subscription_data", { count: "exact", head: false });
 
   if (search) {
     migQuery = migQuery.ilike("email", `%${search}%`);
@@ -240,6 +242,8 @@ export async function searchSubscribersForAdmin(
       migrationEmail: m.email,
       migrationStripeSubId: m.stripe_subscription_id,
       migrationStripeStatus: stripeStatus,
+      migrationMpPreapprovalId: m.mp_preapproval_id,
+      migrationMpCurrency: m.mp_plan_currency,
       migrationRefunded: refunded,
     };
   });
