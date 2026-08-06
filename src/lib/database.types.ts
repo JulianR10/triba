@@ -143,16 +143,25 @@ export interface Database {
           id: string;
           email: string;
           subscribed_at: string;
+          sender_synced: boolean;
+          sender_synced_at: string | null;
+          sender_sync_error: string | null;
         };
         Insert: {
           id?: string;
           email: string;
           subscribed_at?: string;
+          sender_synced?: boolean;
+          sender_synced_at?: string | null;
+          sender_sync_error?: string | null;
         };
         Update: {
           id?: string;
           email?: string;
           subscribed_at?: string;
+          sender_synced?: boolean;
+          sender_synced_at?: string | null;
+          sender_sync_error?: string | null;
         };
         Relationships: [];
       };

@@ -61,8 +61,6 @@ import PatchTitle from "../components/PatchTitle.astro";
 </Layout>
 
 <script>
-  import { supabase } from "../lib/supabase";
-
   function setup() {
     const form = document.getElementById("creators-form") as HTMLFormElement;
     const msg = document.getElementById("creators-msg")!;
@@ -73,29 +71,52 @@ import PatchTitle from "../components/PatchTitle.astro";
       e.preventDefault();
       msg.classList.add("hidden");
 
-      const data = new FormData(form);
-      const areas = Array.from(form.querySelectorAll("[name=area]:checked")).map(cb => (cb as HTMLInputElement).value);
-      const toStr = (v: FormDataEntryValue | null) => (typeof v === "string" ? v : "");
-      const trabajo = data.get("trabajo");
-
-      const { error } = await supabase!.from("creator_applications").insert({
-        nombre: toStr(data.get("nombre")),
-        email: toStr(data.get("email")),
-        pais: toStr(data.get("pais")),
-        areas,
-        propuesta: toStr(data.get("propuesta")),
-        trabajo_url: typeof trabajo === "string" && trabajo ? trabajo : null,
-      });
-
-      if (error) {
-        msg.textContent = "Error al enviar. Intentalo de nuevo.";
-        msg.className = "font-sans text-sm text-center text-triba-red";
-      } else {
-        msg.textContent = "¡Gracias por postularte! Te vamos a contactar pronto.";
-        msg.className = "font-sans text-sm text-center text-triba-green";
-        form.reset();
+      const submitBtn = form.querySelector("button[type=submit]") as HTMLButtonElement | null;
+      // Disable synchronously before the first await so a double-click can't fire twice
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Enviando...";
       }
-      msg.classList.remove("hidden");
+
+      try {
+        const data = new FormData(form);
+        const areas = Array.from(form.querySelectorAll("[name=area]:checked")).map(cb => (cb as HTMLInputElement).value);
+        const toStr = (v: FormDataEntryValue | null) => (typeof v === "string" ? v : "");
+        const trabajo = data.get("trabajo");
+
+        const res = await fetch("/api/creators", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            nombre: toStr(data.get("nombre")),
+            email: toStr(data.get("email")),
+            pais: toStr(data.get("pais")),
+            areas,
+            propuesta: toStr(data.get("propuesta")),
+            trabajo_url: typeof trabajo === "string" && trabajo ? trabajo : null,
+          }),
+        });
+
+        const dataRes = await res.json().catch(() => ({}));
+
+        if (res.ok) {
+          msg.textContent = "¡Gracias por postularte! Te vamos a contactar pronto.";
+          msg.className = "font-sans text-sm text-center text-triba-green";
+          form.reset();
+        } else {
+          msg.textContent = dataRes.error || "Error al enviar. Intentalo de nuevo.";
+          msg.className = "font-sans text-sm text-center text-triba-red";
+        }
+      } catch (err) {
+        msg.textContent = "Error de conexión. Intentalo de nuevo.";
+        msg.className = "font-sans text-sm text-center text-triba-red";
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "Enviar postulación";
+        }
+        msg.classList.remove("hidden");
+      }
     });
   }
 

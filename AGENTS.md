@@ -25,13 +25,14 @@ Revista digital mensual — newsletter gratuito + suscripción paga, escrita por
 
 ## Convenciones
 - Naming: kebab archivos, PascalCase componentes, camelCase vars
-- Astro: Layout + SEO; scripts `setup(); document.addEventListener("astro:page-load", setup)`
+- Astro: Layout + SEO; scripts `setup(); document.addEventListener("astro:page-load", setup)` (llamar `setup()` directo ES OBLIGATORIO: sin View Transitions `astro:page-load` nunca dispara y el form queda sin handlers → submit nativo sin `preventDefault`. El listener queda inerte; no causa doble binding)
 - Server routes: `APIRoute`, auth `requireUser`/`requireAdmin`
 - UI español rioplatense, código/logs inglés
 - Migraciones SQL en `supabase/migrations/`, secuenciales, idempotentes
 
 ## Quirks clave (bugs ya resueltos, no reintroducir)
 - `--nav-height`: lo setea el Navbar con `ResizeObserver`; secciones usan `padding-top: max(1rem, var(--nav-height, 64px))`.
+- **Dedup submissions (24h):** triggers en DB (migraciones `015`/`016`): `creator_applications` = 1 por email/24h (RPC `23505` → `/api/creators` devuelve 429 "Esperá 24 horas"); `feedback` = mismo user + mismo mensaje/24h. Usan `pg_advisory_xact_lock(hashtext(...))` para ser atómicos ante doble-submit concurrente (doble-click). CUIDADO: al construir la key del lock con columna uuid usar `coalesce(col::text, '')`, NO `coalesce(col, '')` (fuerza cast a uuid de '' → 22P02 bloquea todos los inserts).
 - **PDFViewer** (`client:only="react"`, ~48kB): import ESTÁTICO de react-pdf (`import { Document, Page, pdfjs }`) + `pdfjs.GlobalWorkerOptions.workerSrc = workerUrl` desde `import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url"` (siempre la versión instalada; NO `public/pdf.worker.min.mjs`, estático, daba carga eterna al des-sincronizarse). `client:only` es OBLIGATORIO: evita SSR (react-pdf/pdfjs usa `DOMMatrix`, inexistente en Node → si se renderiza en server rompe). NO usar `client:visible` con import estático (mismo DOMMatrix). NO usar `import("react-pdf")` dinámico (pasa por el optimizador de deps de Vite → `node_modules/.vite/deps/react-pdf.js?v=...`, al re-optimizar cambia el hash → 404 "Failed to fetch dynamically imported module"). NO tocar `vite.optimizeDeps` (excluir react-pdf rompe el interop CJS de `warning` → "does not provide an export named 'default'"). Lazy: gate interno `useIsVisible` (IntersectionObserver). Carga: watchdog 25s + `onLoadError` de `<Document>` → `err` + botón "Reintentar" (remonta el Document vía `key={retryKey}`; nunca queda en "Cargando..." infinito). Fullscreen: `expanded` desacoplado de la API nativa (fallback overlay `fixed inset-0` en iOS, que no soporta Fullscreen API).
 - Rate limiting: tabla `rate_limits` (no Map en memoria).
 - MP sin portal hosted: `/api/portal` devuelve `{ note }` → se muestra con `alert()`.
@@ -94,6 +95,7 @@ triba/
 ⚠️ `src/lib/database.types.ts` debe mantenerse en formato canónico y sincronizado con `supabase/migrations/` (tablas, columnas, funciones): si falta una clave, todo `.from()` resuelve a `never[]`.
 
 Lecciones (evitar regresión):
+- Scripts Astro: SIEMPRE llamar `setup()` directo además de `addEventListener("astro:page-load", setup)`. Sin View Transitions (sacadas por CSP `frame-src 'none'`, ver commit `2499658`) `astro:page-load` NUNCA dispara; el `setup()` directo es lo que corre en la carga inicial. Quitarlo deja los forms sin handlers (submit nativo sin `preventDefault`) → "no ingresa / no aparece cartel". El listener inerte NO duplica (los duplicados reales venían de doble-click, resueltos con triggers de migración `015` + botón deshabilitado).
 - En `NodeListOf.forEach` NO tipar el parámetro como `HTMLElement` (2345): tipar la variable en la declaración (`querySelectorAll<HTMLDetailsElement>`); para `.open` de `<details>` usar `HTMLDetailsElement`.
 - No usar tipos `HTML*Attribute` en templates `.astro` (2304): unión literal en `Props`.
 - Custom DOM props: intersección `as HTMLElement & { _revealSplit?: boolean }`.

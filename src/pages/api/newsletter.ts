@@ -54,11 +54,24 @@ export const POST: APIRoute = async ({ request }) => {
     );
   }
 
-  try {
-    await syncFreeSubscriber(email);
-  } catch (err) {
-    logger.error({ err, email }, "Sender sync error");
-  }
+  await recordSenderSync(email);
 
   return ok();
 };
+
+async function recordSenderSync(email: string): Promise<void> {
+  try {
+    await syncFreeSubscriber(email);
+    await supabaseAdmin
+      .from("newsletters")
+      .update({ sender_synced: true, sender_synced_at: new Date().toISOString(), sender_sync_error: null })
+      .eq("email", email);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    logger.error({ err, email }, "Sender sync error");
+    await supabaseAdmin
+      .from("newsletters")
+      .update({ sender_synced: false, sender_sync_error: message.slice(0, 500) })
+      .eq("email", email);
+  }
+}

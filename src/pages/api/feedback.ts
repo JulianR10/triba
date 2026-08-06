@@ -49,6 +49,9 @@ export const POST: APIRoute = async ({ request }) => {
     });
 
     if (insertError) {
+      if (insertError.code === "23505") {
+        return error("Ya enviaste ese mensaje. Esperá 24 horas para volver a enviarlo.", 429);
+      }
       logger.error({ err: insertError, userId: user.id }, "feedback insert error");
       return error("No se pudo guardar el feedback", 500);
     }

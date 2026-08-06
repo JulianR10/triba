@@ -272,6 +272,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
   const fbTextarea = fbForm?.querySelector("textarea[name=feedback]") as HTMLTextAreaElement | null;
   const fbCounter = document.getElementById("feedback-counter");
   const fbBtn = fbForm?.querySelector("button[type=submit]") as HTMLButtonElement | null;
+  let fbTimer: number | undefined;
 
   const updateCounter = () => {
     if (!fbTextarea || !fbCounter) return;
@@ -293,19 +294,25 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
       e.preventDefault();
       fbMsg.classList.add("hidden");
       fbMsg.className = "font-sans text-sm text-center mt-3 hidden";
+      window.clearTimeout(fbTimer);
+
+      const mensaje = fbTextarea?.value;
+      // Disable synchronously before the first await so a double-click can't fire twice
+      if (fbBtn) {
+        fbBtn.disabled = true;
+        fbBtn.textContent = "Enviando...";
+      }
 
       var { data: { session } } = await supabase!.auth.getSession();
       if (!session) {
         fbMsg.textContent = "Debés iniciar sesión para enviar feedback";
         fbMsg.className = "font-sans text-sm text-center text-triba-red mt-3";
         fbMsg.classList.remove("hidden");
+        if (fbBtn) {
+          fbBtn.disabled = false;
+          fbBtn.textContent = "Enviar";
+        }
         return;
-      }
-
-      const mensaje = fbTextarea?.value;
-      if (fbBtn) {
-        fbBtn.disabled = true;
-        fbBtn.textContent = "Enviando...";
       }
 
       try {
@@ -328,9 +335,13 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
           fbMsg.className = "font-sans text-sm text-center text-triba-red mt-3";
         } else {
           fbMsg.textContent = "¡Gracias por tu feedback!";
-          fbMsg.className = "font-sans text-sm text-center text-triba-green mt-3";
+          fbMsg.className = "font-sans text-sm text-center text-triba-red mt-3";
           if (fbTextarea) fbTextarea.value = "";
           updateCounter();
+          window.clearTimeout(fbTimer);
+          fbTimer = window.setTimeout(() => {
+            fbMsg.classList.add("hidden");
+          }, 3000);
         }
       } catch (err) {
         fbMsg.textContent = "Error de conexión. Intentalo de nuevo.";

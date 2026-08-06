@@ -56,10 +56,11 @@ export async function addSubscriberToGroup(
   });
 }
 
-export async function syncFreeSubscriber(email: string, firstName?: string): Promise<void> {
-  if (!isConfigured()) return;
+export async function syncFreeSubscriber(email: string, firstName?: string): Promise<boolean> {
+  if (!isConfigured()) return false;
   const group = await getOrCreateGroup("newsletter-gratuito");
   await addSubscriberToGroup(email, group.id, firstName);
+  return true;
 }
 
 export async function syncPaidSubscriber(email: string, firstName?: string): Promise<void> {
