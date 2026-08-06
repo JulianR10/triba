@@ -26,7 +26,7 @@ const { editions, selectedId } = Astro.props;
    <button data-carousel-prev class="absolute -left-2 sm:-left-4 md:-left-10 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-triba-pink to-triba-red flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red" aria-label="Edición anterior">
     <span class="text-xl font-heading text-triba-white -mt-0.5">‹</span>
   </button>
-  <div data-carousel-scroll class="overflow-x-auto scrollbar-hide snap-x snap-mandatory py-1">
+  <div data-carousel-scroll class="overflow-x-auto scrollbar-hide snap-x snap-mandatory py-8 md:py-10">
     <div class="flex gap-4 md:gap-6 [&>*:first-child]:ml-auto [&>*:last-child]:mr-auto">
       {editions.map((ed) => (
         <div

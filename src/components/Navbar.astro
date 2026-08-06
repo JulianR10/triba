@@ -1,5 +1,6 @@
 ---
 import { createSupabaseServerClient } from "../lib/supabase-server";
+import AccountMenuItems from "./AccountMenuItems.astro";
 
 const { showLogoAlways = false } = Astro.props;
 
@@ -8,6 +9,32 @@ const {
   data: { session },
 } = await supabase.auth.getSession();
 const isLoggedIn = !!session;
+
+const user = session?.user ?? null;
+
+let profileRole: string | null = null;
+let accountSub: any = null;
+if (user) {
+  const { data: p } = await supabase.from("profiles").select("role, subscription_id").eq("id", user.id).single();
+  profileRole = p?.role ?? null;
+  if (p?.subscription_id) {
+    const { data: s } = await supabase
+      .from("subscriptions")
+      .select("status, provider, plan_currency, current_period_end")
+      .eq("id", p.subscription_id)
+      .single();
+    accountSub = s;
+  }
+}
+
+function formatPeriodEnd(iso?: string | null) {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+}
+
+const periodEndLabel = formatPeriodEnd(accountSub?.current_period_end);
 
 const publicLinks = [
   { href: "/", label: "Inicio" },
@@ -18,7 +45,6 @@ const publicLinks = [
 
 const authLinks = [
   { href: "/", label: "Inicio" },
-  { href: "/mi-cuenta", label: "Mi perfil" },
   { href: "/revista", label: "Revista" },
   { href: "/triba-creators", label: "Triba Creators" },
 ];
@@ -105,9 +131,7 @@ const authLinks = [
               </button>
               <div id="mi-cuenta-dropdown" class="hidden absolute right-0 top-full mt-2 w-64 bg-triba-white border-2 border-triba-black rounded-xl shadow-xl overflow-hidden z-50">
                 <div class="p-4" id="mi-cuenta-content">
-                  <div class="flex items-center justify-center py-4">
-                    <div class="w-5 h-5 border-2 border-triba-red border-t-2 border-t-transparent rounded-full animate-spin"></div>
-                  </div>
+                  <AccountMenuItems role={profileRole} sub={accountSub} periodEndLabel={periodEndLabel} />
                 </div>
               </div>
             </div>
@@ -144,10 +168,8 @@ const authLinks = [
 
     {
       isLoggedIn && (
-        <div id="mobile-mi-cuenta-items" class="border-b border-triba-black/10 py-3 space-y-3">
-          <div class="flex items-center justify-center py-2">
-            <div class="w-4 h-4 border-2 border-triba-red border-t-2 border-t-transparent rounded-full animate-spin"></div>
-          </div>
+        <div id="mobile-mi-cuenta-items" class="border-b border-triba-black/10 py-3">
+          <AccountMenuItems role={profileRole} sub={accountSub} periodEndLabel={periodEndLabel} />
         </div>
       )
     }
@@ -172,8 +194,6 @@ const authLinks = [
       _navObserver?: ResizeObserver;
     }
   }
-
-  var lastSubStatus = null;
 
   function setupNav() {
     if (window._navScrollHandler) {
@@ -285,221 +305,117 @@ const authLinks = [
     // --- MI CUENTA dropdown ---
     setupMiCuentaDropdown();
 
-    // --- Logout ---
-    async function logout() {
-      if (supabase) {
-        await supabase.auth.signOut();
-      }
-      window.location.href = "/";
-    }
-
+    // --- Logout (mobile) ---
     var logoutBtn = document.getElementById("logout-btn-mobile");
     if (logoutBtn) logoutBtn.addEventListener("click", logout);
   }
 
   function setupMiCuentaDropdown() {
-    // Desktop dropdown
-    var btn = document.getElementById("mi-cuenta-btn")!;
-    var dropdown = document.getElementById("mi-cuenta-dropdown")!;
-    var content = document.getElementById("mi-cuenta-content")!;
+    var btn = document.getElementById("mi-cuenta-btn");
+    var dropdown = document.getElementById("mi-cuenta-dropdown");
 
-    if (btn && dropdown && content) {
-      if (!btn.dataset.bound) {
-        btn.dataset.bound = "1";
-        btn.addEventListener("click", function (e) {
-          e.stopPropagation();
-          var isHidden = dropdown.classList.contains("hidden");
-          dropdown.classList.toggle("hidden");
-          if (isHidden && !dropdown.dataset.loaded) {
-            fetchSubStatus(content, dropdown);
-          }
-        });
+    if (btn && dropdown && !btn.dataset.bound) {
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        dropdown!.classList.toggle("hidden");
+      });
 
-        document.addEventListener("click", function (e) {
-          var target = e.target as Node | null;
-          if (!dropdown.classList.contains("hidden") &&
-              !dropdown.contains(target) &&
-              target !== btn &&
-              !btn.contains(target)) {
-            dropdown.classList.add("hidden");
-          }
-        });
-      }
-    }
-
-    // Mobile items
-    var mobileItems = document.getElementById("mobile-mi-cuenta-items");
-    if (mobileItems && !mobileItems.dataset.bound) {
-      mobileItems.dataset.bound = "1";
-      fetchSubStatus(mobileItems, null);
+      document.addEventListener("click", function (e) {
+        var target = e.target as Node | null;
+        if (!dropdown!.classList.contains("hidden") &&
+            !dropdown!.contains(target) &&
+            target !== btn &&
+            !btn!.contains(target)) {
+          dropdown!.classList.add("hidden");
+        }
+      });
     }
   }
 
-  async function fetchSubStatus(container: HTMLElement, dropdown: HTMLElement | null) {
-    try {
-      var { data: { session } } = await supabase!.auth.getSession();
-      if (!session) {
-        renderGuest(container);
-        if (dropdown) dropdown.dataset.loaded = "1";
-        return;
-      }
+  async function logout() {
+    if (supabase) await supabase.auth.signOut();
+    window.location.href = "/";
+  }
 
-      var res = await fetch("/api/subscription-status", {
-        headers: { Authorization: "Bearer " + session.access_token },
+  async function openManage() {
+    var { data: { session } } = await supabase!.auth.getSession();
+    if (!session) return;
+    try {
+      var res = await fetch("/api/portal", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.access_token,
+        },
       });
       var data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Error");
-
-      lastSubStatus = data;
-      renderDropdown(container, data, dropdown);
+      if (data.url) { window.location.href = data.url; return; }
+      if (data.note) { alert(data.note); return; }
+      throw new Error(data.error || "Error");
     } catch (e) {
-      container.innerHTML =
-        '<p class="font-sans text-xs text-triba-red text-center">Error al cargar</p>';
-    } finally {
-      if (dropdown) dropdown.dataset.loaded = "1";
+      alert("Error al abrir el portal de gestión");
     }
   }
 
-  function renderDropdown(container: HTMLElement, data: { role: string; subscription: any }, dropdown: HTMLElement | null) {
-    var sub = data.subscription;
-    var role = data.role;
+  async function cancelSub(btn: HTMLButtonElement) {
+    var confirmed = await showConfirm(
+      "Cancelar suscripción",
+      "¿Estás segura? Perderás el acceso a la revista al final del período actual."
+    );
+    if (!confirmed) return;
 
-    if (role === "admin") {
-      container.innerHTML =
-        '<a href="/admin" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-brown hover:text-triba-red py-2 transition-colors">Panel de administración →</a>' +
-        '<hr class="border-triba-black/10 my-2">' +
-        '<button class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>';
-      bindLogout(container);
-      return;
-    }
+    var { data: { session } } = await supabase!.auth.getSession();
+    if (!session) return;
 
-    if (!sub || sub.status === "none" || sub.status === "incomplete") {
-      container.innerHTML =
-        '<p class="font-sans text-xs text-triba-brown/70 mb-2">Aún no estás suscripta</p>' +
-        '<a href="/suscribirme" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Suscribirme</a>' +
-        '<hr class="border-triba-black/10 my-2">' +
-        '<button class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>';
-      bindLogout(container);
-      return;
-    }
-
-    if (sub.status === "canceled") {
-      container.innerHTML =
-        '<p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 mb-1">Suscripción cancelada</p>' +
-        '<p class="font-sans text-xs text-triba-brown/50 mb-3">Ya no tenés acceso a la revista</p>' +
-        '<a href="/suscribirme" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Suscribirme de nuevo</a>' +
-        '<hr class="border-triba-black/10 my-2">' +
-        '<button class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>';
-      bindLogout(container);
-      return;
-    }
-
-    // Active subscription
-    var periodEnd = sub.current_period_end
-      ? new Date(sub.current_period_end).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
-      : "";
-
-    container.innerHTML =
-      '<a href="/mi-cuenta" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Ir a mi perfil →</a>' +
-      '<hr class="border-triba-black/10 my-2">' +
-      '<div class="mb-3">' +
-        '<p class="font-heading text-xs uppercase tracking-wider text-triba-green mb-1">Suscripción activa</p>' +
-        '<p class="font-sans text-xs text-triba-brown">' +
-          'Plan <span class="font-bold">' + sub.plan_currency + '</span> vía <span class="font-bold capitalize">' + sub.provider + '</span>' +
-        '</p>' +
-        (periodEnd ? '<p class="font-sans text-[10px] text-triba-brown/50">Vence ' + periodEnd + '</p>' : '') +
-      '</div>' +
-      (sub.provider === "stripe"
-        ? '<button class="manage-sub-btn block w-full text-left font-sans text-xs text-triba-brown hover:text-triba-red hover:underline py-1.5 transition-colors">Gestionar suscripción</button>'
-        : '<p class="font-sans text-[10px] text-triba-brown/50 mb-1">Gestioná desde tu cuenta de Mercado Pago</p>') +
-      '<button class="cancel-sub-btn block w-full text-left font-sans text-xs text-triba-red hover:underline py-1.5 transition-colors">Cancelar suscripción</button>' +
-      '<hr class="border-triba-black/10 my-2">' +
-      '<button class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>';
-
-    bindManage(container);
-    bindCancel(container);
-    bindLogout(container);
-  }
-
-  function renderGuest(container: HTMLElement) {
-    container.innerHTML =
-      '<a href="/iniciar-sesion" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Iniciar sesión</a>';
-  }
-
-  function bindManage(container: HTMLElement) {
-    container.querySelector(".manage-sub-btn")?.addEventListener("click", async function () {
-      var { data: { session } } = await supabase!.auth.getSession();
-      if (!session) return;
-      try {
-        var res = await fetch("/api/portal", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + session.access_token,
-          },
-        });
-        var data = await res.json();
-        if (data.url) { window.location.href = data.url; return; }
-        if (data.note) { alert(data.note); return; }
-        throw new Error(data.error || "Error");
-      } catch (e) {
-        alert("Error al abrir el portal de gestión");
-      }
-    });
-  }
-
-  function bindCancel(container: HTMLElement) {
-    container.querySelector(".cancel-sub-btn")?.addEventListener("click", async function (this: HTMLButtonElement) {
-      var confirmed = await showConfirm(
-        "Cancelar suscripción",
-        "¿Estás segura? Perderás el acceso a la revista al final del período actual."
-      );
-      if (!confirmed) return;
-
-      var { data: { session } } = await supabase!.auth.getSession();
-      if (!session) return;
-
-      this.disabled = true;
-      this.textContent = "Cancelando...";
-      try {
-        var res = await fetch("/api/cancel-subscription", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: "Bearer " + session.access_token,
-          },
-        });
-        var data = await res.json();
-        if (data.ok) {
-          var toast = (window as any).adminToast;
-          if (toast) { toast("Suscripción cancelada", "success"); }
-          if (data.providerWarnings && data.providerWarnings.length > 0) {
-            var warnMsg = "Cancelada en Triba, pero hubo un problema con el proveedor de pago: " + data.providerWarnings.join(". ");
-            setTimeout(function () { alert(warnMsg); }, 500);
-          }
-          setTimeout(function () { window.location.reload(); }, 1000);
-        } else {
-          alert(data.error || "Error al cancelar");
-          this.disabled = false;
-          this.textContent = "Cancelar suscripción";
-        }
-      } catch (e) {
-        alert("Error de conexión");
-        this.disabled = false;
-        this.textContent = "Cancelar suscripción";
-      }
-    });
-  }
-
-  function bindLogout(container: HTMLElement) {
-    container.querySelectorAll(".logout-dropdown-btn").forEach(function (btn: Element) {
-      btn.addEventListener("click", async function () {
-        if (supabase) await supabase.auth.signOut();
-        window.location.href = "/";
+    btn.disabled = true;
+    btn.textContent = "Cancelando...";
+    try {
+      var res = await fetch("/api/cancel-subscription", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: "Bearer " + session.access_token,
+        },
       });
+      var data = await res.json();
+      if (data.ok) {
+        var toast = (window as any).adminToast;
+        if (toast) { toast("Suscripción cancelada", "success"); }
+        if (data.providerWarnings && data.providerWarnings.length > 0) {
+          var warnMsg = "Cancelada en Triba, pero hubo un problema con el proveedor de pago: " + data.providerWarnings.join(". ");
+          setTimeout(function () { alert(warnMsg); }, 500);
+        }
+        setTimeout(function () { window.location.reload(); }, 1000);
+      } else {
+        alert(data.error || "Error al cancelar");
+        btn.disabled = false;
+        btn.textContent = "Cancelar suscripción";
+      }
+    } catch (e) {
+      alert("Error de conexión");
+      btn.disabled = false;
+      btn.textContent = "Cancelar suscripción";
+    }
+  }
+
+  function bindAccountActions() {
+    if ((window as any)._accountActionsBound) return;
+    (window as any)._accountActionsBound = true;
+
+    document.addEventListener("click", function (e) {
+      var target = e.target as HTMLElement | null;
+      if (!target) return;
+
+      if (target.closest(".logout-dropdown-btn")) { logout(); return; }
+      if (target.closest(".manage-sub-btn")) { openManage(); return; }
+
+      var cancelBtn = target.closest(".cancel-sub-btn");
+      if (cancelBtn) { cancelSub(cancelBtn as HTMLButtonElement); }
     });
   }
 
+  bindAccountActions();
   setupNav();
   document.addEventListener("astro:page-load", setupNav);
 </script>

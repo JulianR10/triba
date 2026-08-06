@@ -81,8 +81,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
               Hola, <span class="text-triba-red">{displayName}</span>
             </h1>
             <div class="mt-6 mb-6">
-              <span class="font-heading text-lg uppercase tracking-wider text-triba-red">{featured.edition}</span>
-              <h2 class="font-heading text-2xl md:text-3xl text-triba-brown mt-1">{featured.title}</h2>
+              <h2 class="font-heading text-2xl md:text-3xl text-triba-brown">{featured.title}</h2>
             </div>
             <p class="font-sans text-base md:text-base text-triba-brown/80 leading-relaxed mb-8 max-w-lg whitespace-pre-line">
               {featured.description}
@@ -115,56 +114,32 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
         </div>
       )}
 
-      <!-- ===== COLECCIÓN (staggered cover collage) ===== -->
+      <!-- ===== COLECCIÓN (grid expandible, 3 de base) ===== -->
       <div class="px-5 md:px-14 lg:px-20 mt-12 md:mt-16 mb-12 md:mb-20 reveal" data-reveal>
         <div class="max-w-6xl mx-auto">
           <p class="font-heading text-xs uppercase tracking-[0.25em] text-triba-brown/50 mb-8">Tus tomos</p>
 
-          <!-- Desktop: stacked collage -->
-          <div class="hidden md:flex justify-center items-end gap-0 py-8" data-collage-desktop>
-            {editions.map((ed, i) => {
-              const rotations = [-2.5, 1.8, -1.2, 2.2, -1.8, 1.5, -2.0, 2.5];
-              const rot = rotations[i % rotations.length];
-              const z = editions.length - i;
-              const ml = i === 0 ? 0 : -12;
-              return (
-                <a
-                  href={`/revista/${ed.slug}`}
-                  class="relative transition-all duration-400 hover:z-30 group block"
-                  style={`margin-left: ${ml}px; z-index: ${z}; transform: rotate(${rot}deg);`}
-                >
-                  <div class="w-44 lg:w-52 xl:w-56 aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg transition-all duration-400 group-hover:rotate-0 group-hover:scale-105 group-hover:shadow-2xl">
-                    <img src={ed.cover} alt={`Portada ${ed.edition}`} class="w-full h-full object-cover" loading="lazy" />
-                  </div>
-                  <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 text-center mt-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">{ed.edition}</p>
-                </a>
-              );
-            })}
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-6" data-gallery>
+            {editions.map((ed, i) => (
+              <a
+                href={`/revista/${ed.slug}#visor-revista`}
+                class="group block"
+                data-gallery-full={i >= 3 ? "true" : "false"}
+                style={i >= 3 ? "display:none" : ""}
+              >
+                <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg transition-all duration-400 group-hover:rotate-0 group-hover:scale-[1.04] group-hover:shadow-2xl">
+                  <img src={ed.cover} alt={`Portada ${ed.edition} — ${ed.title}`} loading="lazy" class="w-full h-full object-cover" />
+                </div>
+                <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 text-center mt-2 leading-relaxed">{ed.title}</p>
+              </a>
+            ))}
           </div>
 
-          <!-- Mobile: snap-horizontal scroll -->
-          <div class="md:hidden" data-collage-mobile>
-            <div class="flex gap-3 overflow-x-auto snap-x snap-mandatory scrollbar-hide pb-4 -mx-5 px-5">
-              {editions.map((ed, i) => {
-                const rotations = [-2, 1.5, -1, 2, -1.5, 1, -2.5, 2];
-                const rot = rotations[i % rotations.length];
-                return (
-                  <a href={`/revista/${ed.slug}`} class="snap-center shrink-0 w-[70vw] max-w-[240px] block" style={`transform: rotate(${rot}deg);`}>
-                    <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg">
-                      <img src={ed.cover} alt={`Portada ${ed.edition}`} class="w-full h-full object-cover" loading="lazy" />
-                    </div>
-                    <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 text-center mt-2">{ed.edition}</p>
-                  </a>
-                );
-              })}
+          {editions.length > 3 && (
+            <div class="text-center mt-8">
+              <Button variant="ghost" size="md" id="ver-todas-tomos">Ver todas las ediciones ({editions.length})</Button>
             </div>
-            <!-- Dots -->
-            <div class="flex justify-center gap-2 mt-4" data-dots>
-              {editions.map((_, i) => (
-                <span class="w-2 h-2 rounded-full bg-triba-brown/20 transition-colors duration-300" data-dot={i}></span>
-              ))}
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -173,7 +148,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
         <div class="max-w-6xl mx-auto">
           {featured.pdf !== "#" && (
           <div id="visor-revista" class="scroll-anchor reveal" data-reveal>
-            <PatchTitle content={`${featured.edition} ${featured.title}`} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
+            <PatchTitle content={featured.title} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
             <div class="-mx-5 md:mx-0">
               <PDFViewer pdfUrl={featuredPdfSignedUrl || ''} client:only="react" />
@@ -278,23 +253,17 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
     }, 3000);
   }
 
-  // --- Mobile collage dots ---
-  var collageScroll = document.querySelector("[data-collage-mobile] .overflow-x-auto") as HTMLElement;
-  var dots = document.querySelectorAll("[data-dot]");
-  if (collageScroll && dots.length) {
-    var updateDots = function () {
-      var scrollLeft = collageScroll.scrollLeft;
-      var scrollWidth = collageScroll.scrollWidth - collageScroll.clientWidth;
-      if (scrollWidth <= 0) { dots.forEach(function (d) { d.classList.add("bg-triba-brown/60"); d.classList.remove("bg-triba-brown/20"); }); return; }
-      var ratio = scrollLeft / scrollWidth;
-      var active = Math.round(ratio * (dots.length - 1));
-      dots.forEach(function (d, i) {
-        d.classList.toggle("bg-triba-brown/60", i === active);
-        d.classList.toggle("bg-triba-brown/20", i !== active);
+  // --- Tus tomos: reveal all editions ---
+  var verTodas = document.getElementById("ver-todas-tomos") as HTMLButtonElement | null;
+  var galleryCards = document.querySelectorAll("[data-gallery-full]");
+  if (verTodas && galleryCards.length) {
+    verTodas.addEventListener("click", function () {
+      galleryCards.forEach(function (c) {
+        var el = c as HTMLElement;
+        el.style.display = "";
       });
-    };
-    collageScroll.addEventListener("scroll", updateDots);
-    updateDots();
+      verTodas!.style.display = "none";
+    });
   }
 
   // --- Feedback form ---

@@ -1,0 +1,70 @@
+---
+interface Sub {
+  status?: string | null;
+  provider?: string | null;
+  plan_currency?: string | null;
+  current_period_end?: string | null;
+}
+
+interface Props {
+  role: string | null;
+  sub: Sub | null;
+  periodEndLabel: string;
+}
+
+const { role, sub, periodEndLabel } = Astro.props;
+
+const isActive = sub?.status === "active" || sub?.status === "migrated";
+const isAdmin = role === "admin";
+---
+
+{
+  isAdmin ? (
+    <>
+      <a href="/admin" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-brown hover:text-triba-red py-2 transition-colors">
+        Panel de administración →
+      </a>
+      <hr class="border-triba-black/10 my-2" />
+      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">
+        Cerrar sesión
+      </button>
+    </>
+  ) : isActive ? (
+    <>
+      <a href="/mi-cuenta" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">
+        Ir a mi perfil →
+      </a>
+      <hr class="border-triba-black/10 my-2" />
+      <div class="mb-3">
+        <p class="font-heading text-xs uppercase tracking-wider text-triba-green mb-1">Suscripción activa</p>
+        <p class="font-sans text-xs text-triba-brown">
+          Plan <span class="font-bold">{sub?.plan_currency}</span> vía <span class="font-bold capitalize">{sub?.provider}</span>
+        </p>
+        {periodEndLabel && <p class="font-sans text-[10px] text-triba-brown/50">Vence {periodEndLabel}</p>}
+      </div>
+      {
+        sub?.provider === "stripe"
+          ? <button type="button" class="manage-sub-btn block w-full text-left font-sans text-xs text-triba-brown hover:text-triba-red hover:underline py-1.5 transition-colors">Gestionar suscripción</button>
+          : <p class="font-sans text-[10px] text-triba-brown/50 mb-1">Gestioná desde tu cuenta de Mercado Pago</p>
+      }
+      <button type="button" class="cancel-sub-btn block w-full text-left font-sans text-xs text-triba-red hover:underline py-1.5 transition-colors">Cancelar suscripción</button>
+      <hr class="border-triba-black/10 my-2" />
+      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">
+        Cerrar sesión
+      </button>
+    </>
+  ) : (
+    <>
+      <p class="font-sans text-xs text-triba-brown/70 mb-2">
+        {sub?.status === "canceled" ? "Suscripción cancelada. Ya no tenés acceso a la revista." : "Aún no estás suscripta"}
+      </p>
+      <a href="/suscribirme" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
+        Suscribirme
+      </a>
+      <hr class="border-triba-black/10 my-2" />
+      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">
+        Cerrar sesión
+      </button>
+    </>
+  )
+}

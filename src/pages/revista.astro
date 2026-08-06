@@ -111,7 +111,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
       </div>
 
       <!-- Bloque 2: Carrusel de ediciones -->
-      <div class="relative bg-white w-full px-5 md:px-10 lg:px-20 py-8 md:py-14 rounded-[20px] mx-auto mb-12 md:mb-20 reveal" data-reveal>
+      <div class="relative bg-white w-full px-5 md:px-10 lg:px-20 py-12 md:py-20 rounded-[20px] mx-auto mb-12 md:mb-20 reveal" data-reveal>
         <div class="max-w-6xl mx-auto">
           <MagazineCarousel editions={editions} selectedId={featured.id} />
         </div>

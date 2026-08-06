@@ -21,7 +21,7 @@ Revista digital mensual — newsletter gratuito + suscripción paga, escrita por
 | Rol | Items |
 |---|---|
 | Público | INICIO · REVISTA · SUSCRIBIRME · TRIBA CREATORS · INICIAR SESION |
-| Suscriptora | MI PERFIL · REVISTA · TRIBA CREATORS |
+| Suscriptora | REVISTA · TRIBA CREATORS (+ botón "MI CUENTA" → dropdown) |
 
 ## Convenciones
 - Naming: kebab archivos, PascalCase componentes, camelCase vars

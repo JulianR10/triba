@@ -20,7 +20,7 @@ const { items, selectedId } = Astro.props;
 ---
 
 <div class="md:hidden" data-slider-root>
-  <div data-slider-scroll class="overflow-x-auto scrollbar-hide snap-x snap-mandatory py-2">
+  <div data-slider-scroll class="overflow-x-auto scrollbar-hide snap-x snap-mandatory py-6 md:py-8">
     <div class="flex gap-4 px-5">
       {items.map((item) => {
         const isSelected = item.id === selectedId;
