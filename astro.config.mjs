@@ -5,7 +5,7 @@ import sitemap from "@astrojs/sitemap";
 import vercel from "@astrojs/vercel";
 
 export default defineConfig({
-  site: "https://www.comunidadtriba.com",
+  site: "https://universotriba.com",
   devToolbar: { enabled: false },
   vite: {
     esbuild: { jsxDev: false },
