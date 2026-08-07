@@ -43,6 +43,13 @@ const editions = allEditions.map((e) => ({
   previewArticle: true,
 }));
 
+const editionsPayload = editions.map((e) => ({
+  slug: e.slug,
+  title: e.title,
+  cover: e.cover,
+  edition: e.edition,
+}));
+
 const featured = editions.find((e) => e.featured) || editions[0];
 const featuredEditionRaw = featuredEdition ?? allEditions[0];
 const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
@@ -114,34 +121,37 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
         </div>
       )}
 
-      <!-- ===== COLECCIÓN (grid expandible, 3 de base) ===== -->
-      <div class="px-5 md:px-14 lg:px-20 mt-12 md:mt-16 mb-12 md:mb-20 reveal" data-reveal>
+      <!-- ===== COLECCIÓN (carrusel "Tus tomos") ===== -->
+      <div id="tus-tomos" class="px-5 md:px-14 lg:px-20 mt-12 md:mt-16 mb-12 md:mb-20 reveal" data-reveal>
         <div class="max-w-6xl mx-auto">
           <p class="font-heading text-xs uppercase tracking-[0.25em] text-triba-brown/50 mb-8">Tus tomos</p>
 
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 md:gap-6" data-gallery>
-            {editions.map((ed, i) => (
-              <a
-                href={`/revista/${ed.slug}#visor-revista`}
-                class="group block"
-                data-gallery-full={i >= 3 ? "true" : "false"}
-                style={i >= 3 ? "display:none" : ""}
-              >
-                <div class="aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg transition-all duration-400 group-hover:rotate-0 group-hover:scale-[1.04] group-hover:shadow-2xl">
-                  <img src={ed.cover} alt={`Portada ${ed.edition} — ${ed.title}`} loading="lazy" class="w-full h-full object-cover" />
-                </div>
-                <p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 text-center mt-2 leading-relaxed">{ed.title}</p>
-              </a>
-            ))}
+          <div class="relative" data-tomos-wrap>
+            <button
+              type="button"
+              data-tomos-prev
+              aria-label="Ver anteriores"
+              class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 -ml-4 md:-ml-6 rounded-full bg-triba-white border-2 border-triba-black shadow-lg flex items-center justify-center font-sans text-xl text-triba-brown hover:bg-triba-pink transition-colors"
+            >‹</button>
+
+            <div
+              data-tomos-track
+              class="flex gap-4 md:gap-6 overflow-x-auto scrollbar-hide snap-x snap-mandatory"
+            ></div>
+
+            <button
+              type="button"
+              data-tomos-next
+              aria-label="Ver siguientes"
+              class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 -mr-4 md:-mr-6 rounded-full bg-triba-white border-2 border-triba-black shadow-lg flex items-center justify-center font-sans text-xl text-triba-brown hover:bg-triba-pink transition-colors"
+            >›</button>
           </div>
 
-          {editions.length > 3 && (
-            <div class="text-center mt-8">
-              <Button variant="ghost" size="md" id="ver-todas-tomos">Ver todas las ediciones ({editions.length})</Button>
-            </div>
-          )}
+          <div class="flex justify-center gap-2 mt-8" data-tomos-dots></div>
         </div>
       </div>
+
+      <script type="application/json" data-tomos-data>{JSON.stringify(editionsPayload)}</script>
 
       <!-- ===== VISOR ===== -->
       <div class="bg-triba-cream w-full px-5 md:px-14 lg:px-20 xl:px-32 2xl:px-48 py-12 md:py-20">
@@ -254,17 +264,98 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
     }, 3000);
   }
 
-  // --- Tus tomos: reveal all editions ---
-  var verTodas = document.getElementById("ver-todas-tomos") as HTMLButtonElement | null;
-  var galleryCards = document.querySelectorAll("[data-gallery-full]");
-  if (verTodas && galleryCards.length) {
-    verTodas.addEventListener("click", function () {
-      galleryCards.forEach(function (c) {
-        var el = c as HTMLElement;
-        el.style.display = "";
+  // --- Tus tomos: carrusel paginado (mobile 2x2 / desktop 2 filas de 4) ---
+  var dataEl = document.querySelector<HTMLElement>("[data-tomos-data]");
+  if (dataEl) {
+    var editionsList: { slug: string; title: string; cover: string; edition: string }[] = JSON.parse(dataEl.textContent || "[]");
+    var wrap = document.querySelector<HTMLElement>("[data-tomos-wrap]");
+    var track = wrap && wrap.querySelector<HTMLElement>("[data-tomos-track]");
+    var dotsBox = wrap && wrap.querySelector<HTMLElement>("[data-tomos-dots]");
+    var prevBtn = wrap && wrap.querySelector<HTMLButtonElement>("[data-tomos-prev]");
+    var nextBtn = wrap && wrap.querySelector<HTMLButtonElement>("[data-tomos-next]");
+
+    function tomosPerPage() {
+      return window.matchMedia("(min-width: 768px)").matches ? 8 : 4;
+    }
+
+    function buildTomos() {
+      if (!track || !dotsBox || !prevBtn || !nextBtn || !editionsList.length) return;
+      var n = tomosPerPage();
+      var pages: typeof editionsList[] = [];
+      for (var i = 0; i < editionsList.length; i += n) {
+        pages.push(editionsList.slice(i, i + n));
+      }
+
+      track.innerHTML = pages
+        .map(function (page) {
+          return (
+            '<div class="flex-none w-full snap-start">' +
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">' +
+            page
+              .map(function (ed) {
+                return (
+                  '<a href="/revista/' + ed.slug + '#visor-revista" class="group block">' +
+                  '<div class="aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg transition-all duration-400 group-hover:rotate-0 group-hover:scale-[1.04] group-hover:shadow-2xl">' +
+                  '<img src="' + ed.cover + '" alt="Portada ' + ed.edition + ' — ' + ed.title + '" loading="lazy" class="w-full h-full object-cover" />' +
+                  "</div>" +
+                  '<p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 text-center mt-2 leading-relaxed">' + ed.title + "</p>" +
+                  "</a>"
+                );
+              })
+              .join("") +
+            "</div></div>"
+          );
+        })
+        .join("");
+
+      dotsBox.innerHTML = pages
+        .map(function (_, i) {
+          return (
+            '<button type="button" data-tomos-dot="' + i + '" aria-label="Ir a página ' + (i + 1) + '" class="w-2.5 h-2.5 rounded-full bg-triba-brown/25 transition-all hover:scale-125"></button>'
+          );
+        })
+        .join("");
+      dotsBox.style.display = pages.length > 1 ? "" : "none";
+
+      track.scrollLeft = 0;
+      updateTomosUI();
+    }
+
+    function updateTomosUI() {
+      if (!track || !prevBtn || !nextBtn || !dotsBox) return;
+      var scrollLeft = track.scrollLeft;
+      var width = track.clientWidth || 1;
+      var idx = Math.round(scrollLeft / width);
+      var maxIdx = Math.max(0, Math.round((track.scrollWidth - track.clientWidth) / width));
+      prevBtn.style.opacity = idx <= 0 ? "0.35" : "1";
+      nextBtn.style.opacity = idx >= maxIdx ? "0.35" : "1";
+      dotsBox.querySelectorAll<HTMLButtonElement>("[data-tomos-dot]").forEach(function (d, i) {
+        d.className = "w-2.5 h-2.5 rounded-full transition-colors " + (i === idx ? "bg-triba-red" : "bg-triba-brown/25");
       });
-      verTodas!.style.display = "none";
-    });
+    }
+
+    if (track && prevBtn && nextBtn && dotsBox) {
+      track.addEventListener("scroll", updateTomosUI, { passive: true });
+      prevBtn.addEventListener("click", function () {
+        track!.scrollBy({ left: -(track!.clientWidth || 0), behavior: "smooth" });
+      });
+      nextBtn.addEventListener("click", function () {
+        track!.scrollBy({ left: track!.clientWidth || 0, behavior: "smooth" });
+      });
+      dotsBox.addEventListener("click", function (e) {
+        var b = (e.target as HTMLElement).closest("[data-tomos-dot]");
+        if (b) {
+          var idx = Number(b.getAttribute("data-tomos-dot"));
+          track!.scrollTo({ left: idx * (track!.clientWidth || 1), behavior: "smooth" });
+        }
+      });
+      var rsT: number | undefined;
+      window.addEventListener("resize", function () {
+        window.clearTimeout(rsT);
+        rsT = window.setTimeout(buildTomos, 150);
+      });
+      buildTomos();
+    }
   }
 
   // --- Feedback form ---
