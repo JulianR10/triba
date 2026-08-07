@@ -1,0 +1,214 @@
+---
+export interface Props {
+  arrows?: boolean;
+  dots?: boolean;
+  keyboard?: boolean;
+  scrollMode?: "card" | "page";
+  trackClass?: string;
+  scrollClass?: string;
+  dotBarClass?: string;
+  prevClass?: string;
+  nextClass?: string;
+  glyphClass?: string;
+  rootData?: Record<string, string>;
+  ariaLabel?: string;
+}
+
+const {
+  arrows = false,
+  dots = false,
+  keyboard = false,
+  scrollMode = "card",
+  trackClass = "",
+  scrollClass = "",
+  dotBarClass = "mt-4",
+  prevClass = "absolute -left-2 sm:-left-4 md:-left-10 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-triba-pink to-triba-red flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red disabled:opacity-40 disabled:hover:scale-100",
+  nextClass = "absolute -right-2 sm:-right-4 md:-right-10 top-1/2 -translate-y-1/2 z-10 w-9 h-9 md:w-11 md:h-11 rounded-full bg-gradient-to-br from-triba-pink to-triba-red flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red disabled:opacity-40 disabled:hover:scale-100",
+  glyphClass = "text-xl font-heading text-triba-white -mt-0.5",
+  rootData = {},
+  ariaLabel = "Carrusel",
+} = Astro.props;
+---
+
+<div
+  class="relative"
+  data-scroller
+  data-scroller-mode={scrollMode}
+  data-scroller-keyboard={keyboard ? "1" : ""}
+  aria-label={ariaLabel}
+  role="region"
+  {...(rootData as Record<string, string>)}
+>
+  {arrows && (
+    <button type="button" data-scroller-prev aria-label="Anterior" class={prevClass}>
+      <span class={glyphClass}>‹</span>
+    </button>
+  )}
+
+  <div data-scroller-scroll class={`overflow-x-auto scrollbar-hide snap-x snap-mandatory ${scrollClass}`} tabindex={keyboard ? "0" : undefined}>
+    <div class={`flex gap-4 md:gap-6 ${trackClass}`}>
+      <slot />
+    </div>
+  </div>
+
+  {arrows && (
+    <button type="button" data-scroller-next aria-label="Siguiente" class={nextClass}>
+      <span class={glyphClass}>›</span>
+    </button>
+  )}
+
+  {dots && (
+    <div data-scroller-dots class={`flex justify-center gap-1.5 ${dotBarClass}`}></div>
+  )}
+</div>
+
+<script>
+  import { onPageCycle } from "../lib/onPageCycle";
+
+  function init(root: HTMLElement) {
+    if ((root as any)._scrollerBound) return;
+    (root as any)._scrollerBound = true;
+
+    const scrollEl = root.querySelector<HTMLElement>("[data-scroller-scroll]");
+    if (!scrollEl) return;
+    const el: HTMLElement = scrollEl;
+    const keyboard = root.dataset.scrollerKeyboard === "1";
+    const prevBtn = root.querySelector<HTMLButtonElement>("[data-scroller-prev]");
+    const nextBtn = root.querySelector<HTMLButtonElement>("[data-scroller-next]");
+    const dotsEl = root.querySelector<HTMLElement>("[data-scroller-dots]");
+    const mode = (root.dataset.scrollerMode === "page" ? "page" : "card") as "page" | "card";
+
+    function items(): HTMLElement[] {
+      return Array.from(el.querySelectorAll<HTMLElement>("[data-scroller-item]"));
+    }
+
+    function stepWidth(): number {
+      const list = items();
+      if (!list.length) return el.clientWidth || 200;
+      const track = list[0].parentElement as HTMLElement;
+      let gap = 16;
+      const gapVal = track ? parseFloat(getComputedStyle(track).columnGap) : NaN;
+      if (!isNaN(gapVal)) gap = gapVal;
+      return list[0].offsetWidth + gap;
+    }
+
+    function stopCount(): number {
+      const list = items();
+      if (!list.length) return 1;
+      if (mode === "page") {
+        const w = el.clientWidth || 1;
+        return Math.max(1, Math.ceil(el.scrollWidth / w));
+      }
+      return list.length;
+    }
+
+    function currentIndex(): number {
+      const list = items();
+      if (!list.length) return 0;
+      if (mode === "page") {
+        const w = el.clientWidth || 1;
+        return Math.max(0, Math.min(stopCount() - 1, Math.round(el.scrollLeft / w)));
+      }
+      const mid = el.scrollLeft + el.clientWidth / 2;
+      let best = 0;
+      let bestDist = Infinity;
+      for (let i = 0; i < list.length; i++) {
+        const c = list[i].offsetLeft + list[i].offsetWidth / 2;
+        const d = Math.abs(c - mid);
+        if (d < bestDist) { bestDist = d; best = i; }
+      }
+      return best;
+    }
+
+    function goTo(i: number) {
+      const list = items();
+      if (!list.length) return;
+      const n = stopCount();
+      const target = Math.max(0, Math.min(n - 1, i));
+      if (mode === "page") {
+        el.scrollTo({ left: target * (el.clientWidth || 1), behavior: "smooth" });
+        return;
+      }
+      list[Math.min(target, list.length - 1)].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+    }
+
+    function step(delta: number) {
+      if (mode === "page") {
+        el.scrollBy({ left: delta * (el.clientWidth || 1), behavior: "smooth" });
+      } else {
+        el.scrollBy({ left: delta * stepWidth(), behavior: "smooth" });
+      }
+    }
+
+    function buildDots() {
+      if (!dotsEl) return;
+      const n = stopCount();
+      dotsEl.innerHTML = "";
+      for (let i = 0; i < n; i++) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.setAttribute("data-scroller-dot", String(i));
+        b.setAttribute("aria-label", "Ir a " + (i + 1));
+        b.className = "w-2 h-2 rounded-full bg-triba-black/20 transition-all duration-300 cursor-pointer";
+        b.addEventListener("click", () => goTo(i));
+        dotsEl.appendChild(b);
+      }
+    }
+
+    function update() {
+      const n = stopCount();
+      const idx = currentIndex();
+
+      if (dotsEl) {
+        if (dotsEl.querySelectorAll("[data-scroller-dot]").length !== n) buildDots();
+        dotsEl.querySelectorAll<HTMLButtonElement>("[data-scroller-dot]").forEach(function (b, i) {
+          const active = i === idx;
+          b.className = (active ? "w-3 h-3 bg-triba-red" : "w-2 h-2 bg-triba-black/20") + " rounded-full transition-all duration-300 cursor-pointer";
+          b.setAttribute("aria-current", active ? "true" : "false");
+        });
+      }
+
+      if (prevBtn) prevBtn.disabled = idx <= 0;
+      if (nextBtn) nextBtn.disabled = idx >= n - 1;
+    }
+
+    if (prevBtn) prevBtn.addEventListener("click", () => step(-1));
+    if (nextBtn) nextBtn.addEventListener("click", () => step(1));
+
+    if (keyboard) {
+      el.addEventListener("keydown", (e: KeyboardEvent) => {
+        if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+        const focused = el.querySelector<HTMLElement>("[data-scroller-item]:focus");
+        if (!focused) return;
+        e.preventDefault();
+        const cards = items();
+        const fileCurrent = cards.indexOf(focused);
+        const target = e.key === "ArrowRight" ? fileCurrent + 1 : fileCurrent - 1;
+        if (target >= 0 && target < cards.length) {
+          cards[target].focus();
+          cards[target].scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
+        }
+      });
+    }
+
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    el.addEventListener("scroll", () => {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(update, 50);
+    });
+
+    if (mode === "page" && typeof ResizeObserver === "function") {
+      const ro = new ResizeObserver(() => { buildDots(); update(); });
+      ro.observe(el);
+    }
+
+    if (dotsEl) buildDots();
+    update();
+  }
+
+  function setup() {
+    document.querySelectorAll<HTMLElement>("[data-scroller]").forEach(init);
+  }
+
+  onPageCycle(setup);
+</script>
