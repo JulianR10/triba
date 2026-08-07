@@ -1,9 +1,11 @@
 # Plan: Mudanza de dominio
 
+**✅ COMPLETADA 7-Ago-2026** — el sitio ahora vive en `https://www.universotriba.com` (el apex redirige a www; comunidadtriba.com hace 301 al nuevo). Webhook Stripe: `we_1U1plgLIVKTt84JHLV8gZN41` → `https://www.universotriba.com/api/webhook/stripe`. Este documento queda como registro histórico.
+
 Objetivo: mover el sitio de `www.comunidadtriba.com` a un dominio nuevo minimizando downtime y sin romper webhooks, pagos ni emails.
 
 Dominio actual (hardcodeado): `https://www.comunidadtriba.com`
-Dominio nuevo: **`NUEVO_DOMINIO`** (completar)
+Dominio nuevo: **`https://www.universotriba.com`**
 
 ---
 
