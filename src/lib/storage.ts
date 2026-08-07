@@ -44,7 +44,8 @@ export interface UploadResult {
 export async function uploadEditionFile(
   file: File,
   kind: EditionFileKind,
-  editionNumber: number
+  editionNumber: number,
+  opts?: { slug?: string }
 ): Promise<UploadResult> {
   const rule = FILE_RULES[kind];
   if (file.size > rule.maxBytes) {
@@ -58,7 +59,7 @@ export async function uploadEditionFile(
   const ext = fileExt(file.name) || (kind === "pdf" ? "pdf" : "jpg");
   const path =
     kind === "pdf"
-      ? `pdfs/revista-${editionNumber}.${ext}`
+      ? `pdfs/${opts?.slug ?? `revista-${editionNumber}`}.${ext}`
       : `${kind}s/edicion-${editionNumber}-${Date.now()}.${ext}`;
 
   const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, file, {

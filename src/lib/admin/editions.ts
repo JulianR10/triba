@@ -21,33 +21,39 @@ export async function getEditionForAdmin(id: number): Promise<Edition | null> {
 }
 
 export interface EditionInput {
-  edition_number: number;
+  edition_number: number | null;
   title: string;
   description: string;
-  cover_url: string;
+  cover_url: string | null;
   pdf_url: string | null;
   featured: boolean;
   badge: string | null;
+  kind: "magazine" | "free";
 }
 
 export function validateEditionInput(
   input: Partial<EditionInput>,
 ): { ok: true; data: EditionInput } | { ok: false; error: string } {
-  if (
-    typeof input.edition_number !== "number" ||
-    !Number.isInteger(input.edition_number) ||
-    input.edition_number < 1
-  ) {
-    return { ok: false, error: "edition_number debe ser un entero positivo" };
+  const kind = input.kind === "free" ? "free" : "magazine";
+
+  if (kind === "magazine") {
+    if (
+      typeof input.edition_number !== "number" ||
+      !Number.isInteger(input.edition_number) ||
+      input.edition_number < 1
+    ) {
+      return { ok: false, error: "edition_number debe ser un entero positivo" };
+    }
+    if (typeof input.cover_url !== "string" || !input.cover_url.trim()) {
+      return { ok: false, error: "cover_url es obligatorio" };
+    }
   }
+
   if (typeof input.title !== "string" || !input.title.trim()) {
     return { ok: false, error: "title es obligatorio" };
   }
   if (typeof input.description !== "string" || !input.description.trim()) {
     return { ok: false, error: "description es obligatoria" };
-  }
-  if (typeof input.cover_url !== "string" || !input.cover_url.trim()) {
-    return { ok: false, error: "cover_url es obligatorio" };
   }
   if (
     input.pdf_url !== null &&
@@ -56,17 +62,25 @@ export function validateEditionInput(
   ) {
     return { ok: false, error: "pdf_url debe ser string o null" };
   }
+  if (kind === "free" && !input.pdf_url?.trim()) {
+    return { ok: false, error: "Subí el PDF del artículo gratis" };
+  }
 
+  const title = input.title.trim();
   return {
     ok: true,
     data: {
-      edition_number: input.edition_number,
-      title: input.title.trim(),
-      description: input.description.trim(),
-      cover_url: input.cover_url.trim(),
+      edition_number:
+        kind === "free"
+          ? null
+          : (input.edition_number as number),
+      title,
+      description: kind === "free" ? title : input.description.trim(),
+      cover_url: input.cover_url?.trim() || null,
       pdf_url: input.pdf_url?.trim() || null,
-      featured: !!input.featured,
-      badge: input.badge?.trim() || null,
+      featured: kind === "free" ? false : !!input.featured,
+      badge: kind === "free" ? null : input.badge?.trim() || null,
+      kind,
     },
   };
 }

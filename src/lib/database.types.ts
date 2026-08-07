@@ -75,37 +75,40 @@ export interface Database {
       editions: {
         Row: {
           id: number;
-          edition_number: number;
+          edition_number: number | null;
           title: string;
           description: string;
-          cover_url: string;
+          cover_url: string | null;
           pdf_url: string | null;
           featured: boolean;
           badge: string | null;
+          kind: "magazine" | "free";
           published_at: string;
           created_at: string;
         };
         Insert: {
           id?: number;
-          edition_number: number;
+          edition_number?: number | null;
           title: string;
           description: string;
-          cover_url: string;
+          cover_url?: string | null;
           pdf_url?: string | null;
           featured?: boolean;
           badge?: string | null;
+          kind?: "magazine" | "free";
           published_at?: string;
           created_at?: string;
         };
         Update: {
           id?: number;
-          edition_number?: number;
+          edition_number?: number | null;
           title?: string;
           description?: string;
-          cover_url?: string;
+          cover_url?: string | null;
           pdf_url?: string | null;
           featured?: boolean;
           badge?: string | null;
+          kind?: "magazine" | "free";
           published_at?: string;
           created_at?: string;
         };

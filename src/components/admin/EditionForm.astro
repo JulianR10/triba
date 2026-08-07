@@ -13,51 +13,85 @@ const { mode, edition } = Astro.props;
 const storageReady = isStorageConfigured();
 const formId = `edition-form-${mode}`;
 const formMsgId = "form-msg";
+const initialKind = edition?.kind ?? "magazine";
 ---
 
 <form id={formId} data-edition-id={edition?.id ?? ""} data-mode={mode} class="space-y-6">
-  <div class="grid md:grid-cols-2 gap-4">
-    <Input
-      label="Número de edición"
-      name="edition_number"
-      type="number"
-      required
-      minlength={1}
-      placeholder="1"
-      value={edition?.edition_number?.toString() ?? ""}
-      validationMsg="Ingresá un número entero positivo"
-    />
-    <Input
-      label="Badge (opcional)"
-      name="badge"
-      type="text"
-      placeholder="Última edición"
-      value={edition?.badge ?? ""}
-    />
-  </div>
+  <fieldset>
+    <legend class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">Tipo de contenido</legend>
+    <div class="grid sm:grid-cols-2 gap-3">
+      <label
+        for="kind-magazine"
+        class="flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer hover:border-triba-black transition-colors"
+        id="kind-label-magazine"
+      >
+        <input
+          type="radio"
+          id="kind-magazine"
+          name="kind"
+          value="magazine"
+          checked={initialKind === "magazine"}
+          class="accent-triba-red w-5 h-5"
+        />
+        <div>
+          <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Para suscriptoras</p>
+          <p class="font-sans text-xs text-triba-brown/60">Edición completa con portada y PDF. Acceso restringido.</p>
+        </div>
+      </label>
+      <label
+        for="kind-free"
+        class="flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer hover:border-triba-black transition-colors"
+        id="kind-label-free"
+      >
+        <input
+          type="radio"
+          id="kind-free"
+          name="kind"
+          value="free"
+          checked={initialKind === "free"}
+          class="accent-triba-green"
+        />
+        <div>
+          <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Artículo gratis universal</p>
+          <p class="font-sans text-xs text-triba-brown/60">PDF público que se muestra en /revista. Sin acceso restringido.</p>
+        </div>
+      </label>
+    </div>
+  </fieldset>
 
-  <Input
-    label="Título"
-    name="title"
-    type="text"
-    required
-    placeholder="Tomo 1 — Identidades"
-    value={edition?.title ?? ""}
-  />
+  <div id="magazine-fields" class="space-y-6">
+    <div class="grid md:grid-cols-2 gap-4">
+      <Input
+        label="Número de edición"
+        name="edition_number"
+        type="number"
+        required
+        minlength={1}
+        placeholder="1"
+        value={edition?.edition_number?.toString() ?? ""}
+        validationMsg="Ingresá un número entero positivo"
+      />
+      <Input
+        label="Badge (opcional)"
+        name="badge"
+        type="text"
+        placeholder="Última edición"
+        value={edition?.badge ?? ""}
+      />
+    </div>
 
-  <div>
-    <label for="description" class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Descripción</label>
-    <textarea
-      id="description"
-      name="description"
-      rows="5"
-      required
-      placeholder="Resumen de la edición. Se muestra en la home y en la portada del PDF."
-      class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none"
-    >{edition?.description ?? ""}</textarea>
-  </div>
+    <div>
+      <label for="description" class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Descripción</label>
+      <textarea
+        id="description"
+        name="description"
+        rows="5"
+        required
+        placeholder="Resumen de la edición. Se muestra en la home y en la portada del PDF."
+        class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none"
+      >{edition?.description ?? ""}</textarea>
+    </div>
 
-  <div class="grid md:grid-cols-2 gap-6">
     <div>
       <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">Portada (imagen)</p>
       <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-bone">
@@ -73,40 +107,50 @@ const formMsgId = "form-msg";
         <p class="font-sans text-xs text-triba-brown/60 mt-2">JPG/PNG/WebP/AVIF, máx 5 MB. Si no subís archivo nuevo, se conserva la portada actual.</p>
       </div>
     </div>
+  </div>
 
-    <div>
-      <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">PDF (opcional)</p>
-      <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-bone">
-        {edition?.pdf_url && (
-          <p class="font-sans text-xs text-triba-brown/70 mb-2">PDF actual: <a href={edition.pdf_url} class="text-triba-red hover:underline" target="_blank" rel="noopener">ver</a></p>
-        )}
-        <input
-          type="file"
-          name="pdf_file"
-          accept="application/pdf"
-          class="font-sans text-xs w-full"
-        />
-        <p class="font-sans text-xs text-triba-brown/60 mt-2">PDF, máx 80 MB. Si no subís archivo nuevo, se conserva el actual.</p>
-      </div>
+  <Input
+    label="Título"
+    name="title"
+    type="text"
+    placeholder="Tomo 1 — Identidades"
+    value={edition?.title ?? ""}
+  />
+
+  <div>
+    <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">PDF</p>
+    <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-bone">
+      {edition?.pdf_url && (
+        <p class="font-sans text-xs text-triba-brown/70 mb-2">PDF actual: <a href={edition.pdf_url} class="text-triba-red hover:underline" target="_blank" rel="noopener">ver</a></p>
+      )}
+      <input
+        type="file"
+        name="pdf_file"
+        accept="application/pdf"
+        class="font-sans text-xs w-full"
+      />
+      <p class="font-sans text-xs text-triba-brown/60 mt-2">PDF, máx 80 MB. Si no subís archivo nuevo, se conserva el actual.</p>
     </div>
+  </div>
+
+  <div id="featured-field">
+    <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-triba-black/20 bg-triba-white cursor-pointer hover:border-triba-black">
+      <input
+        type="checkbox"
+        name="featured"
+        value="true"
+        checked={!!edition?.featured}
+        class="w-5 h-5 accent-triba-red"
+      />
+      <div>
+        <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Marcar como edición destacada</p>
+        <p class="font-sans text-xs text-triba-brown/60">Solo puede haber una a la vez. Quita el destaque de la anterior automáticamente.</p>
+      </div>
+    </label>
   </div>
 
   <input type="hidden" name="existing_cover_url" value={edition?.cover_url ?? ""} />
   <input type="hidden" name="existing_pdf_url" value={edition?.pdf_url ?? ""} />
-
-  <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-triba-black/20 bg-triba-white cursor-pointer hover:border-triba-black">
-    <input
-      type="checkbox"
-      name="featured"
-      value="true"
-      checked={!!edition?.featured}
-      class="w-5 h-5 accent-triba-red"
-    />
-    <div>
-      <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Marcar como edición destacada</p>
-      <p class="font-sans text-xs text-triba-brown/60">Solo puede haber una a la vez. Quita el destaque de la anterior automáticamente.</p>
-    </div>
-  </label>
 
   {!storageReady && (
     <p class="font-sans text-xs text-triba-red bg-triba-red/10 border border-triba-red rounded p-3">
@@ -122,7 +166,7 @@ const formMsgId = "form-msg";
         type="button"
         id="delete-edition-btn"
         data-edition-id={edition?.id}
-        data-edition-number={edition?.edition_number}
+        data-edition-number={edition?.edition_number ?? ""}
         class="ml-auto rounded-button bg-transparent text-triba-red border-2 border-triba-red px-6 py-3 font-heading text-xs uppercase tracking-wider hover:bg-triba-red hover:text-triba-white transition-all"
       >
         Eliminar
@@ -146,6 +190,24 @@ const formMsgId = "form-msg";
 
     if ((form as any)._editionFormBound) return;
     (form as any)._editionFormBound = true;
+
+    const magazineFields = document.getElementById("magazine-fields");
+    const featuredField = document.getElementById("featured-field");
+    const titleInput = form.querySelector<HTMLInputElement>("input[name=title]");
+    const pdfInput = form.querySelector<HTMLInputElement>("input[name=pdf_file]");
+
+    function syncKind() {
+      const kind = form!.querySelector<HTMLInputElement>("input[name=kind]:checked")?.value ?? "magazine";
+      const isFree = kind === "free";
+      magazineFields?.classList.toggle("hidden", isFree);
+      featuredField?.classList.toggle("hidden", isFree);
+      if (titleInput) titleInput.required = !isFree;
+      if (pdfInput) pdfInput.required = isFree;
+    }
+    form.querySelectorAll<HTMLInputElement>("input[name=kind]").forEach((r) => {
+      r.addEventListener("change", syncKind);
+    });
+    syncKind();
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -195,7 +257,7 @@ const formMsgId = "form-msg";
         const num = deleteBtn.dataset.editionNumber;
         const confirmed = await (window as any).adminConfirm?.(
           "Eliminar edición",
-          `¿Eliminar la edición #${num}? Esta acción no se puede deshacer.`
+          num ? `¿Eliminar la edición #${num}? Esta acción no se puede deshacer.` : `¿Eliminar esta edición? Esta acción no se puede deshacer.`
         );
         if (!confirmed) return;
         deleteBtn.disabled = true;

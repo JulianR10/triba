@@ -10,15 +10,16 @@ const title = "Revista";
 const description = "Explorá las ediciones de Triba, nuestra revista digital mensual. Leé online, descargá PDF y descubrí artículos de cultura, arte e identidad.";
 const canonical = "/revista";
 
-import { getEditions } from "../lib/editions";
+import { getEditions, getFreeArticle } from "../lib/editions";
 const allEditions = await getEditions();
+const freeArticle = await getFreeArticle();
 
 const editions = allEditions.map((e, i) => ({
   id: e.id,
   edition: `#${e.edition_number}`,
   title: e.title,
   description: e.description,
-  cover: e.cover_url,
+  cover: e.cover_url ?? "",
   pdf: e.pdf_url ? `/api/pdf/${e.id}` : "#",
   featured: e.featured,
   badge: e.badge,
@@ -120,7 +121,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
       <!-- Bloque 3: Vista previa de artículo -->
       <div id="visor-revista" class="scroll-anchor flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16">
         <div class="flex-1 order-2 md:order-1">
-          <PDFViewer pdfUrl="/articulo-gratis.pdf" client:only="react" />
+          <PDFViewer pdfUrl={freeArticle?.pdf_url ?? "/articulo-gratis.pdf"} client:only="react" />
         </div>
         <div class="flex-1 flex flex-col justify-center order-1 md:order-2 text-center md:text-left">
           <PatchTitle tag="h2" class="mb-4 text-2xl md:text-3xl" lines={[

@@ -34,19 +34,25 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     return error("Edición no encontrada", 404);
   }
 
+  const kind = fd.get("kind") === "free" ? "free" : fd.get("kind") === "magazine" ? "magazine" : (current as any).kind;
+
   const input: Record<string, any> = {
-    edition_number: fd.get("edition_number") ? Number(fd.get("edition_number")) : current.edition_number,
+    kind,
+    edition_number:
+      kind === "free"
+        ? null
+        : fd.get("edition_number") ? Number(fd.get("edition_number")) : current.edition_number,
     title: fd.get("title") ?? current.title,
     description: fd.get("description") ?? current.description,
-    cover_url: current.cover_url,
+    cover_url: kind === "free" ? null : current.cover_url,
     pdf_url: current.pdf_url,
-    featured: fd.has("featured") ? fd.get("featured") === "true" || fd.get("featured") === "on" : current.featured,
-    badge: fd.has("badge") ? (fd.get("badge") || null) : current.badge,
+    featured: kind === "free" ? false : (fd.has("featured") ? fd.get("featured") === "true" || fd.get("featured") === "on" : current.featured),
+    badge: kind === "free" ? null : (fd.has("badge") ? (fd.get("badge") || null) : current.badge),
   };
 
   const coverFile = fd.get("cover_file");
   const pdfFile = fd.get("pdf_file");
-  if (coverFile instanceof File && coverFile.size > 0) {
+  if (coverFile instanceof File && coverFile.size > 0 && kind === "magazine") {
     try {
       const result = await uploadEditionFile(coverFile, "cover", input.edition_number);
       input.cover_url = result.url;
@@ -56,7 +62,8 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
   }
   if (pdfFile instanceof File && pdfFile.size > 0) {
     try {
-      const result = await uploadEditionFile(pdfFile, "pdf", input.edition_number);
+      const slug = kind === "free" ? `articulo-gratis-${Date.now()}` : undefined;
+      const result = await uploadEditionFile(pdfFile, "pdf", input.edition_number, { slug });
       input.pdf_url = result.url;
     } catch (err: any) {
       return error(err.message || "Error subiendo PDF", 400);
@@ -68,11 +75,11 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     return error(validated.error, 400);
   }
 
-  if (validated.data.edition_number !== current.edition_number) {
+  if (validated.data.kind === "magazine" && validated.data.edition_number !== current.edition_number) {
       const { data: conflict } = await supabaseAdmin
       .from("editions")
       .select("id")
-      .eq("edition_number", validated.data.edition_number)
+      .eq("edition_number", validated.data.edition_number!)
       .neq("id", editionId)
       .maybeSingle();
     if (conflict) {
@@ -80,7 +87,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     }
   }
 
-  if (validated.data.featured && !current.featured) {
+  if (validated.data.kind === "magazine" && validated.data.featured && !current.featured) {
     await supabaseAdmin.from("editions").update({ featured: false }).eq("featured", true);
   }
 

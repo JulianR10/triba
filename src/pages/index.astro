@@ -14,7 +14,7 @@ import { getEditions } from "../lib/editions";
 const editions = await getEditions();
 const magazines = editions.map((e) => ({
   id: e.id,
-  number: String(e.edition_number),
+  number: String(e.edition_number ?? ""),
   title: e.title,
   description: e.edition_number === 1
     ? "Felices de lanzar con ustedes nuestra primera edición de la revista y la posibilidad de hacer realidad un sueño por el que venimos trabajando hace tantos meses! El universo de Triba abre sus puertas y tiene ganas de recibirlas a todas, esperamos que disfruten de la lectura!"
@@ -23,7 +23,7 @@ const magazines = editions.map((e) => ({
       : e.edition_number === 3
         ? "Estamos felices de compartir con ustedes la tercera edición de nuestra revista! Con la participación de las colaboradoras fundadoras y algunas Triba Creators que se suman este mes. “El show debe continuar” viene a recordarnos un poco quienes fuimos y quienes somos hoy, transitando por 15 artículos diferentes pero igual de inspiradores. Esperamos que disfrutes tu lectura, nos vemos el mes que viene!"
         : e.description,
-  image: e.cover_url,
+  image: e.cover_url ?? "",
 }));
 
 const flipColors = ["bg-triba-pink/80", "bg-triba-blue/80", "bg-triba-red/80"];

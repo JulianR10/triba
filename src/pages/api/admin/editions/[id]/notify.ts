@@ -18,12 +18,16 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
   const { data: edition, error: fetchError } = await supabaseAdmin
     .from("editions")
-    .select("id, edition_number, title, description, cover_url")
+    .select("id, edition_number, title, description, cover_url, kind")
     .eq("id", editionId)
     .single();
 
   if (fetchError || !edition) {
     return error("Edición no encontrada", 404);
+  }
+
+  if (edition.kind !== "magazine" || !edition.cover_url) {
+    return ok({ notified: 0, total: 0 });
   }
 
   const { data: subscribers, error: subsError } = await supabaseAdmin
@@ -45,7 +49,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
   for (const sub of subscribers) {
     try {
-      await sendNewEditionEmail(sub.email, edition);
+      await sendNewEditionEmail(sub.email, edition as { title: string; edition_number: number; cover_url: string; description: string; id: number });
       notified++;
     } catch (err) {
       failed++;

@@ -17,7 +17,7 @@ export const GET: APIRoute = async ({ params, request, url }) => {
 
   const { data: edition, error: fetchError } = await supabaseAdmin
     .from("editions")
-    .select("id, pdf_url, featured, edition_number, title")
+    .select("id, pdf_url, featured, kind, edition_number, title")
     .eq("id", editionId)
     .single();
 
@@ -64,7 +64,7 @@ export const GET: APIRoute = async ({ params, request, url }) => {
     }
   }
 
-  if (!allowed && edition.featured) {
+  if (!allowed && (edition.featured || edition.kind === "free")) {
     allowed = true;
   }
 
