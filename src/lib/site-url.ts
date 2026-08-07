@@ -1,4 +1,4 @@
-const FALLBACK_SITE_URL = "https://universotriba.com";
+const FALLBACK_SITE_URL = "https://www.universotriba.com";
 
 export const SITE_URL = import.meta.env.SITE || FALLBACK_SITE_URL;
 

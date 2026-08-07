@@ -4,4 +4,4 @@ Disallow: /admin
 Disallow: /api
 Disallow: /iniciar-sesion
 
-Sitemap: https://universotriba.com/sitemap.xml
+Sitemap: https://www.universotriba.com/sitemap.xml
