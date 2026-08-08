@@ -2,7 +2,6 @@ import type { APIRoute } from "astro";
 import { requireAdmin } from "../../../../lib/auth";
 import { ok, error } from "../../../../lib/response";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
-import { uploadEditionFile } from "../../../../lib/storage";
 import { validateEditionInput } from "../../../../lib/admin/editions";
 import { logAdminAction } from "../../../../lib/admin/audit";
 
@@ -28,29 +27,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     description: fd.get("description"),
     cover_url: fd.get("cover_url") || undefined,
     pdf_url: fd.get("pdf_url") || null,
-    featured: false,
-    badge: null,
+    featured: kind === "free" ? false : fd.get("featured") === "true" || fd.get("featured") === "on",
+    badge: kind === "free" ? null : fd.get("badge") || null,
   };
-
-  const coverFile = fd.get("cover_file");
-  const pdfFile = fd.get("pdf_file");
-  if (coverFile instanceof File && coverFile.size > 0 && kind === "magazine") {
-    try {
-      const result = await uploadEditionFile(coverFile, "cover", input.edition_number);
-      input.cover_url = result.url;
-    } catch (err: any) {
-      return error(err.message || "Error subiendo portada", 400);
-    }
-  }
-  if (pdfFile instanceof File && pdfFile.size > 0) {
-    try {
-      const slug = kind === "free" ? `articulo-gratis-${Date.now()}` : undefined;
-      const result = await uploadEditionFile(pdfFile, "pdf", input.edition_number, { slug });
-      input.pdf_url = result.url;
-    } catch (err: any) {
-      return error(err.message || "Error subiendo PDF", 400);
-    }
-  }
 
   if (kind === "magazine" && !input.cover_url) {
     return error("cover_url es obligatorio (subí una portada o pegá una URL)", 400);

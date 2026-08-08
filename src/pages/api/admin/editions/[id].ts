@@ -2,7 +2,6 @@ import type { APIRoute } from "astro";
 import { requireAdmin } from "../../../../lib/auth";
 import { ok, error } from "../../../../lib/response";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
-import { uploadEditionFile } from "../../../../lib/storage";
 import { validateEditionInput } from "../../../../lib/admin/editions";
 import { logAdminAction } from "../../../../lib/admin/audit";
 
@@ -44,31 +43,11 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
         : fd.get("edition_number") ? Number(fd.get("edition_number")) : current.edition_number,
     title: fd.get("title") ?? current.title,
     description: fd.get("description") ?? current.description,
-    cover_url: kind === "free" ? null : current.cover_url,
-    pdf_url: current.pdf_url,
+    cover_url: (fd.get("cover_url") as string) || current.cover_url,
+    pdf_url: (fd.get("pdf_url") as string) || current.pdf_url,
     featured: kind === "free" ? false : (fd.has("featured") ? fd.get("featured") === "true" || fd.get("featured") === "on" : current.featured),
     badge: kind === "free" ? null : (fd.has("badge") ? (fd.get("badge") || null) : current.badge),
   };
-
-  const coverFile = fd.get("cover_file");
-  const pdfFile = fd.get("pdf_file");
-  if (coverFile instanceof File && coverFile.size > 0 && kind === "magazine") {
-    try {
-      const result = await uploadEditionFile(coverFile, "cover", input.edition_number);
-      input.cover_url = result.url;
-    } catch (err: any) {
-      return error(err.message || "Error subiendo portada", 400);
-    }
-  }
-  if (pdfFile instanceof File && pdfFile.size > 0) {
-    try {
-      const slug = kind === "free" ? `articulo-gratis-${Date.now()}` : undefined;
-      const result = await uploadEditionFile(pdfFile, "pdf", input.edition_number, { slug });
-      input.pdf_url = result.url;
-    } catch (err: any) {
-      return error(err.message || "Error subiendo PDF", 400);
-    }
-  }
 
   const validated = validateEditionInput(input);
   if (!validated.ok) {

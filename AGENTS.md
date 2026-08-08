@@ -46,13 +46,15 @@ Revista digital mensual — newsletter gratuito + suscripción paga, escrita por
 - Email de confirmación OFF (alta instantánea); email duplicado → `identities: 0` → aviso "Ya existe una cuenta".
 - SMTP de Supabase Auth = Sender (solo reset de password; el default de Supabase limita 2/hora → NO usar).
 - Checkout sin sesión: `checkout-intent` (TTL 24h) → `/iniciar-sesion?signup=true&redirect=...` → `flushPendingCheckout`.
+- **Acceso de suscriptora = helper `isActiveSubscription(status)` de `src/lib/subscription-status.ts`** (`active` o `migrated`). Usarlo SIEMPRE para gatear acceso (PDF, mi-cuenta tomos, menu cuenta, admin "Activas"); NO comparar `=== "active"` a mano (mi-cuenta no mostraba los tomos a migradas).
 
 ## Admin
 - Promover admin: `update public.profiles set role='admin' where email='...'` · Fix: `node --env-file=.env scripts/fix-admin.mjs <email> '<password>'`
-- Nueva edición `/admin/ediciones/nuevo`: portada ≤5MB, PDF ≤80MB, featured única
+- Nueva edición `/admin/ediciones/nuevo`: portada ≤5MB, PDF ≤50MB, featured única
 - Cancelar sub manual `/admin/suscriptoras` → RPC `cancel_subscription` (solo DB local) · Aprobar creator `/admin/creators?status=pending`
+- Nueva edición `/admin/ediciones/nuevo`: portada ≤5MB, PDF ≤50MB, featured única
 - **Reembolsar suscripción:** botón "Reembolsar" en `/admin/suscriptoras` (junto a "Cancelar", visible para subs Stripe/MP activas). `POST /api/admin/subscribers/[id]/refund` → reembolsa último cobro en el gateway + cancela suscripción + RPC `cancel_subscription` + log `subscriber.refunded` en `admin_audit_log`. Stripe: usa `invoicePayments.list` (API dahlia no expone `charge`/`payment_intent` directo en Invoice). MP: busca pagos por `preapproval_id`, reembolsa el último `approved`, cancela preapproval vía SDK. Migrated: solo cancela acceso local.
-- Storage: bucket público `editions` (`src/lib/storage.ts:uploadEditionFile`)
+- **Upload directo a Supabase Storage (NO por Vercel):** Vercel limita el body de serverless a 4.5MB (PDFs >4.5MB → 413 al publicar). Flujo: `EditionForm.astro` → `POST /api/admin/uploads/sign` (JSON chico) → `createSignedUploadUrl(path, { upsert: true })` → el navegador hace `PUT` directo al `signedUrl` → el form recién POSTea/PATCHea la edición con `cover_url`/`pdf_url` (sin files). NO re-introducir `request.formData()` con files en `/api/admin/editions` ni `uploadEditionFile` server-side en ese flujo (ya no sube archivos; quedó como fallback/uso legacy). `buildStoragePath` en `storage.ts` arma los paths (reutilizar, no duplicar). `createSignedUploadUrl` con `upsert:true`: el PUT del cliente solo manda `Content-Type` (safelist CORS, sin headers custom para evitar preflight). El POST crea/el PATCH actualiza respetando `featured`/`badge` del form (bug resuelto: antes se hardcodeaban `false`/`null`).
 - Notificar edición: `POST /api/admin/editions/[id]/notify` → `sendNewEditionEmail` a `role='subscriber'`
 - **Suscriptoras migradas:** tab "Migradas" (`status=migrated`) lista `subscriber_migrations` incluidas las sin cuenta (`searchMigratedSubscribersForAdmin`); stat `totalMigrated` + card `migrated_subscribers` en dashboard.
 

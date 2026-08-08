@@ -129,7 +129,7 @@ const initialKind = edition?.kind ?? "magazine";
         accept="application/pdf"
         class="font-sans text-xs w-full"
       />
-      <p class="font-sans text-xs text-triba-brown/60 mt-2">PDF, máx 80 MB. Si no subís archivo nuevo, se conserva el actual.</p>
+      <p class="font-sans text-xs text-triba-brown/60 mt-2">PDF, máx 50 MB. Si no subís archivo nuevo, se conserva el actual.</p>
     </div>
   </div>
 
@@ -219,7 +219,35 @@ const initialKind = edition?.kind ?? "magazine";
       submitBtn.disabled = true;
       submitBtn.textContent = mode === "create" ? "Creando..." : "Guardando...";
 
+      const setState = (text: string) => { submitBtn.textContent = text; };
+
       try {
+        // Upload files FIRST, directly to Supabase Storage (bypasses the Vercel 4.5MB body limit).
+        const kind = form.querySelector<HTMLInputElement>("input[name=kind]:checked")?.value ?? "magazine";
+        const coverFile = form.querySelector<HTMLInputElement>("input[name=cover_file]")?.files?.[0];
+        const pdfFile = form.querySelector<HTMLInputElement>("input[name=pdf_file]")?.files?.[0];
+        fd.delete("cover_file");
+        fd.delete("pdf_file");
+
+        const editionNumber =
+          kind === "free"
+            ? undefined
+            : Number(form.querySelector<HTMLInputElement>("input[name=edition_number]")?.value || 0);
+        const isFree = kind === "free";
+
+        if (coverFile && !isFree) {
+          setState("Subiendo portada...");
+          const pub = await signAndUpload("cover", coverFile, editionNumber);
+          fd.set("cover_url", pub);
+        }
+        if (pdfFile) {
+          setState("Subiendo PDF...");
+          const pub = await signAndUpload("pdf", pdfFile, editionNumber, isFree);
+          fd.set("pdf_url", pub);
+        }
+
+        setState(mode === "create" ? "Creando..." : "Guardando...");
+
         const editionId = form.dataset.editionId;
         const url = mode === "create"
           ? "/api/admin/editions"
@@ -239,16 +267,47 @@ const initialKind = edition?.kind ?? "magazine";
 
         (window as any).adminToast?.(mode === "create" ? "Edición creada" : "Edición actualizada", "success");
         setTimeout(() => { window.location.href = "/admin/ediciones"; }, 800);
-      } catch (err) {
-        msg.textContent = "Error de conexión. Intentalo de nuevo.";
+      } catch (err: any) {
+        msg.textContent = err?.message || "Error de conexión. Intentalo de nuevo.";
         msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
         msg.classList.remove("hidden");
-        (window as any).adminToast?.("Error de conexión", "error");
+        (window as any).adminToast?.(err?.message || "Error de conexión", "error");
       } finally {
         submitBtn.disabled = false;
         submitBtn.textContent = mode === "create" ? "Crear edición" : "Guardar cambios";
       }
     });
+
+    async function signAndUpload(kind: "cover" | "pdf", file: File, editionNumber?: number, isFree?: boolean): Promise<string> {
+      const slug = kind === "pdf" && isFree ? `articulo-gratis-${Date.now()}` : undefined;
+      const res = await fetch("/api/admin/uploads/sign", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kind,
+          filename: file.name,
+          contentType: file.type,
+          size: file.size,
+          editionNumber,
+          slug,
+        }),
+      });
+      const sign = await res.json().catch(() => ({}));
+      if (!res.ok || !sign.signedUrl) {
+        throw new Error(sign.error || "Error generando enlace de subida");
+      }
+
+      const up = await fetch(sign.signedUrl, {
+        method: "PUT",
+        headers: { "Content-Type": file.type },
+        body: file,
+      });
+      if (!up.ok) {
+        throw new Error("Error subiendo archivo al storage");
+      }
+
+      return sign.publicUrl as string;
+    }
 
     const deleteBtn = document.getElementById("delete-edition-btn") as HTMLButtonElement | null;
     if (deleteBtn) {

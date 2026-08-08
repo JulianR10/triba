@@ -9,7 +9,7 @@ export function extractStoragePath(publicUrl: string): string | null {
   return publicUrl.slice(idx + STORAGE_URL_PREFIX.length);
 }
 
-function getPublicUrl(path: string): string {
+export function getPublicUrl(path: string): string {
   const supabaseUrl =
     import.meta.env.PUBLIC_SUPABASE_URL ||
     import.meta.env.SUPABASE_URL ||
@@ -20,7 +20,7 @@ function getPublicUrl(path: string): string {
 
 export type EditionFileKind = "cover" | "pdf";
 
-function fileExt(name: string): string {
+export function fileExt(name: string): string {
   const i = name.lastIndexOf(".");
   return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
 }
@@ -31,7 +31,7 @@ export const FILE_RULES: Record<EditionFileKind, { maxBytes: number; mime: RegEx
     mime: /^image\/(jpeg|png|webp|avif)$/,
   },
   pdf: {
-    maxBytes: 80 * 1024 * 1024,
+    maxBytes: 50 * 1024 * 1024,
     mime: /^application\/pdf$/,
   },
 };
@@ -39,6 +39,18 @@ export const FILE_RULES: Record<EditionFileKind, { maxBytes: number; mime: RegEx
 export interface UploadResult {
   url: string;
   path: string;
+}
+
+export function buildStoragePath(
+  kind: EditionFileKind,
+  editionNumber: number | undefined,
+  ext: string,
+  opts?: { slug?: string }
+): string {
+  if (kind === "pdf") {
+    return `pdfs/${opts?.slug ?? `revista-${editionNumber}`}.${ext}`;
+  }
+  return `covers/edicion-${editionNumber}-${Date.now()}.${ext}`;
 }
 
 export async function uploadEditionFile(
@@ -57,10 +69,7 @@ export async function uploadEditionFile(
   }
 
   const ext = fileExt(file.name) || (kind === "pdf" ? "pdf" : "jpg");
-  const path =
-    kind === "pdf"
-      ? `pdfs/${opts?.slug ?? `revista-${editionNumber}`}.${ext}`
-      : `${kind}s/edicion-${editionNumber}-${Date.now()}.${ext}`;
+  const path = buildStoragePath(kind, editionNumber, ext, opts);
 
   const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, file, {
     contentType: file.type,
