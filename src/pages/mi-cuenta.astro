@@ -274,7 +274,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
     var editionsList: { slug: string; title: string; cover: string; edition: string }[] = JSON.parse(dataEl.textContent || "[]");
     var wrap = document.querySelector<HTMLElement>("[data-tomos-wrap]");
     var track = wrap && wrap.querySelector<HTMLElement>("[data-tomos-track]");
-    var dotsBox = wrap && wrap.querySelector<HTMLElement>("[data-tomos-dots]");
+    var dotsBox = document.querySelector<HTMLElement>("[data-tomos-dots]");
     var prevBtn = wrap && wrap.querySelector<HTMLButtonElement>("[data-tomos-prev]");
     var nextBtn = wrap && wrap.querySelector<HTMLButtonElement>("[data-tomos-next]");
 

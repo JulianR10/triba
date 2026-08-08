@@ -255,13 +255,21 @@ const initialKind = edition?.kind ?? "magazine";
         const method = mode === "create" ? "POST" : "PATCH";
 
         const res = await fetch(url, { method, body: fd });
-        const data = await res.json().catch(() => ({}));
+        const raw = await res.text().catch(() => "");
+        let data: any = {};
+        try { data = raw ? JSON.parse(raw) : {}; } catch { data = {}; }
 
         if (!res.ok) {
-          msg.textContent = data.error || "Error guardando la edición";
+          const message =
+            typeof data?.error === "string" && data.error
+              ? data.error
+              : raw
+                ? `HTTP ${res.status}: ${raw.slice(0, 400)}`
+                : `HTTP ${res.status}`;
+          msg.textContent = message;
           msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
           msg.classList.remove("hidden");
-          (window as any).adminToast?.(data.error || "Error guardando la edición", "error");
+          (window as any).adminToast?.(message, "error");
           return;
         }
 

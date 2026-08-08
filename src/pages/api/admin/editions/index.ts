@@ -18,61 +18,73 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return error("Body inválido: se esperaba multipart/form-data", 400);
   }
 
-  const kind = fd.get("kind") === "free" ? "free" : "magazine";
+  try {
+    const kind = fd.get("kind") === "free" ? "free" : "magazine";
 
-  const input: Record<string, any> = {
-    kind,
-    edition_number: kind === "free" ? undefined : fd.get("edition_number") ? Number(fd.get("edition_number")) : undefined,
-    title: fd.get("title"),
-    description: fd.get("description"),
-    cover_url: fd.get("cover_url") || undefined,
-    pdf_url: fd.get("pdf_url") || null,
-    featured: kind === "free" ? false : fd.get("featured") === "true" || fd.get("featured") === "on",
-    badge: kind === "free" ? null : fd.get("badge") || null,
-  };
+    const input: Record<string, any> = {
+      kind,
+      edition_number: kind === "free" ? undefined : fd.get("edition_number") ? Number(fd.get("edition_number")) : undefined,
+      title: fd.get("title"),
+      description: fd.get("description"),
+      cover_url: fd.get("cover_url") || undefined,
+      pdf_url: fd.get("pdf_url") || null,
+      featured: kind === "free" ? false : fd.get("featured") === "true" || fd.get("featured") === "on",
+      badge: kind === "free" ? null : fd.get("badge") || null,
+    };
 
-  if (kind === "magazine" && !input.cover_url) {
-    return error("cover_url es obligatorio (subí una portada o pegá una URL)", 400);
-  }
+    if (kind === "magazine" && !input.cover_url) {
+      return error("cover_url es obligatorio (subí una portada o pegá una URL)", 400);
+    }
 
-  const validated = validateEditionInput(input);
-  if (!validated.ok) {
-    return error(validated.error, 400);
-  }
+    const validated = validateEditionInput(input);
+    if (!validated.ok) {
+      return error(validated.error, 400);
+    }
 
-  if (validated.data.kind === "magazine") {
-    const { data: existing } = await supabaseAdmin
+    if (validated.data.kind === "magazine") {
+      const { data: existing } = await supabaseAdmin
+        .from("editions")
+        .select("id")
+        .eq("edition_number", validated.data.edition_number!)
+        .maybeSingle();
+      if (existing) {
+        return error(`Ya existe una edición con número ${validated.data.edition_number}`, 409);
+      }
+
+      if (validated.data.featured) {
+        const { error: featError } = await supabaseAdmin
+          .from("editions")
+          .update({ featured: false })
+          .eq("featured", true);
+        if (featError) {
+          console.error("[editions.create] unset-featured error:", featError);
+        }
+      }
+    }
+
+    const { data, error: insertError } = await supabaseAdmin
       .from("editions")
+      .insert(validated.data)
       .select("id")
-      .eq("edition_number", validated.data.edition_number!)
-      .maybeSingle();
-    if (existing) {
-      return error(`Ya existe una edición con número ${validated.data.edition_number}`, 409);
+      .single();
+
+    if (insertError) {
+      console.error("[editions.create] insert error:", insertError);
+      return error(insertError.message, 500);
     }
 
-    if (validated.data.featured) {
-      await supabaseAdmin.from("editions").update({ featured: false }).eq("featured", true);
-    }
+    logAdminAction(
+      admin.user.id,
+      admin.profile.email,
+      "edition.created",
+      "edition",
+      String(data.id),
+      { edition_number: validated.data.edition_number, title: validated.data.title }
+    );
+
+    return ok({ id: data.id });
+  } catch (e) {
+    console.error("[editions.create] unexpected error:", e);
+    return error(e instanceof Error ? e.message : "Error inesperado al crear la edición", 500);
   }
-
-  const { data, error: insertError } = await supabaseAdmin
-    .from("editions")
-    .insert(validated.data)
-    .select("id")
-    .single();
-
-  if (insertError) {
-    return error(insertError.message, 500);
-  }
-
-  logAdminAction(
-    admin.user.id,
-    admin.profile.email,
-    "edition.created",
-    "edition",
-    String(data.id),
-    { edition_number: validated.data.edition_number, title: validated.data.title }
-  );
-
-  return ok({ id: data.id });
 };
