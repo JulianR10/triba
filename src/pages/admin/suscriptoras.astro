@@ -252,7 +252,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       statNosub.textContent = "—";
       return;
     }
-    const active = rows.filter((r: any) => r.subscription?.status === "active").length;
+    const active = rows.filter((r: any) => r.subscription?.status === "active" || r.subscription?.status === "migrated").length;
     const canceled = rows.filter((r: any) => r.subscription?.status === "canceled").length;
     const none = rows.filter((r: any) => r.profile && !r.subscription).length;
     statActive.textContent = String(active);

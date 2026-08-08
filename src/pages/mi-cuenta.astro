@@ -7,6 +7,7 @@ import PatchTitle from "../components/PatchTitle.astro";
 import { createSupabaseServerClient } from "../lib/supabase-server";
 import { getEditions, getFeaturedEdition } from "../lib/editions";
 import { getSignedPdfUrl } from "../lib/storage";
+import { isActiveSubscription } from "../lib/subscription-status";
 import type { Profile, Subscription } from "../lib/types";
 
 const supabase = createSupabaseServerClient(Astro.request);
@@ -24,6 +25,8 @@ if (user) {
     subscription = s;
   }
 }
+
+const hasActiveSub = isActiveSubscription(subscription?.status ?? null);
 
 const isAdmin = profile?.role === "admin";
 
@@ -76,7 +79,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
       )}
 
       {
-        (subscription?.status === "active") && (
+        hasActiveSub && (
           <>
 
       <!-- ===== HERO ===== -->
@@ -197,7 +200,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
       }
 
       {
-        !(subscription?.status === "active") && (
+        !hasActiveSub && (
           <div class="max-w-lg mx-auto mt-10 text-center reveal px-5" data-reveal>
             <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8">
               {
@@ -228,6 +231,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
 
 <script>
   import { supabase } from "../lib/supabase";
+  import { isActiveSubscription } from "../lib/subscription-status";
   import { onPageCycle } from "../lib/onPageCycle";
 
   function setup() {
@@ -254,7 +258,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
           headers: { Authorization: "Bearer " + session.access_token },
         });
         var data = await res.json();
-        if (data.subscription?.status === "active") {
+        if (isActiveSubscription(data.subscription?.status)) {
           if (pollInterval) clearInterval(pollInterval);
           window.location.reload();
         }

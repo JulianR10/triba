@@ -1,4 +1,6 @@
 ---
+import { isActiveSubscription } from "../lib/subscription-status";
+
 interface Sub {
   status?: string | null;
   provider?: string | null;
@@ -14,7 +16,7 @@ interface Props {
 
 const { role, sub, periodEndLabel } = Astro.props;
 
-const isActive = sub?.status === "active" || sub?.status === "migrated";
+const isActive = isActiveSubscription(sub?.status ?? null);
 const isAdmin = role === "admin";
 ---
 

@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "../../../lib/supabase-server";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { error } from "../../../lib/response";
 import { extractStoragePath } from "../../../lib/storage";
+import { isActiveSubscription } from "../../../lib/subscription-status";
 import { logger } from "../../../lib/logger";
 
 const BUCKET = "editions";
@@ -58,7 +59,7 @@ export const GET: APIRoute = async ({ params, request, url }) => {
         .select("status")
         .eq("id", profile.subscription_id)
         .single();
-      if (sub?.status === "active" || sub?.status === "migrated") {
+      if (isActiveSubscription(sub?.status)) {
         allowed = true;
       }
     }

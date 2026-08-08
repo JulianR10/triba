@@ -1,5 +1,6 @@
 import { supabaseAdmin } from "../supabase-admin";
 import { stripe } from "../stripe";
+import { isActiveSubscription } from "../subscription-status";
 import type { Profile, Subscription } from "../types";
 
 export interface AdminSubscriberRow {
@@ -251,7 +252,7 @@ export async function searchSubscribersForAdmin(
   let allRows = [...profileRows, ...pendingRows];
 
   if (status === "active") {
-    allRows = allRows.filter((r) => r.subscription?.status === "active" || r.subscription?.status === "migrated");
+    allRows = allRows.filter((r) => isActiveSubscription(r.subscription?.status ?? null));
   } else if (status === "canceled") {
     allRows = allRows.filter((r) => r.subscription?.status === "canceled");
   } else if (status === "none") {
