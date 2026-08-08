@@ -154,7 +154,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
         </div>
       </div>
 
-      <script type="application/json" data-tomos-data>{JSON.stringify(editionsPayload)}</script>
+      <script type="application/json" data-tomos-data set:html={JSON.stringify(editionsPayload)}></script>
 
       <!-- ===== VISOR ===== -->
       <div class="bg-triba-cream w-full px-5 md:px-14 lg:px-20 xl:px-32 2xl:px-48 py-12 md:py-20">

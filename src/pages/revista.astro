@@ -11,6 +11,20 @@ const description = "Explorá las ediciones de Triba, nuestra revista digital me
 const canonical = "/revista";
 
 import { getEditions, getFreeArticle } from "../lib/editions";
+import { createSupabaseServerClient } from "../lib/supabase-server";
+import { isActiveSubscription } from "../lib/subscription-status";
+
+const supabase = createSupabaseServerClient(Astro.request);
+const { data: { session } } = await supabase.auth.getSession();
+let hasActiveSub = false;
+if (session?.user) {
+  const { data: p } = await supabase.from("profiles").select("subscription_id").eq("id", session.user.id).single();
+  if (p?.subscription_id) {
+    const { data: s } = await supabase.from("subscriptions").select("status").eq("id", p.subscription_id).single();
+    hasActiveSub = isActiveSubscription(s?.status ?? null);
+  }
+}
+
 const allEditions = await getEditions();
 const freeArticle = await getFreeArticle();
 
@@ -74,7 +88,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
     "inLanguage": "es",
     "numberOfIssues": allEditions.length,
   })} />
-  <section class="page-shell page-gutter bg-triba-bone">
+  <section class="page-shell page-gutter bg-triba-bone" data-has-sub={hasActiveSub ? "1" : "0"}>
     <div class="max-w-6xl mx-auto">
       <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
         <PatchTitle content="Nuestra revista" tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
@@ -94,9 +108,15 @@ const featured = editions.find((e) => e.featured) || editions[0];
             Esperamos que disfrutes tu lectura, nos vemos el mes que viene.
           </p>
           <div class="flex justify-center md:justify-start">
-            <Button variant="default" id="featured-cta" href="/suscribirme" class="px-10 py-4 text-base">
-              LA QUIERO!
-            </Button>
+            {hasActiveSub ? (
+              <Button variant="default" id="featured-cta" href="/mi-cuenta" class="px-10 py-4 text-base">
+                Seguir leyendo
+              </Button>
+            ) : (
+              <Button variant="default" id="featured-cta" href="/suscribirme" class="px-10 py-4 text-base">
+                LA QUIERO!
+              </Button>
+            )}
           </div>
         </div>
         <!-- Columna derecha: portada -->
@@ -146,7 +166,11 @@ const featured = editions.find((e) => e.featured) || editions[0];
             Si disfrutas de tu lectura, te esperamos en la suscripción!
           </p>
           <div class="flex justify-center md:justify-start">
-            <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+            {hasActiveSub ? (
+              <Button variant="primary" href="/mi-cuenta">Seguir leyendo</Button>
+            ) : (
+              <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+            )}
           </div>
         </div>
       </div>
@@ -159,6 +183,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
   function setup() {
     var featuredCover = document.getElementById("featured-cover") as HTMLImageElement | null;
     var featuredCta = document.getElementById("featured-cta") as HTMLAnchorElement | null;
+    var isSubscriber = document.querySelector("section[data-has-sub]")?.getAttribute("data-has-sub") === "1";
     var carousel = document.querySelector("[data-carousel]")!;
 
     var featuredEl = document.querySelector("[data-featured]") as HTMLElement | null;
@@ -198,7 +223,7 @@ const featured = editions.find((e) => e.featured) || editions[0];
         featuredCover.alt = "Portada de " + ed.title;
       }
       if (featuredCta) {
-        featuredCta.href = "/suscribirme";
+        featuredCta.href = isSubscriber ? "/mi-cuenta" : "/suscribirme";
       }
 
       setActiveCard(id);
