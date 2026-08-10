@@ -159,16 +159,29 @@ async function activateSubscription({
     return;
   }
 
-  await supabaseAdmin.from("profiles").upsert(
-    {
-      id: userId,
-      ...(email ? { email } : {}), // never overwrite with null (NOT NULL)
+  // Separar UPDATE desde el upsert: el on_conflict de upsert no garantiza
+  // que role/subscription_id se actualicen si la fila ya existe (race condition
+  // con handle_new_user que crea el profile en "free" antes del webhook).
+  // UPDATE explícito fuerza el linkeo.
+  await supabaseAdmin
+    .from("profiles")
+    .update({
       role: "subscriber",
       subscription_id: sub.id,
       updated_at: now,
-    } as Database["public"]["Tables"]["profiles"]["Insert"],
-    { onConflict: "id" },
-  );
+    })
+    .eq("id", userId);
+
+  if (email) {
+    const { error: emailErr } = await supabaseAdmin
+      .from("profiles")
+      .update({ email })
+      .eq("id", userId)
+      .is("email", null);
+    if (emailErr) {
+      logger.warn({ err: emailErr, userId, email }, "[MP webhook] failed updating null email");
+    }
+  }
 
   await supabaseAdmin
     .from("subscriptions")
