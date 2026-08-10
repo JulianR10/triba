@@ -244,7 +244,12 @@ async function handleAuthorizedPaymentEvent(paymentId: string): Promise<void> {
   // event never activated access — create it from the preapproval itself.
   const preapproval = await mpGet<MpPreapproval>(`/preapproval/${preapprovalId}`);
   if (!preapproval) return;
-  if (!isActivePreapproval(preapproval.status)) return;
+  // NOTE: do NOT gate on isActivePreapproval(preapproval.status) here. MP's
+  // preapproval status is eventually consistent — when the first approved
+  // payment arrives it may still report "pending". An APPROVED payment is the
+  // source of truth that the user paid, so activate regardless. The status
+  // check stays ONLY in handlePreApprovalEvent (fires before payment auth).
+  // See AGENTS.md: webhook must activate from subscription_authorized_payment approved.
 
   let userId = preapproval.external_reference || null;
   const email = payment.payer?.email || preapproval.payer_email || null;
