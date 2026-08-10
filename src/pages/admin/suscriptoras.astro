@@ -182,7 +182,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             const plan = hasMpSub ? mpCurrency : "—";
             const canAct = hasStripeSub && !isRefunded && stripeStatus === "active";
             const refundBtn = canAct
-              ? `<button class="refund-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-migration-id="${row.migrationId}" data-email="${escapeHtml(email)}">Reembolsar</button>`
+              ? `<button class="refund-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-migration-id="${row.migrationId}" data-user-id="${row.migrationId || row.profile?.id || ""}" data-email="${escapeHtml(email)}">Reembolsar</button>`
               : "";
             const cancelBtn = canAct
               ? `<button class="cancel-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-migration-id="${row.migrationId}" data-email="${escapeHtml(email)}">Cancelar</button>`
@@ -215,8 +215,8 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             ? `<button class="cancel-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-email="${row.profile.email}">Cancelar</button>`
             : "";
           const refundBtn = canRefund
-            ? `<button class="refund-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-email="${row.profile.email}">Reembolsar</button>`
-            : "";
+              ? `<button class="refund-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-migration-id="" data-email="${row.profile.email}">Reembolsar</button>`
+              : "";
           const actionsContent = [cancelBtn, refundBtn].filter(Boolean).join('<span class="text-triba-brown/20 mx-1">|</span>') || "—";
           return `<tr class="border-b border-triba-black/10 last:border-0 hover:bg-triba-bone/50">
             <td class="px-4 py-3"><p class="font-sans">${escapeHtml(row.profile.email)}</p><p class="font-sans text-xs text-triba-brown/60">${row.profile.role}</p></td>

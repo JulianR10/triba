@@ -5,8 +5,11 @@ import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { logAdminAction } from "../../../../../lib/admin/audit";
 import { stripe } from "../../../../../lib/stripe";
 import { mpClient } from "../../../../../lib/mercadopago";
+import { PreApproval } from "mercadopago";
 
 export const prerender = false;
+
+const MP_ACCESS_TOKEN = process.env.MP_ACCESS_TOKEN || "";
 
 async function refundStripe(subscriptionId: string): Promise<{ warnings: string[] }> {
   if (!stripe) throw new Error("Stripe no está configurado");
@@ -43,15 +46,13 @@ async function refundStripe(subscriptionId: string): Promise<{ warnings: string[
 
 async function refundMercadoPago(preapprovalId: string): Promise<{ warnings: string[] }> {
   if (!mpClient) throw new Error("Mercado Pago no está configurado");
-
-  const mpAccessToken = import.meta.env.MP_ACCESS_TOKEN || "";
-  if (!mpAccessToken) throw new Error("Falta MP_ACCESS_TOKEN en las variables de entorno");
+  if (!MP_ACCESS_TOKEN) throw new Error("Falta MP_ACCESS_TOKEN en las variables de entorno");
 
   // The MP payments/search API rejects `preapproval_id` as a filter. Use the
   // subscription's authorized payments instead, which expose the real payment id.
   const searchRes = await fetch(
     `https://api.mercadopago.com/authorized_payments/search?preapproval_id=${preapprovalId}`,
-    { headers: { Authorization: `Bearer ${mpAccessToken}` } },
+    { headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}` } },
   );
   if (!searchRes.ok) throw new Error(`Error al buscar pagos en Mercado Pago: ${await searchRes.text()}`);
 
@@ -66,19 +67,20 @@ async function refundMercadoPago(preapprovalId: string): Promise<{ warnings: str
     `https://api.mercadopago.com/v1/payments/${approvedPaymentId}/refunds`,
     {
       method: "POST",
-      headers: { Authorization: `Bearer ${mpAccessToken}`, "Content-Type": "application/json" },
+      headers: { Authorization: `Bearer ${MP_ACCESS_TOKEN}`, "Content-Type": "application/json" },
       body: JSON.stringify({}),
     },
   );
   if (!refundRes.ok) throw new Error(`Error al procesar el reembolso en Mercado Pago: ${await refundRes.text()}`);
 
   const warnings: string[] = [];
+
+  // Cancelar la preapproval usando import estático (no dinámico)
   try {
-    const { PreApproval } = await import("mercadopago");
     const preApproval = new PreApproval(mpClient);
     await preApproval.update({ id: preapprovalId, body: { status: "cancelled" } });
   } catch (cancelErr: any) {
-    warnings.push(`Reembolso OK, pero no se pudo cancelar la renovación: ${cancelErr.message || cancelErr}`);
+    warnings.push(`Reembolso OK, pero no se pudo cancelar la renovación en MP: ${cancelErr.message || cancelErr}`);
   }
 
   return { warnings };
@@ -113,14 +115,14 @@ export const POST: APIRoute = async ({ params, locals }) => {
         const result = await refundStripe(sub.provider_subscription_id);
         warnings.push(...result.warnings);
       } catch (err: any) {
-        return error(`Error en Stripe: ${err.message || err}`, 500);
+        warnings.push(`Error en Stripe: ${err.message || err}`);
       }
     } else if (sub.provider === "mercadopago") {
       try {
         const result = await refundMercadoPago(sub.provider_subscription_id);
         warnings.push(...result.warnings);
       } catch (err: any) {
-        return error(`Error en Mercado Pago: ${err.message || err}`, 500);
+        warnings.push(`Error en Mercado Pago: ${err.message || err}`);
       }
     } else if (sub.provider === "migrated") {
       // Legacy migration, no active payment provider charge
