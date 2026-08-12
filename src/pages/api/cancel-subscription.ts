@@ -25,10 +25,13 @@ export const POST: APIRoute = async ({ request }) => {
     const provider = getPaymentProvider(subscription.provider as "stripe" | "mercadopago");
     const providerWarnings: string[] = [];
 
-    try {
-      await provider.cancelSubscription(subscription.provider_subscription_id);
-    } catch (err: any) {
-      providerWarnings.push(err.message || "Provider cancel failed");
+    // For courtesy 'migrated' subs there is no gateway to cancel: skip cleanly.
+    if (provider && subscription.provider_subscription_id) {
+      try {
+        await provider.cancelSubscription(subscription.provider_subscription_id);
+      } catch (err: any) {
+        providerWarnings.push(err.message || "Provider cancel failed");
+      }
     }
 
     const { error: dbError } = await supabaseAdmin.rpc("cancel_subscription", {

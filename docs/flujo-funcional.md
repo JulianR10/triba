@@ -524,12 +524,12 @@ Las migradas reciben "acceso por 7 días" pero no hay job que revoque el acceso 
 **2. `$ST-01` — estados `past_due` / `incomplete` / `trialing` sin manejo** · `AccountMenuItems.astro`, `mi-cuenta.astro`, `admin/suscriptoras.astro`
 Una usuaria cuyo cobro falló (o quedó `incomplete`) ve "Aún no estás suscripta", sin explicación ni camino para actualizar el pago. Churn + tickets de soporte.
 *Cambio:* distinguir esos estados en UI → mensaje "falló tu cobro, actualizá tu pago" + CTA.
-*Esfuerzo:* bajo. · Estado: pendiente.
+*Esfuerzo:* bajo. · Estado: **hecho** (labels en dropdown/mi-cuenta + CTA "Actualizar medio de pago" → `/api/portal`; Stripe portal, MP note→alert).
 
 **3. `P11` — Cancelación inconsistente BD vs gateway** · `FLOW-11`, `cancel-subscription.ts`, `admin/.../cancel`
 Si `cancel_subscription` (RPC) falla después de cancelar en Stripe/MP, el perfil queda "activo" en la app pero cancelado en el proveedor. Estado divergente sin auto-corrección.
 *Cambio:* revertir/compensar o dejar la canc local como fuente y re-sincronizar.
-*Esfuerzo:* medio. · Estado: pendiente.
+*Esfuerzo:* medio. · Estado: **hecho (mitigación)** — guard de provider `migrated`/sin id + `providerWarnings` surfaceados en el dropdown público y en el toast del panel de suscriptoras; la compensación de gateway en `admin/.../cancel` ahora usa `provider_subscription_id` y avisa si quedó divergente.
 
 **4. `$ST-07` — PDF 401 devuelve JSON crudo** · `api/pdf/[editionId].ts`
 Descargar sin sesión/rol muestra un JSON plano en el navegador, sin redirigir a login ni explicación.

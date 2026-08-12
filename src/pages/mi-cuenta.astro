@@ -247,8 +247,19 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
                 ) : (
                   <>
                     <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">{subscriptionInfo.label}</h2>
-                    <p class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">No tenés una suscripción activa. Podés suscribirte para acceder a la revista completa, el archivo histórico y la descarga PDF.</p>
-                    <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+                    {subscriptionInfo.action ? (
+                      <>
+                        <p class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">No se procesó tu último pago. Actualizá tu medio de pago para recuperar el acceso a la revista completa, el archivo histórico y la descarga PDF.</p>
+                        <button type="button" class="manage-sub-btn rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-8 py-3 font-heading text-base uppercase tracking-wider hover:scale-[1.02] transition-all">
+                          {subscriptionInfo.action}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <p class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">No tenés una suscripción activa. Podés suscribirte para acceder a la revista completa, el archivo histórico y la descarga PDF.</p>
+                        <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+                      </>
+                    )}
                   </>
                 )
               }

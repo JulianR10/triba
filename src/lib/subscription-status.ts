@@ -35,7 +35,7 @@ export function subscriptionStatusInfo(status?: string | null): SubscriptionStat
     case "past_due":
       return {
         active: false,
-        label: "Cobro fallido",
+        label: "Tu último cobro falló",
         action: "Actualizar medio de pago",
       };
     case "incomplete":

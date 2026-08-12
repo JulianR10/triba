@@ -1,5 +1,5 @@
 ---
-import { subscriptionStatusInfo } from "../lib/subscription-status";
+import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
 
 interface Sub {
   status?: string | null;
@@ -16,8 +16,17 @@ interface Props {
 
 const { role, sub, periodEndLabel } = Astro.props;
 
-const { active, label } = subscriptionStatusInfo(sub?.status);
+const isActiveSub = isActiveSubscription(sub?.status, sub?.current_period_end ?? undefined);
+const info = subscriptionStatusInfo(sub?.status);
 const isAdmin = role === "admin";
+
+let label = info.label;
+let action: string | null = info.action ?? null;
+if (sub?.status === "migrated" && !isActiveSub) {
+  // Access window (7 days) already elapsed → treat as not subscribed.
+  label = "Aún no estás suscripta";
+  action = null;
+}
 
 ---
 {
@@ -29,7 +38,7 @@ const isAdmin = role === "admin";
       <hr class="border-triba-black/10 my-2" />
       <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>
     </>
-  ) : active ? (
+  ) : isActiveSub ? (
     <>
       <a href="/mi-cuenta" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">
         Ir a mi perfil →
@@ -56,6 +65,15 @@ const isAdmin = role === "admin";
       <p class="font-sans text-xs text-triba-brown/70 mb-2">
         {label}
       </p>
+      {action ? (
+        <button type="button" class="manage-sub-btn block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
+          {action}
+        </button>
+      ) : (
+        <a href="/suscribirme" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
+          Suscribirme
+        </a>
+      )}
       <hr class="border-triba-black/10 my-2" />
       <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>
     </>
