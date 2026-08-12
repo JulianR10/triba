@@ -87,3 +87,25 @@ export async function sendEmail(to: string, subject: string, html: string): Prom
 
   if (!res) return;
 }
+
+export async function unsubscribeSubscriber(email: string): Promise<void> {
+  const key = apiKey();
+  if (!key) throw new Error("Sender not configured");
+
+  const url = `${SENDER_API_BASE}/subscribers/${encodeURIComponent(
+    email
+  )}/unsubscribe`;
+  const res = await fetch(url, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${key}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Sender unsubscribe ${res.status}: ${text}`);
+  }
+}

@@ -2,8 +2,8 @@ import type { APIRoute } from "astro";
 import { requireAdmin } from "../../../../../lib/auth";
 import { ok, error } from "../../../../../lib/response";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
+import { getPaymentProvider } from "../../../../../lib/payment-provider";
 import { logAdminAction } from "../../../../../lib/admin/audit";
-import { stripe } from "../../../../../lib/stripe";
 
 export const prerender = false;
 
@@ -22,9 +22,42 @@ export const POST: APIRoute = async ({ params, locals }) => {
     .single();
 
   if (profile?.subscription_id) {
-    const { error: rpcErr } = await supabaseAdmin.rpc("cancel_subscription", { p_user_id: profile.id });
-    if (rpcErr) return error(rpcErr.message, 500);
+    // Also get provider from subscriptions table
+    const { data: subscription, error: subError } = await supabaseAdmin
+      .from("subscriptions")
+      .select("provider, provider_subscription_id")
+      .eq("user_id", id)
+      .single();
 
+    if (subError || !subscription) {
+      return error("No active subscription found", 404);
+    }
+
+    const provider = getPaymentProvider(subscription.provider as "stripe" | "mercadopago");
+
+    // 1. Probar RPC primero
+    const { error: rpcErr } = await supabaseAdmin.rpc("cancel_subscription", { p_user_id: profile.id });
+
+    if (rpcErr) {
+      // RPC falló → intentar cancelar en proveedor como compensación
+      if (provider && subscription.provider_subscription_id) {
+        try {
+          await provider.cancelSubscription(subscription.provider_subscription_id);
+          // RPC falló pero provider cancel succeeded: avisamos al usuario
+          return ok({
+            message: "No se pudo actualizar la BD, pero la suscripción se canceló en el proveedor",
+            providerWarnings: [rpcErr.message || "RPC failed"],
+          });
+        } catch (err: any) {
+          // Ambos fallaron: error crítico
+          return error(`Error en ambos lados: ${err.message || "Provider cancel failed"}`, 500);
+        }
+      }
+      // Sin proveedor externo (migrada) ni fallback: devolver el error del RPC
+      return error(rpcErr.message || "Error actualizando la suscripción", 500);
+    }
+
+    // RPC éxito → solo limpiar BD y log
     logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", profile.id, {
       canceled_email: profile.email,
     });
@@ -43,12 +76,11 @@ export const POST: APIRoute = async ({ params, locals }) => {
     return error("No se encontró suscripción activa para cancelar", 404);
   }
 
-  if (stripe) {
-    try {
-      await stripe.subscriptions.cancel(migration.stripe_subscription_id);
-    } catch (err: any) {
-      return error(`Error al cancelar en Stripe: ${err.message || err}`, 500);
-    }
+  const migrationProvider = getPaymentProvider("stripe");
+  try {
+    await migrationProvider.cancelSubscription(migration.stripe_subscription_id);
+  } catch (err: any) {
+    return error(`Error al cancelar en proveedor: ${err.message || err}`, 500);
   }
 
   await supabaseAdmin

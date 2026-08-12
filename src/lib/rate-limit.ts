@@ -24,7 +24,6 @@ export async function checkRateLimit(
   }
 
   if (count != null && count >= config.maxRequests) {
-    const oldestAllowed = new Date(Date.now() - config.windowMs).getTime();
     const { data: oldest } = await supabaseAdmin
       .from("rate_limits")
       .select("created_at")

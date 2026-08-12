@@ -144,16 +144,7 @@ async function main() {
     const accountId = profileByEmail.get(lower);
     mapped++;
 
-    const line = {
-      email: lower,
-      preapproval: p.id,
-      status: p.status,
-      currency: p.currency,
-      amount: p.amount,
-      hasAccountRecord: !!existing,
-      accountId,
-    };
-    console.log(`\n${email}`);
+console.log(`\n${email}`);
     console.log(`   preapproval: ${p.id} | ${p.status} | ${p.currency} ${p.amount} | ${p.created} | ${p.reason}`);
 
     if (!real) {

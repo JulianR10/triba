@@ -1,10 +1,8 @@
-import { createWriteStream, existsSync, readFileSync, unlinkSync } from "fs";
+import { createWriteStream, existsSync, unlinkSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
-import { createRequire } from "module";
-const require = createRequire(import.meta.url);
+// Runtime require for CJS module archiver (Astro 5 compat)
 const archiver = require("archiver");
-
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const root = resolve(__dirname, "..");
 const zipPath = resolve(root, "triba-app.zip");

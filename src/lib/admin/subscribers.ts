@@ -252,7 +252,9 @@ export async function searchSubscribersForAdmin(
   let allRows = [...profileRows, ...pendingRows];
 
   if (status === "active") {
-    allRows = allRows.filter((r) => isActiveSubscription(r.subscription?.status ?? null));
+    allRows = allRows.filter(
+  (r) => isActiveSubscription(r.subscription?.status, r.subscription?.current_period_end ?? undefined),
+);
   } else if (status === "canceled") {
     allRows = allRows.filter((r) => r.subscription?.status === "canceled");
   } else if (status === "none") {

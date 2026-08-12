@@ -12,16 +12,18 @@ const canonical = "/revista";
 
 import { getEditions, getFreeArticle } from "../lib/editions";
 import { createSupabaseServerClient } from "../lib/supabase-server";
-import { isActiveSubscription } from "../lib/subscription-status";
+import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
 
 const supabase = createSupabaseServerClient(Astro.request);
 const { data: { session } } = await supabase.auth.getSession();
 let hasActiveSub = false;
+let subInfo: { active: boolean; label: string; action?: string | null } | null = null;
 if (session?.user) {
   const { data: p } = await supabase.from("profiles").select("subscription_id").eq("id", session.user.id).single();
   if (p?.subscription_id) {
-    const { data: s } = await supabase.from("subscriptions").select("status").eq("id", p.subscription_id).single();
-    hasActiveSub = isActiveSubscription(s?.status ?? null);
+    const { data: s } = await supabase.from("subscriptions").select("status, current_period_end").eq("id", p.subscription_id).single();
+    hasActiveSub = isActiveSubscription(s?.status, s?.current_period_end);
+    subInfo = subscriptionStatusInfo(s?.status);
   }
 }
 
@@ -107,15 +109,20 @@ const featured = editions.find((e) => e.featured) || editions[0];
           <p class="font-sans text-base text-triba-brown leading-relaxed mb-8">
             Esperamos que disfrutes tu lectura, nos vemos el mes que viene.
           </p>
-          <div class="flex justify-center md:justify-start">
+<div class="flex justify-center md:justify-start">
             {hasActiveSub ? (
               <Button variant="default" id="featured-cta" href="/mi-cuenta" class="px-10 py-4 text-base">
                 Seguir leyendo
               </Button>
             ) : (
-              <Button variant="default" id="featured-cta" href="/suscribirme" class="px-10 py-4 text-base">
-                LA QUIERO!
-              </Button>
+              <>
+                <p class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">
+                  {subInfo?.label}
+                </p>
+                <Button variant="default" id="featured-cta" href="/suscribirme" class="px-10 py-4 text-base">
+                  LA QUIERO!
+                </Button>
+              </>
             )}
           </div>
         </div>
@@ -165,11 +172,16 @@ const featured = editions.find((e) => e.featured) || editions[0];
           <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8">
             Si disfrutas de tu lectura, te esperamos en la suscripción!
           </p>
-          <div class="flex justify-center md:justify-start">
+<div class="flex justify-center md:justify-start">
             {hasActiveSub ? (
               <Button variant="primary" href="/mi-cuenta">Seguir leyendo</Button>
             ) : (
-              <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+              <>
+                <p class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">
+                  {subInfo?.label}
+                </p>
+                <Button variant="primary" href="/suscribirme">Suscribirme</Button>
+              </>
             )}
           </div>
         </div>

@@ -4,6 +4,7 @@ import Button from "../components/Button.astro";
 import CheckoutButton from "../components/CheckoutButton.astro";
 import { plans } from "../lib/pricing";
 import PatchTitle from "../components/PatchTitle.astro";
+import { getCheckoutOutcome } from "../lib/checkout-status";
 
 const title = "Suscribirme";
 const description = "Elegí tu plan de suscripción a Triba: newsletter gratuito o suscripción paga con acceso a la revista completa, archivo y descarga PDF. Pago seguro con Stripe o Mercado Pago.";
@@ -15,7 +16,7 @@ const faqs = [
   { q: "¿Cómo accedo a la revista?", a: "Una vez suscripta, vas a poder leerla online desde nuestro visor o descargarla en PDF." },
 ];
 
-const checkoutStatus = Astro.url.searchParams.get("checkout");
+const checkoutOutcome = getCheckoutOutcome(Astro.url.searchParams);
 ---
 
 <style>
@@ -37,14 +38,14 @@ const checkoutStatus = Astro.url.searchParams.get("checkout");
   <section class="page-shell page-gutter bg-triba-bone">
       <div class="max-w-6xl mx-auto">
 
-      {checkoutStatus === "canceled" && (
+      {checkoutOutcome === "canceled" && (
         <div data-banner="checkout-canceled" class="mb-8 p-4 bg-triba-red/10 border-2 border-triba-red rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
           <p class="font-sans text-base text-triba-brown">Pago cancelado. No se realizó ningún cargo. Podés intentar de nuevo cuando quieras.</p>
           <button type="button" data-dismiss-banner class="shrink-0 text-triba-brown hover:text-triba-red text-xl leading-none" aria-label="Cerrar">×</button>
         </div>
       )}
 
-      {checkoutStatus === "pending" && (
+      {checkoutOutcome === "pending" && (
         <div data-banner="checkout-pending" class="mb-8 p-4 bg-triba-blue/10 border-2 border-triba-blue rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
           <p class="font-sans text-base text-triba-brown">Tu pago está siendo procesado. Te avisaremos por email cuando se confirme.</p>
           <button type="button" data-dismiss-banner class="shrink-0 text-triba-brown hover:text-triba-red text-xl leading-none" aria-label="Cerrar">×</button>
