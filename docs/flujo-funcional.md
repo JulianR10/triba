@@ -514,90 +514,77 @@ FASE 4 (arquitectura):
 
 Lista priorizada por urgencia (referencias al mapa). Los primeros ítems cuestan plata o acceso real; los últimos son deuda técnica.
 
+> **Resueltas en 2026-08-13** (borradas de la lista): `$ST-02` (expiración migrated valida `current_period_end` en los 6 callers incl. AccountMenuItems) · `$ST-01` (labels por estado + CTA "Actualizar medio de pago" → `/api/portal`) · `P11` (mitigado: guard provider `migrated`/sin id + `providerWarnings` surfaceados en dropdown y panel).
+
 ### 🔴 Nivel 1 — Urgente: pérdida de ingresos o acceso incorrecto
 
-**1. `$ST-02` — Suscripciones `migrated` nunca expiran** · `FLOW-17`, `handle_new_user`
-Las migradas reciben "acceso por 7 días" pero no hay job que revoque el acceso si no pagan → acceso gratis indefinido. Es fuga de ingresos directa y no tiene contador de expiración.
-*Cambio:* modificar `isActiveSubscription` para que valide `current_period_end` (archivo `src/lib/subscription-status.ts`) y actualizar los 6 callers que tienen acceso a la fecha (mi-cuenta, revista, AccountMenuItems, checkout-poll, admin/subscribers, pdf/[editionId]). De este modo, las migrated cuya fecha de 7 días haya expirado serán denegadas de acceso.
-*Esfuerzo:* medio. · Estado: **hecho**.
-
-**2. `$ST-01` — estados `past_due` / `incomplete` / `trialing` sin manejo** · `AccountMenuItems.astro`, `mi-cuenta.astro`, `admin/suscriptoras.astro`
-Una usuaria cuyo cobro falló (o quedó `incomplete`) ve "Aún no estás suscripta", sin explicación ni camino para actualizar el pago. Churn + tickets de soporte.
-*Cambio:* distinguir esos estados en UI → mensaje "falló tu cobro, actualizá tu pago" + CTA.
-*Esfuerzo:* bajo. · Estado: **hecho** (labels en dropdown/mi-cuenta + CTA "Actualizar medio de pago" → `/api/portal`; Stripe portal, MP note→alert).
-
-**3. `P11` — Cancelación inconsistente BD vs gateway** · `FLOW-11`, `cancel-subscription.ts`, `admin/.../cancel`
-Si `cancel_subscription` (RPC) falla después de cancelar en Stripe/MP, el perfil queda "activo" en la app pero cancelado en el proveedor. Estado divergente sin auto-corrección.
-*Cambio:* revertir/compensar o dejar la canc local como fuente y re-sincronizar.
-*Esfuerzo:* medio. · Estado: **hecho (mitigación)** — guard de provider `migrated`/sin id + `providerWarnings` surfaceados en el dropdown público y en el toast del panel de suscriptoras; la compensación de gateway en `admin/.../cancel` ahora usa `provider_subscription_id` y avisa si quedó divergente.
-
-**4. `$ST-07` — PDF 401 devuelve JSON crudo** · `api/pdf/[editionId].ts`
+**1. `$ST-07` — PDF 401 devuelve JSON crudo** · `api/pdf/[editionId].ts`
 Descargar sin sesión/rol muestra un JSON plano en el navegador, sin redirigir a login ni explicación.
 *Cambio:* responder 302 a `/iniciar-sesion?redirect=...` cuando aplica.
 *Esfuerzo:* bajo. · Estado: pendiente.
 
 ### 🟠 Nivel 2 — Muy importante: retención y conversión
 
-**5. `$ST-04` — Falla silenciosa del sync de newsletter** · `FLOW-01`, `api/newsletter.ts`, `sender.ts`
+**2. `$ST-04` — Falla silenciosa del sync de newsletter** · `FLOW-01`, `api/newsletter.ts`, `sender.ts`
 El alta devuelve "¡Gracias por suscribirte!" aunque Sender haya rechazado (429/red) → la welcome nunca llega y la usuaria cree que está suscripta. Es exactamente el síntoma de las 4 emails faltantes de AGENTS "Próximo".
 *Cambio:* reintento con backoff, o aviso explícito, o cola de resync + visibilidad admin.
 *Esfuerzo:* medio. · Estado: pendiente.
 
-**6. `P5`/`P6` — Cancelar desde el dropdown no muestra feedback** · `Navbar.astro`
+**3. `P5`/`P6` — Cancelar desde el dropdown no muestra feedback** · `Navbar.astro`
 `cancelSub` usa `window.adminToast`, que solo existe en el layout de admin → en el sitio público el toast es nulo; el éxito solo se ve con el reload. El usuario queda sin confirmación inmediata de una acción importante.
 *Cambio:* mover toast/confirm a un helper global del Layout público (o feedback inline).
 *Esfuerzo:* bajo. · Estado: pendiente.
 
-**7. `$ST-03` — Emails `null` en notificación de edición** · `FLOW-16`, `notify.ts`
+**4. `$ST-03` — Emails `null` en notificación de edición** · `FLOW-16`, `notify.ts`
 Suscriptoras sin email en `profiles` cuentan como `failed` sin explicación; no se sabe a quién avisar ni por qué.
 *Cambio:* filtrar nulos, reportar "sin email: N".
 *Esfuerzo:* muy bajo. · Estado: pendiente.
 
 ### 🟡 Nivel 3 — Correctitud de datos / admin
 
-**8. `P2` — Stats de suscriptoras calculadas solo de la página actual** · `COMP-18`, `suscriptoras.astro`
+**5. `P2` — Stats de suscriptoras calculadas solo de la página actual** · `COMP-18`, `suscriptoras.astro`
 Activas/canceladas/sin-sub se cuentan sobre las 20 filas de la página, no el total real → números engañosos en el dashboard-contact.
 *Cambio:* mover esos counts al server (como ya se hace con `totalPending`/`totalRefunded`).
 *Esfuerzo:* bajo. · Estado: pendiente.
 
-**9. `$ST-05` — Uploads huérfanos** · `FLOW-15`, `EditionForm.astro`
+**6. `$ST-05` — Uploads huérfanos** · `FLOW-15`, `EditionForm.astro`
 Si el PUT sube a Storage y luego el POST/PATCH falla, el archivo queda huérfano para siempre.
 *Cambio:* limpiar por path si la edición no se creó / no referencia el path.
 *Esfuerzo:* medio. · Estado: pendiente.
 
-**10. `FLOW-16` — Notificación sin lista de fallidas accionable** · `notify.ts`
+**7. `FLOW-16` — Notificación sin lista de fallidas accionable** · `notify.ts`
 Se reporta "N fallaron" pero no hay retry ni lista.
 *Cambio:* devolver las fallidas (email+error) y permitir reintento.
 *Esfuerzo:* bajo-medio. · Estado: pendiente.
 
 ### 🟢 Nivel 4 — Robustez de UX
 
-**11. `$ST-06` — "Reintentar" no resuelve PDF expirado** · `PDFViewer.tsx`
+**8. `$ST-06` — "Reintentar" no resuelve PDF expirado** · `PDFViewer.tsx`
 La URL firmada (30 min) expira y el botón remonta el `<Document>` con la misma URL → loop de error sin mensaje real.
 *Cambio:* mensaje de expiración + regenerar URL (o instruir recarga).
 *Esfuerzo:* medio. · Estado: pendiente.
 
-**12. `P4` — Polling sin feedback de red** · `checkout-poll.ts`
+**9. `P4` — Polling sin feedback de red** · `checkout-poll.ts`
 Si el fetch falla en silencio se reintenta sin avisar; el único mensaje llega a los ~60s de timeout.
 *Cambio:* mensaje/simple tras N intentos fallidos consecutivos.
 *Esfuerzo:* bajo. · Estado: pendiente.
 
-**13. `P7` — Gate de acceso repetido en 5 lugares** · Navbar, revista, mi-cuenta, `/api/pdf`, AccountMenuItems
+**10. `P7` — Gate de acceso repetido en 5 lugares** · Navbar, revista, mi-cuenta, `/api/pdf`, AccountMenuItems
 Queries idénticas por request y la regla `active|migrated` vive dispersa (riesgo de divergencia futura).
 *Cambio:* consolidar en middleware/locals como fuente única.
 *Esfuerzo:* medio (toca varias páginas). · Estado: pendiente.
 
-**14. `P8` — Handshake de checkout con `localStorage`** · `checkout-intent.ts`
+**11. `P8` — Handshake de checkout con `localStorage`** · `checkout-intent.ts`
 Estado global frágil con 2 consumidores y TTL implícito. No es urgente, pero es candidato a simplificarse al tocar pagos.
 *Esfuerzo:* medio. · Estado: pendiente.
 
 ### ⚪ Nivel 5 — Deuda técnica / limpieza (sin urgencia)
 
-**15. `P12`** — `check-email-card` rama muerta (confirm OFF) — decidir remover o documentar.
-**16. `P13`** — `STRIPE_PRICE_ARS` definido pero no usado en UI.
-**17. `P15`** — `uploadEditionFile` legacy en `storage.ts` — borrar.
-**18. `P14`** — `sign` solo valida MIME por header, no magic bytes — menor.
+**12. `P12`** — `check-email-card` rama muerta (confirm OFF) — decidir remover o documentar.
+**13. `P13`** — `STRIPE_PRICE_ARS` definido pero no usado en UI.
+**14. `P15`** — `uploadEditionFile` legacy en `storage.ts` — borrar.
+**15. `P14`** — `sign` solo valida MIME por header, no magic bytes — menor.
 
 ### Cómo trabajar estos ítems
 
-Se abordan **uno a la vez**. Cada mejora arranca actualizando su línea `· Estado:` a `en progreso`, y al cerrarla se cambia a `hecho` (con fecha si se quiere). Estado: `pending` / `en progreso` / `hecho`.
+Se abordan **uno a la vez**. Cada mejora arranca actualizando su línea `· Estado:` a `en progreso`, y al cerrarla se cambia a `hecho` (con fecha si se quiere), pasando el ítem a la nota "Resueltas" del encabezado. Estado: `pending` / `en progreso` / `hecho`.
