@@ -70,7 +70,17 @@ export const GET: APIRoute = async ({ params, request, url }) => {
   }
 
   if (!allowed) {
-    return error("No autorizada. Suscribite para acceder al PDF completo.", 401);
+    if (!user) {
+      const original = `${url.pathname}${url.search}`;
+      return new Response(null, {
+        status: 302,
+        headers: { Location: `/iniciar-sesion?redirect=${encodeURIComponent(original)}` },
+      });
+    }
+    return new Response(null, {
+      status: 302,
+      headers: { Location: "/suscribirme" },
+    });
   }
 
   const isDownload = url.searchParams.get("download") === "1";

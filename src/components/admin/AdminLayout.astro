@@ -71,9 +71,6 @@ const items = [
       </div>
     </div>
 
-    <!-- Toast container -->
-    <div id="admin-toast-container"></div>
-
     <!-- Confirm modal -->
     <div id="admin-confirm-overlay" class="hidden">
       <div id="admin-confirm-box">
@@ -87,7 +84,7 @@ const items = [
     </div>
 
     <script>
-      import { showToast, showConfirm } from "./AdminUI";
+      import { showToast, showConfirm } from "../../lib/ui";
 
       (window as any).adminToast = showToast;
       (window as any).adminConfirm = showConfirm;

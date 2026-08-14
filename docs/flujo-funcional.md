@@ -327,9 +327,9 @@ Dropdown → "Cancelar suscripción" → showConfirm ("perderás el acceso al fi
        └─ error del gateway → providerWarnings (no falla el flujo)
    → RPC cancel_subscription (BD local; si falla → 500 y NO revierte el cancel del gateway ★)
  → {ok} → toast "Suscripción cancelada" + si warnings → alert() con detalle + reload
-DEPENDENCIA: NAVBAR/AccountMenuItems debe estar presente; usa window.adminToast (lo expone AdminLayout, no el Layout público ★)
+DEPENDENCIA: NAVBAR/AccountMenuItems debe estar presente; el toast es `showToast` de `src/lib/ui.ts` (compartido, auto-crea su contenedor)
 ```
-> Detección: `adminToast` se define en AdminLayout, pero el cancel-sub en dropdown del sitio público lo invoca `(window as any).adminToast` — en el sitio público ese global NO existe → toast silencioso. El flujo igual recarga, no rompe; feedback de éxito solo por reload.
+> Resuelto 2026-08-14 (P5/P6): el dropdown importa `showToast` de `src/lib/ui.ts` directo → el éxito se confirma con toast antes del reload.
 
 ### FLOW-12 · Acceso/descarga PDF  ⭐
 ```
@@ -338,7 +338,7 @@ GET /api/pdf/:id
   → storagePath extraíble → 302 directo a URL pública
   → user? → profile admin → allow · subscriber+sub active|migrated → allow
   → NO user o sin acceso → SI featured o kind=free → allow (de todos modos público)
-  └─ else → 401 JSON (★ navegación directa a un JSON, sin página amable)
+  └─ else → sin sesión → 302 `/iniciar-sesion?redirect=path+query` · con sesión → 302 `/suscribirme` (sin JSON)
   → createSignedUrl(path, 300s, download=1 si ?download=1) → 302
   → error signedUrl → 500 JSON (enlace muerto)
 ```
@@ -442,7 +442,7 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 |---|---|---|---|
 | $ST-01 | `past_due` / `incomplete` / `trialing` | AccountMenuItems, mi-cuenta gate, admin | Se muestran "Aún no estás suscripta" — confunde a una pagadora con cobro fallido; no hay aviso de "falló tu pago" |
 | $ST-02 | Migrated caducada | Flujo automático | Nada obliga a revocar el acceso tras los 7 días si no paga (no hay job/cron; solo lo resuelve un nuevo pago o acción admin) |
-| $ST-03 | Email null en profiles | notificar edición | select email → emails null intentan enviarse y cuentan como `failed` sin explicación; quien no tiene email no se notifica y nadie lo sabe |
+| $ST-03 | Email null en profiles | notificar edición | se filtran (no cuentan como `failed`) y se reporta `noEmail` | **hecho** |
 | $ST-04 | Newsletter sync silenciosa | FLOW-01 | éxito visible pero `sender_synced=false` (429 de Sender) y la welcome nunca llega; la usuaria cree que está suscripta al pago |
 | $ST-05 | Upload huérfano | FLOW-15 | archivo subido a storage sin edición que lo referencie; no hay limpieza |
 | $ST-06 | PDF expiró 30min | COMP-12 | "Reintentar" remonta el `<Document>` con la MISMA URL firmada expirada → loop de error sin mensaje real |
@@ -459,7 +459,7 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 - **P4 (FLOW-10 polling)**: timeout sin feedback de red; el único mensaje llega ~60s.
 
 **Acoplamientos fuertes**
-- **P5**: el cierre de sesión/cancelar/gestionar del sitio público dependen del **Navbar (COMP-01)** presente (delegación global de eventos). Si se aísla la página del navbar, se rompen. Además `(window).adminToast` no existe fuera del admin (P6).
+- **P5**: el cierre de sesión/cancelar/gestionar del sitio público dependen del **Navbar (COMP-01)** presente (delegación global de eventos). Si se aísla la página del navbar, se rompen. (El toast ya es compartido: `src/lib/ui.ts` — P6 resuelto 2026-08-14.)
 - **P7**: el gate de acceso (isActiveSubscription) se recalcula en 5 lugares distintos (Navbar, revista, mi-cuenta, /api/pdf, AccountMenuItems) con queries repetidas por request → centralizable en middleware/locals.
 - **P8**: handshake de checkout con localStorage (`checkout-intent`) + 2 consumidores (login y suscribirme) + cleanup en mi-cuenta. Funciona, pero es estado global frágil con TTL implícito (24h).
 - **P9**: dos formularios de newsletter con la misma lógica pero markup duplicado (COMP-02 y COMP-07).
@@ -488,7 +488,7 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 
 **5. Más dependencias:** COMP-01 Navbar (auth + dropdown + logout + portal + cancel, afecta a todas las públicas) · COMP-12 PDFViewer (2 páginas + gate `/api/pdf`) · gateway providers (Stripe/MP cargan en create-checkout, portal, cancel, refund, webhooks).
 
-**6. Estados débiles/faltantes:** $ST-01 past_due·incomplete·trialing · $ST-02 caducidad migrated · $ST-03 emails null · $ST-04 newsletter sync silenciosa · $ST-06 PDF expirado · $ST-07 401 sin landing.
+**6. Estados débiles/faltantes:** $ST-04 newsletter sync silenciosa · $ST-06 PDF expirado. (Resueltos: $ST-01, $ST-02, $ST-03, $ST-07.)
 
 **7. Optimizar primero:** (a) consolidar gate de acceso y rol en middleware (elimina P7 y base para $ST-01/$ST-02); (b) exponer estado de pago del proveedor en mi-cuenta (past_due → CTA "actualizá tu pago"); (c) resolver $ST-04 (reintento Sender con backoff o alerta al admin); (d) cleanup de archivos huérfanos en FLOW-15; (e) aislar la lógica de cuenta (logout/portal/cancel) del Navbar.
 
@@ -515,75 +515,60 @@ FASE 4 (arquitectura):
 Lista priorizada por urgencia (referencias al mapa). Los primeros ítems cuestan plata o acceso real; los últimos son deuda técnica.
 
 > **Resueltas en 2026-08-13** (borradas de la lista): `$ST-02` (expiración migrated valida `current_period_end` en los 6 callers incl. AccountMenuItems) · `$ST-01` (labels por estado + CTA "Actualizar medio de pago" → `/api/portal`) · `P11` (mitigado: guard provider `migrated`/sin id + `providerWarnings` surfaceados en dropdown y panel).
-
-### 🔴 Nivel 1 — Urgente: pérdida de ingresos o acceso incorrecto
-
-**1. `$ST-07` — PDF 401 devuelve JSON crudo** · `api/pdf/[editionId].ts`
-Descargar sin sesión/rol muestra un JSON plano en el navegador, sin redirigir a login ni explicación.
-*Cambio:* responder 302 a `/iniciar-sesion?redirect=...` cuando aplica.
-*Esfuerzo:* bajo. · Estado: pendiente.
+>
+> **Resueltas en 2026-08-14** (borradas de la lista): `$ST-07` (PDF sin acceso → 302 a `/iniciar-sesion?redirect=` o `/suscribirme`, sin JSON) · `P5/P6` (toast compartido `src/lib/ui.ts`, auto-crea contenedor; cancelar desde el dropdown del público ya muestra toast de éxito) · `$ST-03` (notify filtra emails null y reporta `noEmail`).
 
 ### 🟠 Nivel 2 — Muy importante: retención y conversión
 
-**2. `$ST-04` — Falla silenciosa del sync de newsletter** · `FLOW-01`, `api/newsletter.ts`, `sender.ts`
-El alta devuelve "¡Gracias por suscribirte!" aunque Sender haya rechazado (429/red) → la welcome nunca llega y la usuaria cree que está suscripta. Es exactamente el síntoma de las 4 emails faltantes de AGENTS "Próximo".
+**1. `$ST-04` — Falla silenciosa del sync de newsletter** · `FLOW-01`, `api/newsletter.ts`, `sender.ts`
+El alta devuelve "¡Gracias por suscribirte!" aunque Sender haya rechazado (429/red) → la welcome nunca llega y la usuaria cree que está suscripta. Es exactamente el síntoma de las 4 emails faltantes de AGENTS "Próximo". (El resync idempotente del handler `existing` ya existe; falta backoff/cola para el alta inicial que falla.)
 *Cambio:* reintento con backoff, o aviso explícito, o cola de resync + visibilidad admin.
 *Esfuerzo:* medio. · Estado: pendiente.
 
-**3. `P5`/`P6` — Cancelar desde el dropdown no muestra feedback** · `Navbar.astro`
-`cancelSub` usa `window.adminToast`, que solo existe en el layout de admin → en el sitio público el toast es nulo; el éxito solo se ve con el reload. El usuario queda sin confirmación inmediata de una acción importante.
-*Cambio:* mover toast/confirm a un helper global del Layout público (o feedback inline).
-*Esfuerzo:* bajo. · Estado: pendiente.
-
-**4. `$ST-03` — Emails `null` en notificación de edición** · `FLOW-16`, `notify.ts`
-Suscriptoras sin email en `profiles` cuentan como `failed` sin explicación; no se sabe a quién avisar ni por qué.
-*Cambio:* filtrar nulos, reportar "sin email: N".
-*Esfuerzo:* muy bajo. · Estado: pendiente.
-
 ### 🟡 Nivel 3 — Correctitud de datos / admin
 
-**5. `P2` — Stats de suscriptoras calculadas solo de la página actual** · `COMP-18`, `suscriptoras.astro`
+**2. `P2` — Stats de suscriptoras calculadas solo de la página actual** · `COMP-18`, `suscriptoras.astro`
 Activas/canceladas/sin-sub se cuentan sobre las 20 filas de la página, no el total real → números engañosos en el dashboard-contact.
 *Cambio:* mover esos counts al server (como ya se hace con `totalPending`/`totalRefunded`).
 *Esfuerzo:* bajo. · Estado: pendiente.
 
-**6. `$ST-05` — Uploads huérfanos** · `FLOW-15`, `EditionForm.astro`
+**3. `$ST-05` — Uploads huérfanos** · `FLOW-15`, `EditionForm.astro`
 Si el PUT sube a Storage y luego el POST/PATCH falla, el archivo queda huérfano para siempre.
 *Cambio:* limpiar por path si la edición no se creó / no referencia el path.
 *Esfuerzo:* medio. · Estado: pendiente.
 
-**7. `FLOW-16` — Notificación sin lista de fallidas accionable** · `notify.ts`
+**4. `FLOW-16` — Notificación sin lista de fallidas accionable** · `notify.ts`
 Se reporta "N fallaron" pero no hay retry ni lista.
 *Cambio:* devolver las fallidas (email+error) y permitir reintento.
 *Esfuerzo:* bajo-medio. · Estado: pendiente.
 
 ### 🟢 Nivel 4 — Robustez de UX
 
-**8. `$ST-06` — "Reintentar" no resuelve PDF expirado** · `PDFViewer.tsx`
+**5. `$ST-06` — "Reintentar" no resuelve PDF expirado** · `PDFViewer.tsx`
 La URL firmada (30 min) expira y el botón remonta el `<Document>` con la misma URL → loop de error sin mensaje real.
 *Cambio:* mensaje de expiración + regenerar URL (o instruir recarga).
 *Esfuerzo:* medio. · Estado: pendiente.
 
-**9. `P4` — Polling sin feedback de red** · `checkout-poll.ts`
+**6. `P4` — Polling sin feedback de red** · `checkout-poll.ts`
 Si el fetch falla en silencio se reintenta sin avisar; el único mensaje llega a los ~60s de timeout.
 *Cambio:* mensaje/simple tras N intentos fallidos consecutivos.
 *Esfuerzo:* bajo. · Estado: pendiente.
 
-**10. `P7` — Gate de acceso repetido en 5 lugares** · Navbar, revista, mi-cuenta, `/api/pdf`, AccountMenuItems
-Queries idénticas por request y la regla `active|migrated` vive dispersa (riesgo de divergencia futura).
+**7. `P7` — Gate de acceso repetido en 5 lugares** · Navbar, revista, mi-cuenta, `/api/pdf`, AccountMenuItems
+Queries idénticas por request y la regla `active|migrated` vive dispersa (riesgo de divergencia futura). El helper `isActiveSubscription` ya es la fuente única de la regla; falta consolidar las queries en middleware/locals.
 *Cambio:* consolidar en middleware/locals como fuente única.
 *Esfuerzo:* medio (toca varias páginas). · Estado: pendiente.
 
-**11. `P8` — Handshake de checkout con `localStorage`** · `checkout-intent.ts`
+**8. `P8` — Handshake de checkout con `localStorage`** · `checkout-intent.ts`
 Estado global frágil con 2 consumidores y TTL implícito. No es urgente, pero es candidato a simplificarse al tocar pagos.
 *Esfuerzo:* medio. · Estado: pendiente.
 
 ### ⚪ Nivel 5 — Deuda técnica / limpieza (sin urgencia)
 
-**12. `P12`** — `check-email-card` rama muerta (confirm OFF) — decidir remover o documentar.
-**13. `P13`** — `STRIPE_PRICE_ARS` definido pero no usado en UI.
-**14. `P15`** — `uploadEditionFile` legacy en `storage.ts` — borrar.
-**15. `P14`** — `sign` solo valida MIME por header, no magic bytes — menor.
+**9. `P12`** — `check-email-card` rama muerta (confirm OFF) — decidir remover o documentar.
+**10. `P13`** — `STRIPE_PRICE_ARS` definido pero no usado en UI.
+**11. `P15`** — `uploadEditionFile` legacy en `storage.ts` — borrar.
+**12. `P14`** — `sign` solo valida MIME por header, no magic bytes — menor.
 
 ### Cómo trabajar estos ítems
 

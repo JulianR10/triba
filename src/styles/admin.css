@@ -1,40 +1,4 @@
 @layer trb-ui {
-  /* === Admin Toast === */
-  #admin-toast-container {
-    position: fixed;
-    bottom: 1.5rem;
-    right: 1.5rem;
-    z-index: 99999;
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    pointer-events: none;
-  }
-
-  .admin-toast {
-    padding: 0.75rem 1.25rem;
-    border: 2px solid #000;
-    border-radius: 12px;
-    font-family: "Montserrat", Helvetica, Arial, sans-serif;
-    font-size: 0.875rem;
-    color: #35220A;
-    pointer-events: auto;
-    opacity: 0;
-    transform: translateY(1rem);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-    max-width: 24rem;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-  }
-
-  .admin-toast-visible {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  .admin-toast-success { background: #BCE85E; }
-  .admin-toast-error { background: #FFCCE4; }
-  .admin-toast-info { background: #FFF8EE; }
-
   /* === Admin Confirm Modal === */
   #admin-confirm-overlay {
     position: fixed;

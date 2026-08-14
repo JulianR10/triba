@@ -186,7 +186,7 @@ const authLinks = [
 
 <script>
   import { supabase } from "../lib/supabase";
-  import { showConfirm } from "./admin/AdminUI";
+  import { showToast, showConfirm } from "../lib/ui";
   import { onPageCycle } from "../lib/onPageCycle";
 
   declare global {
@@ -381,13 +381,12 @@ const authLinks = [
       });
       var data = await res.json();
       if (data.ok) {
-        var toast = (window as any).adminToast;
-        if (toast) { toast("Suscripción cancelada", "success"); }
+        showToast("Suscripción cancelada", "success");
         if (data.providerWarnings && data.providerWarnings.length > 0) {
           var warnMsg = "Cancelada en Triba, pero hubo un problema con el proveedor de pago: " + data.providerWarnings.join(". ");
           setTimeout(function () { alert(warnMsg); }, 500);
         }
-        setTimeout(function () { window.location.reload(); }, 1000);
+        setTimeout(function () { window.location.reload(); }, 1500);
       } else {
         alert(data.error || "Error al cancelar");
         btn.disabled = false;

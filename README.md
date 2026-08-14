@@ -37,6 +37,7 @@ Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABAS
 - **Cobro automático de las migradas recreado:** al morir el sitio WooCommerce viejo se cortaron los cobros recurrentes. Se recrearon **26 subscriptions** en Stripe (precio viejo €10,5/mes, `price_1U0obKLIVKTt84JHfVQV5CRI`) para las migradas con tarjeta + historial, con `billing_cycle_anchor` alineado al último cobro. Estado: 21 activas, 6 `incomplete` (tarjetas caídas). Script idempotente: `node --env-file=.env scripts/recreate-migrated-billing.mjs`.
 - **Cortesía migradas:** 7 días (`handle_new_user` → sub `migrated`). Las que tienen `stripe_subscription_id` linkean su sub real de Stripe al registrarse (migration `010_subscriber_stripe_link.sql`).
 - **Precios actuales:** €7 / $7 / $7.000 ARS. El €10,5 es solo para las migradas recreadas.
+- **Panel admin + accesos (14-Ago):** admin mobile sin scroll (nav grilla 3×2, ediciones como cards apiladas, botones content-sized) · toast compartido público/admin (`src/lib/ui.ts`, auto-crea contenedor) → cancelar desde el dropdown del sitio ya da feedback · `/api/pdf` sin acceso redirige a login o `/suscribirme` (sin JSON crudo) · "Notificar suscriptoras" filtra emails null y reporta "sin email: N".
 
 ## Pendientes
 

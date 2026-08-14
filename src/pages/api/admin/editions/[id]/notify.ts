@@ -30,7 +30,7 @@ export const POST: APIRoute = async ({ params, locals }) => {
     return ok({ notified: 0, total: 0 });
   }
 
-  const { data: subscribers, error: subsError } = await supabaseAdmin
+  const { data: rows, error: subsError } = await supabaseAdmin
     .from("profiles")
     .select("email")
     .eq("role", "subscriber");
@@ -40,8 +40,12 @@ export const POST: APIRoute = async ({ params, locals }) => {
     return error("Error obteniendo suscriptoras", 500);
   }
 
-  if (!subscribers || subscribers.length === 0) {
-    return ok({ notified: 0, total: 0 });
+  const all = rows ?? [];
+  const subscribers = all.filter((s): s is { email: string } => typeof s.email === "string" && s.email.length > 0);
+  const noEmail = all.length - subscribers.length;
+
+  if (subscribers.length === 0) {
+    return ok({ notified: 0, total: all.length, noEmail });
   }
 
   let notified = 0;
@@ -57,5 +61,5 @@ export const POST: APIRoute = async ({ params, locals }) => {
     }
   }
 
-  return ok({ notified, total: subscribers.length, failed });
+  return ok({ notified, total: all.length, failed, noEmail });
 };

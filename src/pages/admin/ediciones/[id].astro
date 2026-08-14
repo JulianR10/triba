@@ -70,7 +70,7 @@ if (!edition) {
           return;
         }
 
-        msg.textContent = `Notificadas: ${data.notified} de ${data.total} suscriptoras${data.failed ? ` (${data.failed} fallaron)` : ""}`;
+        msg.textContent = `Notificadas: ${data.notified} de ${data.total} suscriptoras${data.failed ? ` (${data.failed} fallaron)` : ""}${data.noEmail ? ` (${data.noEmail} sin email)` : ""}`;
         msg.className = "font-sans text-sm text-triba-green bg-triba-green/10 border border-triba-green rounded p-3";
         msg.classList.remove("hidden");
         (window as any).adminToast?.(`${data.notified} notificadas`, "success");

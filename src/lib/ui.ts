@@ -1,18 +1,22 @@
 export function showToast(message: string, type: "success" | "error" | "info" = "success") {
-  const container = document.getElementById("admin-toast-container");
-  if (!container) return;
+  let container = document.getElementById("triba-toast-container");
+  if (!container) {
+    container = document.createElement("div");
+    container.id = "triba-toast-container";
+    document.body.appendChild(container);
+  }
 
   const toast = document.createElement("div");
-  toast.className = `admin-toast admin-toast-${type}`;
+  toast.className = `triba-toast triba-toast-${type}`;
   toast.textContent = message;
   container.appendChild(toast);
 
   requestAnimationFrame(() => {
-    toast.classList.add("admin-toast-visible");
+    toast.classList.add("triba-toast-visible");
   });
 
   setTimeout(() => {
-    toast.classList.remove("admin-toast-visible");
+    toast.classList.remove("triba-toast-visible");
     setTimeout(() => toast.remove(), 300);
   }, 3500);
 }
