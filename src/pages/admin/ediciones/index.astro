@@ -6,11 +6,11 @@ const editions = await listEditionsForAdmin();
 ---
 
 <AdminLayout title="Ediciones" active="ediciones">
-  <div class="flex items-center justify-between mb-6">
+  <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-6">
     <p class="font-sans text-base text-triba-brown/70">
       {editions.length} {editions.length === 1 ? "edición" : "ediciones"} publicadas
     </p>
-    <a href="/admin/ediciones/nuevo" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">+ Nueva edición</a>
+    <a href="/admin/ediciones/nuevo" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all w-fit shrink-0 whitespace-nowrap">+ Nueva edición</a>
   </div>
 
   {
@@ -20,7 +20,7 @@ const editions = await listEditionsForAdmin();
         <a href="/admin/ediciones/nuevo" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider inline-block hover:scale-[1.02] transition-all">Crear la primera</a>
       </div>
     ) : (
-      <div class="bg-triba-white rounded-xl border-2 border-triba-black overflow-x-auto">
+      <div class="hidden md:block bg-triba-white rounded-xl border-2 border-triba-black overflow-x-auto">
         <table class="w-full font-sans text-sm">
           <thead class="bg-triba-bone border-b-2 border-triba-black">
             <tr>
@@ -68,6 +68,37 @@ const editions = await listEditionsForAdmin();
             ))}
           </tbody>
         </table>
+      </div>
+
+      <div class="md:hidden flex flex-col gap-3">
+        {editions.map((e) => (
+          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-4 flex gap-3 items-start">
+            <img src={e.cover_url} alt="" class="w-12 h-16 object-cover rounded border border-triba-black/20 shrink-0" />
+            <div class="flex-1 min-w-0">
+              <p class="font-heading text-sm uppercase tracking-wide text-triba-brown flex items-center gap-2 flex-wrap">
+                <span class="text-triba-red">#{e.edition_number}</span>
+                <span class="truncate">{e.title}</span>
+                {e.kind === "free" && (
+                  <span class="inline-block px-2 py-0.5 rounded-full bg-triba-green text-triba-brown font-heading text-[10px] uppercase tracking-wider">Gratis</span>
+                )}
+              </p>
+              {e.badge && <span class="font-sans text-xs text-triba-brown/60 block mt-0.5">{e.badge}</span>}
+              <div class="flex items-center gap-2 mt-2 flex-wrap">
+                {e.kind === "free" ? (
+                  <span class="inline-block px-2 py-0.5 rounded-full bg-triba-bone text-triba-brown/60 font-heading text-[10px] uppercase tracking-wider">Artículo</span>
+                ) : e.featured ? (
+                  <span class="inline-block px-2 py-0.5 rounded-full bg-triba-green text-triba-brown font-heading text-[10px] uppercase tracking-wider">Destacada</span>
+                ) : (
+                  <span class="inline-block px-2 py-0.5 rounded-full bg-triba-bone text-triba-brown/60 font-heading text-[10px] uppercase tracking-wider">Normal</span>
+                )}
+                <span class="font-sans text-xs text-triba-brown/70">
+                  {new Date(e.published_at).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })}
+                </span>
+              </div>
+            </div>
+            <a href={`/admin/ediciones/${e.id}`} class="inline-flex items-center justify-center min-h-[44px] min-w-[44px] font-sans text-xs text-triba-red hover:underline shrink-0 self-center">Editar</a>
+          </div>
+        ))}
       </div>
     )
   }
