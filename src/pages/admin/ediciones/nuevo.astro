@@ -22,7 +22,15 @@ try {
   <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6">
     <EditionForm
       mode="create"
-      edition={{ edition_number: suggestedNumber } as any}
+      edition={{
+        id: 0,
+        edition_number: suggestedNumber,
+        featured: false,
+        kind: "magazine",
+        published_at: new Date().toISOString(),
+        created_at: new Date().toISOString(),
+        versions: [],
+      }}
     />
   </div>
 </AdminLayout>

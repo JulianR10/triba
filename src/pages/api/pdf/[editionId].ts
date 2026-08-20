@@ -10,31 +10,58 @@ const BUCKET = "editions";
 
 export const prerender = false;
 
+interface VersionWithIssue {
+  id: number;
+  edition_id: number;
+  language: string;
+  pdf_url: string | null;
+  editions: {
+    id: number;
+    featured: boolean;
+    kind: string;
+    edition_number: number | null;
+  } | null;
+}
+
 export const GET: APIRoute = async ({ params, request, url }) => {
-  const editionId = Number(params.editionId);
-  if (!Number.isInteger(editionId)) {
+  const id = Number(params.editionId);
+  if (!Number.isInteger(id)) {
     return error("ID inválido", 400);
   }
 
-  const { data: edition, error: fetchError } = await supabaseAdmin
-    .from("editions")
-    .select("id, pdf_url, featured, kind, edition_number, title")
-    .eq("id", editionId)
-    .single();
+  // Resolve the localized version. `id` can be an edition_languages.id (new
+  // links) OR a legacy editions.id (old emails/bookmarks). Keep both working.
+  const { data: asVersion } = await supabaseAdmin
+    .from("edition_languages")
+    .select("id, edition_id, language, pdf_url, editions(id, featured, kind, edition_number)")
+    .eq("id", id)
+    .maybeSingle();
 
-  if (fetchError || !edition) {
+  let version = asVersion as VersionWithIssue | null;
+
+  if (!version) {
+    const lang = url.searchParams.get("lang") === "en" ? "en" : "es";
+    const { data: all } = await supabaseAdmin
+      .from("edition_languages")
+      .select("id, edition_id, language, pdf_url, editions(id, featured, kind, edition_number)")
+      .eq("edition_id", id);
+    const rows = (all ?? []) as VersionWithIssue[];
+    version = rows.find((v) => v.language === lang) ?? rows.find((v) => v.language === "es") ?? null;
+  }
+
+  if (!version) {
     return error("Edición no encontrada", 404);
   }
 
-  if (!edition.pdf_url) {
+  if (!version.pdf_url) {
     return error("Esta edición no tiene PDF", 404);
   }
 
-  const storagePath = extractStoragePath(edition.pdf_url);
+  const storagePath = extractStoragePath(version.pdf_url);
   if (!storagePath) {
     return new Response(null, {
       status: 302,
-      headers: { Location: edition.pdf_url },
+      headers: { Location: version.pdf_url },
     });
   }
 
@@ -65,7 +92,7 @@ export const GET: APIRoute = async ({ params, request, url }) => {
     }
   }
 
-  if (!allowed && (edition.featured || edition.kind === "free")) {
+  if (!allowed && (version.editions?.featured || version.editions?.kind === "free")) {
     allowed = true;
   }
 
@@ -92,7 +119,7 @@ export const GET: APIRoute = async ({ params, request, url }) => {
     });
 
   if (signedError || !signed) {
-    logger.error({ err: signedError, editionId }, "Error generating signed URL");
+    logger.error({ err: signedError, editionId: id }, "Error generating signed URL");
     return error("Error generando enlace de descarga", 500);
   }
 

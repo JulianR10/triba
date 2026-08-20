@@ -2,7 +2,11 @@ import type { APIRoute } from "astro";
 import { requireAdmin } from "../../../../lib/auth";
 import { ok, error } from "../../../../lib/response";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
-import { validateEditionInput } from "../../../../lib/admin/editions";
+import {
+  editionFormToInput,
+  validateEditionInput,
+  isEmptyVersion,
+} from "../../../../lib/admin/editions";
 import { logAdminAction } from "../../../../lib/admin/audit";
 
 export const prerender = false;
@@ -19,22 +23,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   try {
-    const kind = fd.get("kind") === "free" ? "free" : "magazine";
-
-    const input: Record<string, any> = {
-      kind,
-      edition_number: kind === "free" ? undefined : fd.get("edition_number") ? Number(fd.get("edition_number")) : undefined,
-      title: fd.get("title"),
-      description: fd.get("description"),
-      cover_url: fd.get("cover_url") || undefined,
-      pdf_url: fd.get("pdf_url") || null,
-      featured: kind === "free" ? false : fd.get("featured") === "true" || fd.get("featured") === "on",
-      badge: kind === "free" ? null : fd.get("badge") || null,
-    };
-
-    if (kind === "magazine" && !input.cover_url) {
-      return error("cover_url es obligatorio (subí una portada o pegá una URL)", 400);
-    }
+    const input = editionFormToInput(fd);
 
     const validated = validateEditionInput(input);
     if (!validated.ok) {
@@ -62,9 +51,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       }
     }
 
-    const { data, error: insertError } = await supabaseAdmin
+    const { data: issue, error: insertError } = await supabaseAdmin
       .from("editions")
-      .insert(validated.data)
+      .insert({
+        kind: validated.data.kind,
+        edition_number: validated.data.edition_number,
+        featured: validated.data.featured,
+      })
       .select("id")
       .single();
 
@@ -73,16 +66,42 @@ export const POST: APIRoute = async ({ request, locals }) => {
       return error(insertError.message, 500);
     }
 
+    const versions = validated.data.versions;
+    const { error: langError } = await supabaseAdmin
+      .from("edition_languages")
+      .insert(
+        Object.entries(versions)
+          .filter(([, v]) => !isEmptyVersion(v))
+          .map(([language, v]) => ({
+            edition_id: issue.id,
+            language: language as "es" | "en",
+            title: v!.title,
+            description: v!.description,
+            cover_url: v!.cover_url,
+            pdf_url: v!.pdf_url,
+            badge: v!.badge,
+          }))
+      );
+
+    if (langError) {
+      console.error("[editions.create] languages insert error:", langError);
+      return error(langError.message, 500);
+    }
+
     logAdminAction(
       admin.user.id,
       admin.profile.email,
       "edition.created",
       "edition",
-      String(data.id),
-      { edition_number: validated.data.edition_number, title: validated.data.title }
+      String(issue.id),
+      {
+        edition_number: validated.data.edition_number,
+        title: versions.es?.title,
+        languages: Object.keys(versions),
+      }
     );
 
-    return ok({ id: data.id });
+    return ok({ id: issue.id });
   } catch (e) {
     console.error("[editions.create] unexpected error:", e);
     return error(e instanceof Error ? e.message : "Error inesperado al crear la edición", 500);

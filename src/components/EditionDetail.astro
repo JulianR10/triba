@@ -1,0 +1,91 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import PDFViewer from "../components/PDFViewer.tsx";
+import { getEditionBySlug } from "../lib/editions";
+import { getSignedPdfUrl } from "../lib/storage";
+import { SITE_URL } from "../lib/site-url";
+import PatchTitle from "../components/PatchTitle.astro";
+import { t, type Locale } from "../i18n/ui";
+import { localizePath } from "../i18n/locale";
+
+const { slug, lang = "es" } = Astro.props as { slug: string; lang?: Locale };
+const dict = t(lang);
+
+const edition = await getEditionBySlug(slug, lang);
+
+if (!edition) {
+  return Astro.redirect(lang === "en" ? "/en/revista" : "/revista");
+}
+
+const canonical = lang === "en" ? `/en/revista/${slug}` : `/revista/${slug}`;
+const title = `${edition.title} — ${dict.edition.titleSuffix}`;
+const description = edition.description.split("\n")[0];
+
+const rawDate = edition.created_at;
+const isoDate = rawDate && !isNaN(Date.parse(rawDate))
+  ? new Date(rawDate).toISOString()
+  : undefined;
+
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": edition.title,
+  "description": description,
+  "image": edition.cover_url,
+  ...(isoDate ? { "datePublished": isoDate } : {}),
+  "author": {
+    "@type": "Organization",
+    "name": "Triba",
+    "url": SITE_URL
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Triba",
+    "logo": { "@type": "ImageObject", "url": `${SITE_URL}/logo-triba.svg` }
+  },
+  "inLanguage": lang,
+  "mainEntityOfPage": { "@type": "WebPage", "@id": `${SITE_URL}${canonical}` }
+};
+
+const seeAllHref = `${localizePath("/mi-cuenta", lang)}#tus-tomos`;
+---
+
+<Layout {title} {description} {canonical} lang={lang} navLogoAlways>
+  <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
+  <section class="page-shell page-gutter bg-triba-bone">
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 mb-16 md:mb-20 reveal" data-reveal>
+        <div class="flex-1 flex flex-col justify-center">
+          <p class="font-heading text-lg md:text-xl text-triba-red mb-2 uppercase tracking-wider">{dict.edition.editionLabel.replace("{n}", String(edition.edition_number ?? ""))}</p>
+          <PatchTitle content={edition.title} tag="h1" centered={false} class="text-3xl md:text-4xl text-triba-brown mb-6" />
+          <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8 whitespace-pre-line">{edition.description}</p>
+          <div class="flex flex-wrap gap-4">
+            {edition.pdf_url && (
+                <Button variant="primary" size="md" href="#visor-revista">{dict.edition.readHere}</Button>
+            )}
+            {edition.pdf_url && (
+              <Button variant="default" size="md" href={`/api/pdf/${edition.id}?lang=${lang}&download=1`}>{dict.edition.downloadPdf}</Button>
+            )}
+          </div>
+        </div>
+        <div class="flex-1">
+          <div class="max-w-sm mx-auto md:mx-0">
+            <img src={edition.cover_url} alt={dict.edition.coverAlt.replace("{title}", edition.title)} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-lg" />
+          </div>
+        </div>
+      </div>
+
+      {edition.pdf_url && (
+        <div class="mb-16 md:mb-20 scroll-anchor reveal" id="visor-revista" data-reveal>
+          <PatchTitle content={dict.edition.preview} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
+          <PDFViewer pdfUrl={edition.pdf_url ? (await getSignedPdfUrl(edition.pdf_url).catch(() => edition.pdf_url)) ?? edition.pdf_url : ''} client:only="react" />
+        </div>
+      )}
+
+      <div class="text-center">
+        <Button variant="default" href={seeAllHref}>{dict.edition.seeAll}</Button>
+      </div>
+    </div>
+  </section>
+</Layout>

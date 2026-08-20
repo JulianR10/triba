@@ -41,23 +41,29 @@ export interface UploadResult {
   path: string;
 }
 
+export interface StoragePathOptions {
+  slug?: string;
+  language?: "es" | "en";
+}
+
 export function buildStoragePath(
   kind: EditionFileKind,
   editionNumber: number | undefined,
   ext: string,
-  opts?: { slug?: string }
+  opts?: StoragePathOptions
 ): string {
+  const lang = opts?.language ?? "es";
   if (kind === "pdf") {
-    return `pdfs/${opts?.slug ?? `revista-${editionNumber}`}.${ext}`;
+    return `pdfs/${opts?.slug ?? `revista-${editionNumber}`}-${lang}.${ext}`;
   }
-  return `covers/edicion-${editionNumber}-${Date.now()}.${ext}`;
+  return `covers/edicion-${editionNumber}-${lang}-${Date.now()}.${ext}`;
 }
 
 export async function uploadEditionFile(
   file: File,
   kind: EditionFileKind,
   editionNumber: number,
-  opts?: { slug?: string }
+  opts?: StoragePathOptions
 ): Promise<UploadResult> {
   const rule = FILE_RULES[kind];
   if (file.size > rule.maxBytes) {

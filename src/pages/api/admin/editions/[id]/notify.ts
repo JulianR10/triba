@@ -16,17 +16,28 @@ export const POST: APIRoute = async ({ params, locals }) => {
     return error("ID inválido", 400);
   }
 
-  const { data: edition, error: fetchError } = await supabaseAdmin
+  const { data: issue, error: issueError } = await supabaseAdmin
     .from("editions")
-    .select("id, edition_number, title, description, cover_url, kind")
+    .select("id, edition_number, kind")
     .eq("id", editionId)
-    .single();
+    .maybeSingle();
 
-  if (fetchError || !edition) {
+  if (issueError || !issue) {
     return error("Edición no encontrada", 404);
   }
 
-  if (edition.kind !== "magazine" || !edition.cover_url) {
+  if (issue.kind !== "magazine") {
+    return ok({ notified: 0, total: 0 });
+  }
+
+  const { data: esVersion, error: versionError } = await supabaseAdmin
+    .from("edition_languages")
+    .select("title, description, cover_url")
+    .eq("edition_id", editionId)
+    .eq("language", "es")
+    .maybeSingle();
+
+  if (versionError || !esVersion || !esVersion.cover_url) {
     return ok({ notified: 0, total: 0 });
   }
 
@@ -53,7 +64,13 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
   for (const sub of subscribers) {
     try {
-      await sendNewEditionEmail(sub.email, edition as { title: string; edition_number: number; cover_url: string; description: string; id: number });
+      await sendNewEditionEmail(sub.email, {
+        id: issue.id,
+        edition_number: issue.edition_number,
+        title: esVersion.title,
+        description: esVersion.description,
+        cover_url: esVersion.cover_url,
+      });
       notified++;
     } catch (err) {
       failed++;

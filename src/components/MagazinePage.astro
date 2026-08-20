@@ -1,0 +1,248 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import { SITE_URL } from "../lib/site-url";
+import MagazineCarousel from "../components/MagazineCarousel.astro";
+import PDFViewer from "../components/PDFViewer.tsx";
+import PatchTitle from "../components/PatchTitle.astro";
+import { t, type Locale } from "../i18n/ui";
+import { localizePath } from "../i18n/locale";
+
+const { lang = "es" } = Astro.props as { lang?: Locale };
+const dict = t(lang);
+const canonical = lang === "en" ? "/en/revista" : "/revista";
+
+import { getEditions, getFreeArticle } from "../lib/editions";
+import { createSupabaseServerClient } from "../lib/supabase-server";
+import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
+
+const supabase = createSupabaseServerClient(Astro.request);
+const { data: { session } } = await supabase.auth.getSession();
+let hasActiveSub = false;
+let subInfo: { active: boolean; label: string; action?: string | null } | null = null;
+if (session?.user) {
+  const { data: p } = await supabase.from("profiles").select("subscription_id").eq("id", session.user.id).single();
+  if (p?.subscription_id) {
+    const { data: s } = await supabase.from("subscriptions").select("status, current_period_end").eq("id", p.subscription_id).single();
+    hasActiveSub = isActiveSubscription(s?.status, s?.current_period_end);
+    subInfo = subscriptionStatusInfo(s?.status, lang);
+  }
+}
+
+const allEditions = await getEditions(lang);
+const freeArticle = await getFreeArticle(lang);
+
+const editions = allEditions.map((e, i) => ({
+  id: e.id,
+  edition: `#${e.edition_number}`,
+  title: e.title,
+  description: e.description,
+  cover: e.cover_url ?? "",
+  pdf: e.pdf_url ? `/api/pdf/${e.id}?lang=${lang}` : "#",
+  featured: e.featured,
+  badge: e.badge,
+  flipColor: ["bg-triba-pink/80", "bg-triba-blue/80", "bg-triba-red/80"][i % 3],
+  backTextClass: ["text-triba-brown", "text-triba-white", "text-triba-brown"][i % 3],
+}));
+
+const featured = editions.find((e) => e.featured) || editions[0];
+
+const ctaAccount = localizePath("/mi-cuenta", lang);
+const ctaSubscribe = localizePath("/suscribirme", lang);
+---
+
+<Layout title={dict.magazine.title} description={dict.magazine.description} canonical={canonical} lang={lang} navLogoAlways>
+  <style>
+    .edition-ribbon {
+      position: absolute;
+      top: 0;
+      right: 0;
+      z-index: 20;
+      width: clamp(100px, 30vw, 150px);
+      height: clamp(100px, 30vw, 150px);
+      background: #E91A39;
+      clip-path: polygon(100% 0, 0 0, 100% 100%);
+      overflow: hidden;
+    }
+    .edition-ribbon span {
+      position: absolute;
+      top: 40%;
+      left: 60%;
+      transform: translate(-50%, -50%) rotate(45deg);
+      color: white;
+      font-family: 'Montserrat', sans-serif;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.12em;
+      text-align: center;
+      white-space: nowrap;
+      text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+    }
+  </style>
+  <script type="application/ld+json" set:html={JSON.stringify({
+    "@context": "https://schema.org",
+    "@type": "Periodical",
+    "name": "Triba",
+    "description": dict.magazine.description,
+    "url": `${SITE_URL}${canonical}`,
+    "issn": "",
+    "publisher": {
+      "@type": "Organization",
+      "name": "Triba",
+      "url": SITE_URL
+    },
+    "inLanguage": lang,
+    "numberOfIssues": allEditions.length,
+  })} />
+  <section class="page-shell page-gutter bg-triba-bone" data-has-sub={hasActiveSub ? "1" : "0"} data-cta-account={ctaAccount} data-cta-subscribe={ctaSubscribe} data-cover-alt={dict.magazine.coverAlt}>
+    <div class="max-w-6xl mx-auto">
+      <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content={dict.magazine.patchTitle} tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
+      </div>
+
+      <!-- Bloque 1: Edición destacada — dos columnas -->
+      <div class="flex flex-col md:flex-row gap-8 md:gap-12 mb-8 md:mb-20 reveal-stagger" data-reveal>
+        <!-- Columna izquierda: texto -->
+        <div class="flex-1 flex flex-col justify-center text-center md:text-left order-2 md:order-1">
+          {
+            dict.magazine.featuredParagraphs.map((p) => (
+              <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">{p}</p>
+            ))
+          }
+          <div class="flex justify-center md:justify-start">
+            {hasActiveSub ? (
+              <Button variant="default" id="featured-cta" href={ctaAccount} class="px-10 py-4 text-base">
+                {dict.magazine.continueReading}
+              </Button>
+            ) : (
+              <>
+                <p class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">
+                  {subInfo?.label}
+                </p>
+                <Button variant="default" id="featured-cta" href={ctaSubscribe} class="px-10 py-4 text-base">
+                  {dict.magazine.iWantIt}
+                </Button>
+              </>
+            )}
+          </div>
+        </div>
+        <!-- Columna derecha: portada -->
+        <div class="flex-1 flex items-center justify-center relative order-1 md:order-2">
+          <div class="relative w-full max-w-sm overflow-hidden rounded-xl">
+            <img id="featured-cover" src={featured.cover} alt={dict.magazine.coverAlt.replace("{title}", featured.title)} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-lg hover:scale-[1.02] transition-transform duration-500" />
+            <!-- Badge ribbon "Última edición" -->
+            <div class="edition-ribbon absolute top-0 right-0 z-20">
+              <span>{dict.magazine.latestEdition}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Bloque 2: Carrusel de ediciones -->
+      <div class="relative bg-white w-full px-5 md:px-10 lg:px-20 py-12 md:py-20 rounded-[20px] mx-auto mb-12 md:mb-20 reveal" data-reveal>
+        <div class="max-w-6xl mx-auto">
+          <MagazineCarousel editions={editions} selectedId={featured.id} lang={lang} />
+        </div>
+      </div>
+
+      <!-- Bloque 3: Vista previa de artículo -->
+      <div id="visor-revista" class="scroll-anchor flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16">
+        <div class="flex-1 order-2 md:order-1">
+          <PDFViewer pdfUrl={freeArticle?.pdf_url ?? "/articulo-gratis.pdf"} client:only="react" />
+        </div>
+        <div class="flex-1 flex flex-col justify-center order-1 md:order-2 text-center md:text-left">
+          <PatchTitle tag="h2" class="mb-4 text-2xl md:text-3xl" lines={dict.magazine.freeArticlePatch} />
+          <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-6">
+            {dict.magazine.freeArticleLead1}
+          </p>
+          <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8">
+            {dict.magazine.freeArticleLead2}
+          </p>
+          <div class="flex justify-center md:justify-start">
+            {hasActiveSub ? (
+              <Button variant="primary" href={ctaAccount}>{dict.magazine.continueReading}</Button>
+            ) : (
+              <>
+                <p class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">
+                  {subInfo?.label}
+                </p>
+                <Button variant="primary" href={ctaSubscribe}>{dict.magazine.subscribe}</Button>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { onPageCycle } from "../lib/onPageCycle";
+  function setup() {
+    var featuredCover = document.getElementById("featured-cover") as HTMLImageElement | null;
+    var featuredCta = document.getElementById("featured-cta") as HTMLAnchorElement | null;
+    var section = document.querySelector("section[data-has-sub]") as HTMLElement | null;
+    var isSubscriber = section?.getAttribute("data-has-sub") === "1";
+    var ctaAccount = section?.getAttribute("data-cta-account") || "/mi-cuenta";
+    var ctaSubscribe = section?.getAttribute("data-cta-subscribe") || "/suscribirme";
+    var coverAltTpl = section?.getAttribute("data-cover-alt") || "Portada de {title}";
+    var carousel = document.querySelector("[data-carousel]")!;
+
+    var featuredEl = document.querySelector("[data-featured]") as HTMLElement | null;
+    var currentId = featuredEl ? parseInt(featuredEl.dataset.editionId || "0") : 0;
+
+    function readEdition(card: HTMLElement) {
+      return {
+        id: parseInt(card.dataset.editionId!),
+        edition: card.dataset.editionName!,
+        title: card.dataset.title!,
+        description: card.dataset.description!,
+        cover: card.dataset.cover!,
+        pdf: card.dataset.pdf!,
+        badge: card.dataset.badge || null,
+      };
+    }
+
+    function setActiveCard(id: number) {
+      if (!carousel) return;
+      var cards = carousel.querySelectorAll<HTMLElement>("[data-edition-id]");
+      for (var i = 0; i < cards.length; i++) {
+        var cardId = parseInt(cards[i].dataset.editionId!);
+        var isSelected = cardId === id;
+        cards[i].setAttribute("aria-selected", String(isSelected));
+      }
+    }
+
+    function selectEdition(id: number) {
+      if (id === currentId) return;
+      var card = carousel.querySelector<HTMLElement>('[data-edition-id="' + id + '"]');
+      if (!card) return;
+      var ed = readEdition(card);
+      currentId = id;
+
+      if (featuredCover) {
+        featuredCover.src = ed.cover;
+        featuredCover.alt = coverAltTpl.replace("{title}", ed.title);
+      }
+      if (featuredCta) {
+        featuredCta.href = isSubscriber ? ctaAccount : ctaSubscribe;
+      }
+
+      setActiveCard(id);
+    }
+
+    if (carousel) {
+      carousel.addEventListener("click", function (e) {
+        var target = e.target as HTMLElement | null;
+        var card = target ? target.closest<HTMLElement>("[data-edition-id]") : null;
+        if (card) {
+          var id = parseInt(card.dataset.editionId!);
+          selectEdition(id);
+        }
+      });
+    }
+  }
+
+  onPageCycle(setup);
+</script>

@@ -1,29 +1,48 @@
 ---
 import Button from "./Button.astro";
+import { t, type Locale } from "../i18n/ui";
+
+const { lang = "es" } = Astro.props as { lang?: Locale };
+const dict = t(lang);
+
+const messages = {
+  thanks: dict.newsletter.thanks,
+  existingResynced: dict.newsletter.existingResynced,
+  existing: dict.newsletter.existing,
+  error: dict.newsletter.error,
+  networkError: dict.newsletter.networkError,
+};
 ---
 
-<form class="flex flex-col sm:flex-row gap-3 items-center" id="newsletter-form">
+<form class="flex flex-col sm:flex-row gap-3 items-center" id="newsletter-form" data-messages={JSON.stringify(messages)}>
   <div class="flex-1 w-full flex items-center gap-3">
     <input
       type="email"
       name="email"
-      placeholder="tu email"
+      placeholder={dict.newsletter.placeholder}
       required
       class="flex-1 px-4 py-3 border-2 border-triba-black bg-white text-triba-brown font-sans text-sm placeholder:text-triba-brown/50 focus:outline-none focus:ring-2 focus:ring-triba-red/30 rounded-md"
     />
     <div id="newsletter-msg" class="hidden font-sans text-sm text-triba-red whitespace-nowrap"></div>
   </div>
-  <Button variant="primary" class="shrink-0" type="submit">Suscribirme</Button>
+  <Button variant="primary" class="shrink-0" type="submit">{dict.newsletter.subscribe}</Button>
 </form>
 
 <script>
-  import { setupNewsletterForm } from "../scripts/newsletter-handler";
+  import { setupNewsletterForm, type NewsletterMessages } from "../scripts/newsletter-handler";
   import { onPageCycle } from "../lib/onPageCycle";
 
   function setup() {
     const form = document.getElementById("newsletter-form") as HTMLFormElement | null;
     const msg = document.getElementById("newsletter-msg");
-    if (form && msg) setupNewsletterForm(form, msg);
+    if (form && msg) {
+      let messages: NewsletterMessages | undefined;
+      const raw = form.dataset.messages;
+      if (raw) {
+        try { messages = JSON.parse(raw) as NewsletterMessages; } catch { /* keep defaults */ }
+      }
+      setupNewsletterForm(form, msg, messages);
+    }
   }
 
   onPageCycle(setup);

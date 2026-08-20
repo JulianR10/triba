@@ -1,6 +1,26 @@
 const BASE_CLASSES = "font-sans text-sm text-triba-red whitespace-nowrap";
 
-export function setupNewsletterForm(formEl: HTMLFormElement, msgEl: HTMLElement) {
+export interface NewsletterMessages {
+  thanks: string;
+  existingResynced: string;
+  existing: string;
+  error: string;
+  networkError: string;
+}
+
+const DEFAULT_MESSAGES: NewsletterMessages = {
+  thanks: "¡Gracias por suscribirte!",
+  existingResynced: "Ya estás suscripta — te reenviamos la bienvenida",
+  existing: "Ya estás suscripta",
+  error: "Error al suscribirte. Intentalo de nuevo.",
+  networkError: "Error de conexión. Intentalo de nuevo.",
+};
+
+export function setupNewsletterForm(
+  formEl: HTMLFormElement,
+  msgEl: HTMLElement,
+  messages: NewsletterMessages = DEFAULT_MESSAGES,
+) {
   msgEl.setAttribute("aria-live", "polite");
 
   formEl.addEventListener("submit", async (e) => {
@@ -27,19 +47,15 @@ export function setupNewsletterForm(formEl: HTMLFormElement, msgEl: HTMLElement)
       const data = await res.json();
 
       if (data.ok) {
-        setMsg("¡Gracias por suscribirte!");
+        setMsg(messages.thanks);
         input.value = "";
       } else if (data.existing) {
-        setMsg(
-          data.resynced
-            ? "Ya estás suscripta — te reenviamos la bienvenida"
-            : "Ya estás suscripta",
-        );
+        setMsg(data.resynced ? messages.existingResynced : messages.existing);
       } else {
-        setMsg("Error al suscribirte. Intentalo de nuevo.");
+        setMsg(messages.error);
       }
     } catch {
-      setMsg("Error de conexión. Intentalo de nuevo.");
+      setMsg(messages.networkError);
     } finally {
       if (btn) {
         btn.disabled = false;

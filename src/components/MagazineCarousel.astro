@@ -1,6 +1,7 @@
 ---
 import FlipCover from "./FlipCover.astro";
 import MagazineScroller from "./MagazineScroller.astro";
+import type { Locale } from "../i18n/ui";
 
 export interface Edition {
   id: number;
@@ -18,15 +19,18 @@ export interface Edition {
 export interface Props {
   editions: Edition[];
   selectedId?: number;
+  lang?: Locale;
 }
 
-const { editions, selectedId } = Astro.props;
+const { editions, selectedId, lang = "es" } = Astro.props;
+const ariaLabel = lang === "en" ? "Editions carousel" : "Carrusel de ediciones";
+const coverAlt = lang === "en" ? "Cover of edition" : "Portada de edición";
 ---
 
 <MagazineScroller
   arrows
   keyboard
-  ariaLabel="Carrusel de ediciones"
+  ariaLabel={ariaLabel}
   scrollClass="py-8 md:py-10"
   trackClass="[&>*:first-child]:ml-auto [&>*:last-child]:mr-auto"
   rootData={{ "data-carousel": "" }}
@@ -49,13 +53,14 @@ const { editions, selectedId } = Astro.props;
     >
       <FlipCover
         image={ed.cover}
-        alt={`Portada de edición ${ed.edition}`}
+        alt={`${coverAlt} ${ed.edition}`}
         flipColor={ed.flipColor}
         backTextClass={ed.backTextClass}
         rounded="rounded-xl"
         textSize="text-sm"
         pad="p-4"
         badge={ed.badge}
+        lang={lang}
       />
     </div>
   ))}

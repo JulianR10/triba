@@ -2,6 +2,8 @@ import { defineMiddleware } from "astro/middleware";
 import { createSupabaseServerClient } from "./lib/supabase-server";
 import { supabaseAdmin } from "./lib/supabase-admin";
 import type { Profile } from "./lib/types";
+import { getLocaleFromUrl } from "./i18n/locale";
+import { DEFAULT_LOCALE, type Locale } from "./i18n/ui";
 
 const supabaseUrl =
   import.meta.env.PUBLIC_SUPABASE_URL ||
@@ -36,6 +38,12 @@ const CSP_BASE = [
   "form-action 'self'",
 ].join("; ");
 
+function parseLocaleCookie(cookieHeader: string | null): Locale | null {
+  if (!cookieHeader) return null;
+  const match = cookieHeader.match(/(?:^|;\s*)triba_locale=(es|en)(?:;|$)/);
+  return match ? (match[1] as Locale) : null;
+}
+
 export const onRequest = defineMiddleware(async (context, next) => {
   const supabase = createSupabaseServerClient(context.request);
   const {
@@ -60,6 +68,14 @@ export const onRequest = defineMiddleware(async (context, next) => {
   context.locals.supabase = supabase;
   context.locals.user = user;
   context.locals.profile = profile;
+
+  // The URL is authoritative for existing routes; the `triba_locale` cookie is
+  // only a fallback (e.g. locale-neutral 404s) and the seed for Fase E
+  // (emails by preferred_locale). Physical routes decide the rendered locale.
+  const urlLocale = getLocaleFromUrl(context.url);
+  const cookieLocale = parseLocaleCookie(context.request.headers.get("cookie"));
+  context.locals.locale =
+    urlLocale !== DEFAULT_LOCALE ? urlLocale : (cookieLocale ?? urlLocale);
 
   if (isAdminRoute) {
     if (!user) {

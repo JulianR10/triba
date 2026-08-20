@@ -5,5 +5,6 @@ declare namespace App {
     supabase: ReturnType<typeof import("./lib/supabase-server").createSupabaseServerClient>;
     user: import("@supabase/supabase-js").User | null;
     profile: import("./lib/types").Profile | null;
+    locale: import("./i18n/ui").Locale;
   }
 }

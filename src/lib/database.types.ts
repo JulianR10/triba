@@ -76,12 +76,7 @@ export interface Database {
         Row: {
           id: number;
           edition_number: number | null;
-          title: string;
-          description: string;
-          cover_url: string | null;
-          pdf_url: string | null;
           featured: boolean;
-          badge: string | null;
           kind: "magazine" | "free";
           published_at: string;
           created_at: string;
@@ -89,12 +84,7 @@ export interface Database {
         Insert: {
           id?: number;
           edition_number?: number | null;
-          title: string;
-          description: string;
-          cover_url?: string | null;
-          pdf_url?: string | null;
           featured?: boolean;
-          badge?: string | null;
           kind?: "magazine" | "free";
           published_at?: string;
           created_at?: string;
@@ -102,17 +92,56 @@ export interface Database {
         Update: {
           id?: number;
           edition_number?: number | null;
-          title?: string;
-          description?: string;
-          cover_url?: string | null;
-          pdf_url?: string | null;
           featured?: boolean;
-          badge?: string | null;
           kind?: "magazine" | "free";
           published_at?: string;
           created_at?: string;
         };
         Relationships: [];
+      };
+      edition_languages: {
+        Row: {
+          id: number;
+          edition_id: number;
+          language: "es" | "en";
+          title: string;
+          description: string;
+          cover_url: string | null;
+          pdf_url: string | null;
+          badge: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: number;
+          edition_id: number;
+          language: "es" | "en";
+          title: string;
+          description?: string;
+          cover_url?: string | null;
+          pdf_url?: string | null;
+          badge?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: number;
+          edition_id?: number;
+          language?: "es" | "en";
+          title?: string;
+          description?: string;
+          cover_url?: string | null;
+          pdf_url?: string | null;
+          badge?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "edition_languages_edition_id_fkey";
+            columns: ["edition_id"];
+            isOneToOne: false;
+            referencedRelation: "editions";
+            referencedColumns: ["id"];
+          }
+        ];
       };
       edition_pages: {
         Row: {

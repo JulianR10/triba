@@ -54,8 +54,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
   }
 
   const slug = kind === "pdf" && typeof body.slug === "string" && body.slug ? body.slug : undefined;
+  const language = body.language === "en" ? "en" : "es";
   const ext = fileExt(filename) || (kind === "pdf" ? "pdf" : "jpg");
-  const path = buildStoragePath(kind, editionNumber as number | undefined, ext, { slug });
+  const path = buildStoragePath(kind, editionNumber as number | undefined, ext, { slug, language });
 
   const { data, error: signError } = await supabaseAdmin.storage
     .from(BUCKET)

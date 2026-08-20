@@ -1,4 +1,6 @@
 ---
+import type { Locale } from "../i18n/ui";
+
 interface Props {
   provider: "stripe" | "mercadopago";
   currency: "EUR" | "USD" | "ARS";
@@ -6,10 +8,28 @@ interface Props {
   size?: "sm" | "md";
   label?: string;
   fullWidth?: boolean;
+  lang?: Locale;
 }
 
-const { provider, currency, variant = "primary", size = "md", label, fullWidth } = Astro.props;
-const displayLabel = label || `${provider === "stripe" ? "Tarjeta de débito/crédito" : provider === "mercadopago" ? "Mercado Pago" : "Pagar"}`;
+const { provider, currency, variant = "primary", size = "md", label, fullWidth, lang = "es" } = Astro.props;
+
+const providerLabels: Record<string, { es: string; en: string }> = {
+  stripe: { es: "Tarjeta de débito/crédito", en: "Debit/credit card" },
+  mercadopago: { es: "Mercado Pago", en: "Mercado Pago" },
+};
+const displayLabel =
+  label ||
+  (provider === "stripe" || provider === "mercadopago"
+    ? providerLabels[provider][lang]
+    : lang === "en"
+      ? "Pay"
+      : "Pagar");
+
+const messages = {
+  processing: lang === "en" ? "Processing..." : "Procesando...",
+  error: lang === "en" ? "Error processing the payment. Try again." : "Error al procesar el pago. Intentalo de nuevo.",
+};
+
 const btnClass = `
   inline-flex items-center justify-center font-heading uppercase tracking-wider transition-all duration-200 hover:scale-[1.02]
   ${fullWidth ? "w-full" : ""}
@@ -22,7 +42,7 @@ const btnClass = `
 `;
 ---
 
-<button type="button" data-provider={provider} data-currency={currency} class={btnClass} data-magnetic>
+<button type="button" data-provider={provider} data-currency={currency} data-messages={JSON.stringify(messages)} class={btnClass} data-magnetic>
   {displayLabel}
 </button>
 <p class="font-sans text-xs text-triba-red text-center mt-1 hidden" data-checkout-error></p>
@@ -38,19 +58,26 @@ const btnClass = `
         const provider = btn.getAttribute("data-provider");
         const currency = btn.getAttribute("data-currency");
         const originalText = btn.textContent;
+        let messages = { processing: "Procesando...", error: "Error al procesar el pago. Intentalo de nuevo." };
+        const raw = btn.getAttribute("data-messages");
+        if (raw) {
+          try { messages = JSON.parse(raw); } catch { /* keep defaults */ }
+        }
 
         const errorEl = btn.parentElement?.querySelector("[data-checkout-error]");
         if (errorEl) errorEl.classList.add("hidden");
         (btn as HTMLButtonElement).disabled = true;
-        btn.textContent = "Procesando...";
+        btn.textContent = messages.processing;
 
         try {
           if (!supabase) throw new Error("Supabase no configurado");
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) {
             saveCheckoutIntent(provider!, currency!);
+            const isEn = window.location.pathname.startsWith("/en/");
+            const loginPath = isEn ? "/en/iniciar-sesion" : "/iniciar-sesion";
             const redirect = encodeURIComponent(window.location.pathname + "?currency=" + currency);
-            window.location.href = "/iniciar-sesion?signup=true&redirect=" + redirect;
+            window.location.href = loginPath + "?signup=true&redirect=" + redirect;
             return;
           }
 
@@ -68,7 +95,7 @@ const btnClass = `
         } catch (err: any) {
           const errorEl = btn.parentElement?.querySelector("[data-checkout-error]");
           if (errorEl) {
-            errorEl.textContent = err.message || "Error al procesar el pago. Intentalo de nuevo.";
+            errorEl.textContent = err.message || messages.error;
             errorEl.classList.remove("hidden");
           }
           btn.textContent = originalText;

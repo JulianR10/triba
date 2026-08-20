@@ -1,11 +1,17 @@
 /**
- * Importa los PDFs de los 3 tomos a Supabase:
+ * ⚠️ DEPRECADO (18-Ago-2026). Este script escribe en el esquema legacy de la
+ * tabla `editions` (columnas title/description/cover_url/pdf_url), que ya no
+ * existe: el contenido vive en `edition_languages`. Re-correrlo falla con
+ * "column does not exist" y/o deja datos inconsistentes. Los PDFs ya están en
+ * Storage; el alta mensual se hace desde /admin/ediciones. NO USAR.
+ *
+ * Histórico: Importa los PDFs de los 3 tomos a Supabase:
  *  - Extrae portada (1er página) como PNG
  *  - Sube portada y PDF a Storage
  *  - Actualiza o crea registro en la tabla editions
  *  - Marca el último como destacado
  *
- * Usage:
+ * Usage (NO USAR):
  *   node --env-file=.env scripts/import-pdfs.mjs
  */
 

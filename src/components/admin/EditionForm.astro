@@ -2,11 +2,11 @@
 import Input from "../Input.astro";
 import Button from "../Button.astro";
 import { isStorageConfigured } from "../../lib/storage";
-import type { Edition } from "../../lib/editions";
+import type { AdminEditionRow } from "../../lib/admin/editions";
 
 interface Props {
   mode: "create" | "edit";
-  edition?: Edition | null;
+  edition?: AdminEditionRow | null;
 }
 
 const { mode, edition } = Astro.props;
@@ -14,6 +14,11 @@ const storageReady = isStorageConfigured();
 const formId = `edition-form-${mode}`;
 const formMsgId = "form-msg";
 const initialKind = edition?.kind ?? "magazine";
+const versionsByLang = new Map(
+  (edition?.versions ?? []).map((v) => [v.language, v])
+);
+const esVersion = versionsByLang.get("es");
+const enVersion = versionsByLang.get("en");
 ---
 
 <form id={formId} data-edition-id={edition?.id ?? ""} data-mode={mode} class="space-y-6">
@@ -23,7 +28,6 @@ const initialKind = edition?.kind ?? "magazine";
       <label
         for="kind-magazine"
         class="flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer hover:border-triba-black transition-colors"
-        id="kind-label-magazine"
       >
         <input
           type="radio"
@@ -35,13 +39,12 @@ const initialKind = edition?.kind ?? "magazine";
         />
         <div>
           <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Para suscriptoras</p>
-          <p class="font-sans text-xs text-triba-brown/60">Edición completa con portada y PDF. Acceso restringido.</p>
+          <p class="font-sans text-xs text-triba-brown/60">Un ejemplar en dos idiomas: portada + PDF en español y (opcional) en inglés. Acceso restringido.</p>
         </div>
       </label>
       <label
         for="kind-free"
         class="flex items-center gap-3 p-4 rounded-xl border-2 cursor-pointer hover:border-triba-black transition-colors"
-        id="kind-label-free"
       >
         <input
           type="radio"
@@ -53,87 +56,23 @@ const initialKind = edition?.kind ?? "magazine";
         />
         <div>
           <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Artículo gratis universal</p>
-          <p class="font-sans text-xs text-triba-brown/60">PDF público que se muestra en /revista. Sin acceso restringido.</p>
+          <p class="font-sans text-xs text-triba-brown/60">PDF público que se muestra en /revista, sin acceso restringido.</p>
         </div>
       </label>
     </div>
   </fieldset>
 
-  <div id="magazine-fields" class="space-y-6">
-    <div class="grid md:grid-cols-2 gap-4">
-      <Input
-        label="Número de edición"
-        name="edition_number"
-        type="number"
-        required
-        minlength={1}
-        placeholder="1"
-        value={edition?.edition_number?.toString() ?? ""}
-        validationMsg="Ingresá un número entero positivo"
-      />
-      <Input
-        label="Badge (opcional)"
-        name="badge"
-        type="text"
-        placeholder="Última edición"
-        value={edition?.badge ?? ""}
-      />
-    </div>
-
-    <div>
-      <label for="description" class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Descripción</label>
-      <textarea
-        id="description"
-        name="description"
-        rows="5"
-        required
-        placeholder="Resumen de la edición. Se muestra en la home y en la portada del PDF."
-        class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none"
-      >{edition?.description ?? ""}</textarea>
-    </div>
-
-    <div>
-      <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">Portada (imagen)</p>
-      <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-bone">
-        {edition?.cover_url && (
-          <img id="cover-preview" src={edition.cover_url} alt="Portada actual" class="w-32 h-auto mx-auto mb-3 rounded border border-triba-black/20" />
-        )}
-        <input
-          type="file"
-          name="cover_file"
-          accept="image/jpeg,image/png,image/webp,image/avif"
-          class="font-sans text-xs w-full"
-        />
-        <p class="font-sans text-xs text-triba-brown/60 mt-2">JPG/PNG/WebP/AVIF, máx 5 MB. Si no subís archivo nuevo, se conserva la portada actual.</p>
-      </div>
-    </div>
-  </div>
-
-  <Input
-    label="Título"
-    name="title"
-    type="text"
-    placeholder="Tomo 1 — Identidades"
-    value={edition?.title ?? ""}
-  />
-
-  <div>
-    <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">PDF</p>
-    <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-bone">
-      {edition?.pdf_url && (
-        <p class="font-sans text-xs text-triba-brown/70 mb-2">PDF actual: <a href={edition.pdf_url} class="text-triba-red hover:underline" target="_blank" rel="noopener">ver</a></p>
-      )}
-      <input
-        type="file"
-        name="pdf_file"
-        accept="application/pdf"
-        class="font-sans text-xs w-full"
-      />
-      <p class="font-sans text-xs text-triba-brown/60 mt-2">PDF, máx 50 MB. Si no subís archivo nuevo, se conserva el actual.</p>
-    </div>
-  </div>
-
-  <div id="featured-field">
+  <div id="issue-fields" class="grid md:grid-cols-2 gap-4">
+    <Input
+      label="Número de edición"
+      name="edition_number"
+      type="number"
+      required
+      minlength={1}
+      placeholder="1"
+      value={edition?.edition_number?.toString() ?? ""}
+      validationMsg="Ingresá un número entero positivo"
+    />
     <label class="flex items-center gap-3 p-4 rounded-xl border-2 border-triba-black/20 bg-triba-white cursor-pointer hover:border-triba-black">
       <input
         type="checkbox"
@@ -143,14 +82,173 @@ const initialKind = edition?.kind ?? "magazine";
         class="w-5 h-5 accent-triba-red"
       />
       <div>
-        <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Marcar como edición destacada</p>
-        <p class="font-sans text-xs text-triba-brown/60">Solo puede haber una a la vez. Quita el destaque de la anterior automáticamente.</p>
+        <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Ejemplar destacado</p>
+        <p class="font-sans text-xs text-triba-brown/60">Solo puede haber uno a la vez. Quita el destaque del anterior automáticamente.</p>
       </div>
     </label>
   </div>
 
-  <input type="hidden" name="existing_cover_url" value={edition?.cover_url ?? ""} />
-  <input type="hidden" name="existing_pdf_url" value={edition?.pdf_url ?? ""} />
+  <!-- ===== VERSIÓN EN ESPAÑOL ===== -->
+  <div data-lang-section data-lang="es">
+    <div class="flex items-center gap-3 mb-3">
+      <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Versión en español</p>
+      <span class="inline-block px-2 py-0.5 rounded-full bg-triba-red text-triba-white font-heading text-[10px] uppercase tracking-wider">Obligatorio</span>
+    </div>
+    <div class="space-y-5 p-5 rounded-xl border-2 border-triba-black bg-triba-white">
+      <div data-badge-field>
+        <label for="es_badge" class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Badge (opcional)</label>
+        <input
+          id="es_badge"
+          name="es_badge"
+          type="text"
+          placeholder="Última edición"
+          value={esVersion?.badge ?? ""}
+          class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors"
+        />
+      </div>
+
+      <div>
+        <label for="es_title" class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Título</label>
+        <input
+          id="es_title"
+          name="es_title"
+          type="text"
+          required
+          placeholder="Tomo 1 — Identidades"
+          value={esVersion?.title ?? ""}
+          class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors"
+        />
+      </div>
+
+      <div data-description-field>
+        <label for="es_description" class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Descripción</label>
+        <textarea
+          id="es_description"
+          name="es_description"
+          rows="4"
+          required
+          placeholder="Resumen del ejemplar. Se muestra en la home y en la portada del PDF."
+          class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none"
+        >{esVersion?.description ?? ""}</textarea>
+      </div>
+
+      <div data-cover-field>
+        <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">Portada (imagen)</p>
+        <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-bone">
+          {esVersion?.cover_url && (
+            <img id="es-cover-preview" src={esVersion.cover_url} alt="Portada actual en español" class="w-32 h-auto mx-auto mb-3 rounded border border-triba-black/20" />
+          )}
+          <input
+            type="file"
+            name="es_cover_file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            class="font-sans text-xs w-full"
+          />
+          <p class="font-sans text-xs text-triba-brown/60 mt-2">JPG/PNG/WebP/AVIF, máx 5 MB. Si no subís archivo nuevo, se conserva la portada actual.</p>
+        </div>
+      </div>
+
+      <div>
+        <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">PDF (español)</p>
+        <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-bone">
+          {esVersion?.pdf_url && (
+            <p class="font-sans text-xs text-triba-brown/70 mb-2">PDF actual: <a href={esVersion.pdf_url} class="text-triba-red hover:underline" target="_blank" rel="noopener">ver</a></p>
+          )}
+          <input
+            type="file"
+            name="es_pdf_file"
+            accept="application/pdf"
+            class="font-sans text-xs w-full"
+          />
+          <p class="font-sans text-xs text-triba-brown/60 mt-2">PDF, máx 50 MB. Si no subís archivo nuevo, se conserva el actual.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== VERSIÓN EN INGLÉS (opcional) ===== -->
+  <div data-lang-section data-lang="en">
+    <div class="flex items-center gap-3 mb-3">
+      <p class="font-heading text-sm uppercase tracking-wider text-triba-brown">Version in English</p>
+      <span class="inline-block px-2 py-0.5 rounded-full bg-triba-green text-triba-brown font-heading text-[10px] uppercase tracking-wider">Opcional</span>
+    </div>
+    <p class="font-sans text-xs text-triba-brown/60 mb-3">
+      Si el inglés todavía no está listo, dejá la sección vacía: la revista se publica igual y aparece el estado "English coming soon".
+    </p>
+    <div class="space-y-5 p-5 rounded-xl border-2 border-triba-black/40 bg-triba-bone">
+      <div data-badge-field>
+        <label for="en_badge" class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Badge (optional)</label>
+        <input
+          id="en_badge"
+          name="en_badge"
+          type="text"
+          placeholder="Latest issue"
+          value={enVersion?.badge ?? ""}
+          class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors"
+        />
+      </div>
+
+      <div>
+        <label for="en_title" class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Title</label>
+        <input
+          id="en_title"
+          name="en_title"
+          type="text"
+          placeholder="Issue 1 — Identities"
+          value={enVersion?.title ?? ""}
+          class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors"
+        />
+      </div>
+
+      <div data-description-field>
+        <label for="en_description" class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Description</label>
+        <textarea
+          id="en_description"
+          name="en_description"
+          rows="4"
+          placeholder="Summary of the issue. Shown on the home page and the PDF cover."
+          class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors resize-none"
+        >{enVersion?.description ?? ""}</textarea>
+      </div>
+
+      <div data-cover-field>
+        <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">Cover (image)</p>
+        <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-white">
+          {enVersion?.cover_url && (
+            <img id="en-cover-preview" src={enVersion.cover_url} alt="Current English cover" class="w-32 h-auto mx-auto mb-3 rounded border border-triba-black/20" />
+          )}
+          <input
+            type="file"
+            name="en_cover_file"
+            accept="image/jpeg,image/png,image/webp,image/avif"
+            class="font-sans text-xs w-full"
+          />
+          <p class="font-sans text-xs text-triba-brown/60 mt-2">JPG/PNG/WebP/AVIF, máx 5 MB.</p>
+        </div>
+      </div>
+
+      <div>
+        <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">PDF (English)</p>
+        <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-white">
+          {enVersion?.pdf_url && (
+            <p class="font-sans text-xs text-triba-brown/70 mb-2">Current PDF: <a href={enVersion.pdf_url} class="text-triba-red hover:underline" target="_blank" rel="noopener">view</a></p>
+          )}
+          <input
+            type="file"
+            name="en_pdf_file"
+            accept="application/pdf"
+            class="font-sans text-xs w-full"
+          />
+          <p class="font-sans text-xs text-triba-brown/60 mt-2">PDF, máx 50 MB.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <input type="hidden" name="es_cover_url" value={esVersion?.cover_url ?? ""} />
+  <input type="hidden" name="es_pdf_url" value={esVersion?.pdf_url ?? ""} />
+  <input type="hidden" name="en_cover_url" value={enVersion?.cover_url ?? ""} />
+  <input type="hidden" name="en_pdf_url" value={enVersion?.pdf_url ?? ""} />
 
   {!storageReady && (
     <p class="font-sans text-xs text-triba-red bg-triba-red/10 border border-triba-red rounded p-3">
@@ -191,23 +289,36 @@ const initialKind = edition?.kind ?? "magazine";
     if ((form as any)._editionFormBound) return;
     (form as any)._editionFormBound = true;
 
-    const magazineFields = document.getElementById("magazine-fields");
-    const featuredField = document.getElementById("featured-field");
-    const titleInput = form.querySelector<HTMLInputElement>("input[name=title]");
-    const pdfInput = form.querySelector<HTMLInputElement>("input[name=pdf_file]");
+    const issueFields = document.getElementById("issue-fields");
+    const esTitle = form.querySelector<HTMLInputElement>("input[name=es_title]");
+    const esDescription = form.querySelector<HTMLTextAreaElement>("textarea[name=es_description]");
+    const esPdf = form.querySelector<HTMLInputElement>("input[name=es_pdf_file]");
+    const coverFields = form.querySelectorAll<HTMLElement>("[data-cover-field]");
+    const descriptionFields = form.querySelectorAll<HTMLElement>("[data-description-field]");
+    const badgeFields = form.querySelectorAll<HTMLElement>("[data-badge-field]");
 
     function syncKind() {
       const kind = form!.querySelector<HTMLInputElement>("input[name=kind]:checked")?.value ?? "magazine";
       const isFree = kind === "free";
-      magazineFields?.classList.toggle("hidden", isFree);
-      featuredField?.classList.toggle("hidden", isFree);
-      if (titleInput) titleInput.required = !isFree;
-      if (pdfInput) pdfInput.required = isFree;
+      issueFields?.classList.toggle("hidden", isFree);
+      coverFields.forEach((el) => el.classList.toggle("hidden", isFree));
+      descriptionFields.forEach((el) => el.classList.toggle("hidden", isFree));
+      badgeFields.forEach((el) => el.classList.toggle("hidden", isFree));
+      if (esTitle) esTitle.required = true;
+      if (esDescription) esDescription.required = !isFree;
+      if (esPdf) esPdf.required = isFree;
     }
     form.querySelectorAll<HTMLInputElement>("input[name=kind]").forEach((r) => {
       r.addEventListener("change", syncKind);
     });
     syncKind();
+
+    const slots: { lang: "es" | "en"; kind: "cover" | "pdf"; input: HTMLInputElement | null }[] = [
+      { lang: "es", kind: "cover", input: form.querySelector<HTMLInputElement>("input[name=es_cover_file]") },
+      { lang: "es", kind: "pdf", input: form.querySelector<HTMLInputElement>("input[name=es_pdf_file]") },
+      { lang: "en", kind: "cover", input: form.querySelector<HTMLInputElement>("input[name=en_cover_file]") },
+      { lang: "en", kind: "pdf", input: form.querySelector<HTMLInputElement>("input[name=en_pdf_file]") },
+    ];
 
     form.addEventListener("submit", async (e) => {
       e.preventDefault();
@@ -223,28 +334,23 @@ const initialKind = edition?.kind ?? "magazine";
 
       try {
         // Upload files FIRST, directly to Supabase Storage (bypasses the Vercel 4.5MB body limit).
+        // All-or-nothing: if any upload fails we abort before touching the API.
         const kind = form.querySelector<HTMLInputElement>("input[name=kind]:checked")?.value ?? "magazine";
-        const coverFile = form.querySelector<HTMLInputElement>("input[name=cover_file]")?.files?.[0];
-        const pdfFile = form.querySelector<HTMLInputElement>("input[name=pdf_file]")?.files?.[0];
-        fd.delete("cover_file");
-        fd.delete("pdf_file");
-
+        const isFree = kind === "free";
         const editionNumber =
-          kind === "free"
+          isFree
             ? undefined
             : Number(form.querySelector<HTMLInputElement>("input[name=edition_number]")?.value || 0);
-        const isFree = kind === "free";
 
-        if (coverFile && !isFree) {
-          setState("Subiendo portada...");
-          const pub = await signAndUpload("cover", coverFile, editionNumber);
-          fd.set("cover_url", pub);
+        for (const slot of slots) {
+          const file = slot.input?.files?.[0];
+          if (!file) continue;
+          if (slot.kind === "cover" && isFree) continue;
+          setState(`Subiendo ${slot.lang.toUpperCase()} (${slot.kind})...`);
+          const pub = await signAndUpload(slot.kind, file, editionNumber, isFree, slot.lang);
+          fd.set(`${slot.lang}_${slot.kind}_url`, pub);
         }
-        if (pdfFile) {
-          setState("Subiendo PDF...");
-          const pub = await signAndUpload("pdf", pdfFile, editionNumber, isFree);
-          fd.set("pdf_url", pub);
-        }
+        slots.forEach((slot) => { if (slot.input) fd.delete(slot.input.name); });
 
         setState(mode === "create" ? "Creando..." : "Guardando...");
 
@@ -286,7 +392,7 @@ const initialKind = edition?.kind ?? "magazine";
       }
     });
 
-    async function signAndUpload(kind: "cover" | "pdf", file: File, editionNumber?: number, isFree?: boolean): Promise<string> {
+    async function signAndUpload(kind: "cover" | "pdf", file: File, editionNumber?: number, isFree?: boolean, language?: string): Promise<string> {
       const slug = kind === "pdf" && isFree ? `articulo-gratis-${Date.now()}` : undefined;
       const res = await fetch("/api/admin/uploads/sign", {
         method: "POST",
@@ -298,6 +404,7 @@ const initialKind = edition?.kind ?? "magazine";
           size: file.size,
           editionNumber,
           slug,
+          language: language || "es",
         }),
       });
       const sign = await res.json().catch(() => ({}));

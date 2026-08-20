@@ -1,38 +1,146 @@
 import { supabaseAdmin } from "../supabase-admin";
-import type { Edition } from "../editions";
+import type { Edition, EditionKind, EditionLanguage } from "../editions";
+import type { Database } from "../database.types";
 
-export async function listEditionsForAdmin(): Promise<Edition[]> {
-  const { data: editions, error } = await supabaseAdmin
+type EditionLanguageRow = Database["public"]["Tables"]["edition_languages"]["Row"];
+
+export interface AdminEditionRow extends Edition {
+  versions: EditionLanguageRow[];
+}
+
+function orderIssues<T extends { edition_number: number | null }>(rows: T[]): T[] {
+  return [...rows].sort((a, b) => {
+    if (a.edition_number === null && b.edition_number === null) return 0;
+    if (a.edition_number === null) return 1;
+    if (b.edition_number === null) return -1;
+    return b.edition_number - a.edition_number;
+  });
+}
+
+export async function listEditionsForAdmin(): Promise<AdminEditionRow[]> {
+  const { data: issues, error } = await supabaseAdmin
     .from("editions")
-    .select("*")
+    .select("id, edition_number, featured, kind, published_at, created_at")
     .order("edition_number", { ascending: false });
-  if (error || !editions) return [];
-  return editions as Edition[];
-}
+  if (error || !issues) return [];
 
-export async function getEditionForAdmin(id: number): Promise<Edition | null> {
-  const { data: edition, error } = await supabaseAdmin
-    .from("editions")
+  const ids = issues.map((i) => i.id);
+  const { data: languages } = await supabaseAdmin
+    .from("edition_languages")
     .select("*")
-    .eq("id", id)
-    .single();
-  if (error || !edition) return null;
-  return edition as Edition;
+    .in("edition_id", ids);
+
+  const byEdition = new Map<number, EditionLanguageRow[]>();
+  for (const v of (languages ?? []) as EditionLanguageRow[]) {
+    const arr = byEdition.get(v.edition_id) ?? [];
+    arr.push(v);
+    byEdition.set(v.edition_id, arr);
+  }
+
+  return orderIssues(
+    issues.map((issue) => ({ ...issue, versions: byEdition.get(issue.id) ?? [] }))
+  );
 }
 
-export interface EditionInput {
-  edition_number: number | null;
+export async function getEditionForAdmin(id: number): Promise<AdminEditionRow | null> {
+  const { data: issue, error } = await supabaseAdmin
+    .from("editions")
+    .select("id, edition_number, featured, kind, published_at, created_at")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !issue) return null;
+
+  const { data: languages } = await supabaseAdmin
+    .from("edition_languages")
+    .select("*")
+    .eq("edition_id", id);
+
+  return {
+    ...issue,
+    versions: (languages ?? []) as EditionLanguageRow[],
+  };
+}
+
+export interface EditionVersionInput {
   title: string;
   description: string;
   cover_url: string | null;
   pdf_url: string | null;
-  featured: boolean;
   badge: string | null;
-  kind: "magazine" | "free";
+}
+
+export interface EditionInput {
+  edition_number: number | null;
+  featured: boolean;
+  kind: EditionKind;
+  versions: Partial<Record<EditionLanguage, EditionVersionInput>>;
+}
+
+export function isEmptyVersion(v?: EditionVersionInput): boolean {
+  if (!v) return true;
+  return !(
+    v.title ||
+    v.description ||
+    v.cover_url ||
+    v.pdf_url ||
+    v.badge
+  );
+}
+
+/**
+ * Reads the multilingual edition form (multipart) into an EditionInput.
+ * `current` provides fallbacks for fields not present on PATCH (edit) submits.
+ * English is optional: if its whole section is empty it is dropped.
+ */
+export function editionFormToInput(
+  fd: FormData,
+  current?: { kind?: EditionKind; edition_number?: number | null; featured?: boolean }
+): EditionInput {
+  const kind: EditionKind =
+    fd.get("kind") === "free"
+      ? "free"
+      : fd.get("kind") === "magazine"
+        ? "magazine"
+        : (current?.kind ?? "magazine");
+
+  const edition_number =
+    kind === "free"
+      ? null
+      : fd.get("edition_number")
+        ? Number(fd.get("edition_number"))
+        : (current?.edition_number ?? null);
+
+  const featured =
+    kind === "free"
+      ? false
+      : fd.has("featured")
+        ? fd.get("featured") === "true" || fd.get("featured") === "on"
+        : (current?.featured ?? false);
+
+  const read = (lang: EditionLanguage): EditionVersionInput => ({
+    title: (fd.get(`${lang}_title`) as string) ?? "",
+    description: (fd.get(`${lang}_description`) as string) ?? "",
+    cover_url: (fd.get(`${lang}_cover_url`) as string) || null,
+    pdf_url: (fd.get(`${lang}_pdf_url`) as string) || null,
+    badge: (fd.get(`${lang}_badge`) as string) || null,
+  });
+
+  const es = read("es");
+  const en = read("en");
+
+  return {
+    kind,
+    edition_number,
+    featured,
+    versions: {
+      es,
+      ...(isEmptyVersion(en) ? {} : { en }),
+    },
+  };
 }
 
 export function validateEditionInput(
-  input: Partial<EditionInput>,
+  input: EditionInput,
 ): { ok: true; data: EditionInput } | { ok: false; error: string } {
   const kind = input.kind === "free" ? "free" : "magazine";
 
@@ -44,43 +152,63 @@ export function validateEditionInput(
     ) {
       return { ok: false, error: "edition_number debe ser un entero positivo" };
     }
-    if (typeof input.cover_url !== "string" || !input.cover_url.trim()) {
-      return { ok: false, error: "cover_url es obligatorio" };
+  }
+
+  const es = input.versions.es;
+  if (!es) {
+    return { ok: false, error: "La versión en español es obligatoria" };
+  }
+  if (!es.title?.trim()) {
+    return { ok: false, error: "El título en español es obligatorio" };
+  }
+  if (kind === "magazine") {
+    if (!es.description?.trim()) {
+      return { ok: false, error: "La descripción en español es obligatoria" };
+    }
+    if (!es.cover_url?.trim()) {
+      return { ok: false, error: "La portada en español es obligatoria" };
+    }
+  }
+  if (kind === "free" && !es.pdf_url?.trim()) {
+    return { ok: false, error: "Subí el PDF del artículo gratis (español)" };
+  }
+
+  const en = input.versions.en;
+  if (en) {
+    if (!en.title?.trim()) {
+      return { ok: false, error: "El título en inglés es obligatorio (o vaciá toda la sección EN)" };
+    }
+    if (kind === "magazine") {
+      if (!en.description?.trim()) {
+        return { ok: false, error: "La descripción en inglés es obligatoria (o vaciá toda la sección EN)" };
+      }
+      if (!en.cover_url?.trim()) {
+        return { ok: false, error: "La portada en inglés es obligatoria (o vaciá toda la sección EN)" };
+      }
+    }
+    if (kind === "free" && !en.pdf_url?.trim()) {
+      return { ok: false, error: "Subí el PDF del artículo gratis en inglés (o vaciá toda la sección EN)" };
     }
   }
 
-  if (typeof input.title !== "string" || !input.title.trim()) {
-    return { ok: false, error: "title es obligatorio" };
-  }
-  if (typeof input.description !== "string" || !input.description.trim()) {
-    return { ok: false, error: "description es obligatoria" };
-  }
-  if (
-    input.pdf_url !== null &&
-    input.pdf_url !== undefined &&
-    typeof input.pdf_url !== "string"
-  ) {
-    return { ok: false, error: "pdf_url debe ser string o null" };
-  }
-  if (kind === "free" && !input.pdf_url?.trim()) {
-    return { ok: false, error: "Subí el PDF del artículo gratis" };
-  }
+  const normalize = (v: EditionVersionInput): EditionVersionInput => ({
+    title: v.title.trim(),
+    description: kind === "free" ? v.title.trim() : v.description.trim(),
+    cover_url: v.cover_url?.trim() || null,
+    pdf_url: v.pdf_url?.trim() || null,
+    badge: v.badge?.trim() || null,
+  });
 
-  const title = input.title.trim();
   return {
     ok: true,
     data: {
-      edition_number:
-        kind === "free"
-          ? null
-          : (input.edition_number as number),
-      title,
-      description: kind === "free" ? title : input.description.trim(),
-      cover_url: input.cover_url?.trim() || null,
-      pdf_url: input.pdf_url?.trim() || null,
-      featured: kind === "free" ? false : !!input.featured,
-      badge: kind === "free" ? null : input.badge?.trim() || null,
       kind,
+      edition_number: kind === "free" ? null : input.edition_number,
+      featured: kind === "free" ? false : !!input.featured,
+      versions: {
+        es: normalize(es),
+        ...(en ? { en: normalize(en) } : {}),
+      },
     },
   };
 }

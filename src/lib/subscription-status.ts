@@ -24,33 +24,33 @@ export interface SubscriptionStatusInfo {
   action?: string | null;
 }
 
-export function subscriptionStatusInfo(status?: string | null): SubscriptionStatusInfo {
-  if (!status) return { active: false, label: "Aún no estás suscripta", action: null };
+const STATUS_LABELS: Record<string, { es: string; en: string }> = {
+  active: { es: "Suscripción activa", en: "Active subscription" },
+  migrated: { es: "Suscripción migrada (7 días)", en: "Migrated subscription (7 days)" },
+  past_due: { es: "Tu último cobro falló", en: "Your last payment failed" },
+  incomplete: { es: "Pago en proceso", en: "Payment processing" },
+  trialing: { es: "Período de prueba", en: "Trial period" },
+};
 
-  switch (status) {
-    case "active":
-      return { active: true, label: "Suscripción activa", action: null };
-    case "migrated":
-      return { active: true, label: "Suscripción migrada (7 días)", action: null };
-    case "past_due":
-      return {
-        active: false,
-        label: "Tu último cobro falló",
-        action: "Actualizar medio de pago",
-      };
-    case "incomplete":
-      return {
-        active: false,
-        label: "Pago en proceso",
-        action: null,
-      };
-    case "trialing":
-      return {
-        active: false,
-        label: "Período de prueba",
-        action: null,
-      };
-    default:
-      return { active: false, label: status || "Desconocido", action: null };
+const STATUS_ACTIONS: Record<string, { es: string; en: string }> = {
+  past_due: { es: "Actualizar medio de pago", en: "Update payment method" },
+};
+
+export function subscriptionStatusInfo(
+  status?: string | null,
+  locale: "es" | "en" = "es"
+): SubscriptionStatusInfo {
+  if (!status) {
+    return {
+      active: false,
+      label: locale === "en" ? "You're not subscribed yet" : "Aún no estás suscripta",
+      action: null,
+    };
   }
+
+  const label = STATUS_LABELS[status]?.[locale] ?? status;
+  const action = STATUS_ACTIONS[status]?.[locale] ?? null;
+  const active = status === "active" || status === "migrated";
+
+  return { active, label, action };
 }

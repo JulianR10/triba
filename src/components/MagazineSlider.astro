@@ -1,6 +1,7 @@
 ---
 import FlipCover from "./FlipCover.astro";
 import MagazineScroller from "./MagazineScroller.astro";
+import type { Locale } from "../i18n/ui";
 
 export interface SliderItem {
   id: number;
@@ -15,9 +16,13 @@ export interface SliderItem {
 export interface Props {
   items: SliderItem[];
   selectedId?: number;
+  ariaLabel?: string;
+  lang?: Locale;
 }
 
-const { items, selectedId } = Astro.props;
+const { items, selectedId, ariaLabel, lang = "es" } = Astro.props;
+const coverAlt = lang === "en" ? "Cover of" : "Portada de";
+const effectiveAriaLabel = ariaLabel ?? (lang === "en" ? "Editions carousel" : "Carrusel de ediciones");
 ---
 
 <div class="md:hidden">
@@ -25,7 +30,7 @@ const { items, selectedId } = Astro.props;
     dots
     scrollClass="py-6 md:py-8"
     trackClass="px-5"
-    ariaLabel="Carrusel de ediciones"
+    ariaLabel={effectiveAriaLabel}
   >
     {items.map((item) => {
       const isSelected = item.id === selectedId;
@@ -38,13 +43,14 @@ const { items, selectedId } = Astro.props;
           <div class="w-[90%] mx-auto">
             <FlipCover
               image={item.cover}
-              alt={item.title ? `Portada de ${item.title}` : "Portada"}
+              alt={item.title ? `${coverAlt} ${item.title}` : coverAlt}
               flipColor={item.flipColor}
               backTextClass={item.backTextClass}
               rounded="rounded-xl"
               textSize="text-sm"
               pad="p-4"
               badge={item.badge}
+              lang={lang}
             />
           </div>
           {item.title && (

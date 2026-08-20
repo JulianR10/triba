@@ -3,23 +3,29 @@ import Navbar from "../components/Navbar.astro";
 import Footer from "../components/Footer.astro";
 import "./global.css";
 import { SITE_URL } from "../lib/site-url";
+import { t, type Locale } from "../i18n/ui";
 
-const { title, description, image, canonical, navLogoAlways } = Astro.props;
+const { title, description, image, canonical, navLogoAlways, lang } = Astro.props as {
+  title?: string;
+  description?: string;
+  image?: string;
+  canonical?: string;
+  navLogoAlways?: boolean;
+  lang?: Locale;
+};
 
-const siteTitle = title
-  ? `${title} — Triba`
-  : "Comunidad Triba — Revista digital hecha por y para mujeres";
+const locale = lang ?? "es";
+const dict = t(locale);
 
-const siteDescription = description ||
-  "Triba es una revista digital mensual escrita por y para mujeres. Cultura, arte, identidad y todo lo que nos interesa.";
-
+const siteTitle = title ? `${title} — Triba` : dict.layout.defaultTitle;
+const siteDescription = description || dict.layout.defaultDescription;
 const ogImage = image || "/logo-triba.svg";
 const siteUrl = SITE_URL;
 const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
 ---
 
 <!doctype html>
-<html lang="es">
+<html lang={locale}>
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
@@ -44,7 +50,7 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
     <meta property="og:description" content={siteDescription} />
     <meta property="og:image" content={`${siteUrl}${ogImage}`} />
     <meta property="og:url" content={pageUrl} />
-    <meta property="og:locale" content="es_ES" />
+    <meta property="og:locale" content={dict.ogLocale} />
     <meta property="og:site_name" content="Triba" />
 
     <!-- Twitter Cards -->
@@ -60,7 +66,7 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
         "@type": "WebSite",
         "name": "Triba",
         "url": "${siteUrl}",
-        "description": "Revista digital mensual escrita por y para mujeres. Cultura, arte, identidad.",
+        "description": "${dict.layout.jsonLdDescription}",
         "publisher": {
           "@type": "Organization",
           "name": "Triba",
@@ -70,11 +76,11 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
     </script>
   </head>
   <body class="bg-triba-bone text-triba-black text-pretty flex flex-col min-h-screen">
-    <Navbar showLogoAlways={navLogoAlways} />
+    <Navbar lang={locale} showLogoAlways={navLogoAlways} />
     <main class="relative z-0 flex-1 flex flex-col">
       <slot />
     </main>
-    <Footer />
+    <Footer lang={locale} />
 
     <!-- Animation scripts -->
     <script src="/scripts/magnetic.js" is:inline></script>

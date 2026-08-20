@@ -1,16 +1,21 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
+import { t } from "../i18n/ui";
+import { getLocaleFromUrl } from "../i18n/locale";
+
+const lang = getLocaleFromUrl(Astro.url.pathname);
+const dict = t(lang);
 ---
 
-<Layout title="Página no encontrada" canonical="/404" navLogoAlways>
+<Layout title={dict.notFound.title} canonical="/404" navLogoAlways lang={lang}>
   <section class="page-shell page-gutter bg-triba-bone">
     <div class="max-w-lg mx-auto text-center pt-12 md:pt-24">
       <h1 class="font-heading text-6xl md:text-8xl text-triba-red mb-4">404</h1>
       <p class="font-sans text-lg text-triba-brown mb-8">
-        Esta página no existe o fue removida.
+        {dict.notFound.message}
       </p>
-      <Button variant="primary" href="/">Volver al inicio</Button>
+      <Button variant="primary" href={lang === "en" ? "/en/" : "/"}>{dict.notFound.backHome}</Button>
     </div>
   </section>
 </Layout>

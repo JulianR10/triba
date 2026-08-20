@@ -61,6 +61,16 @@ Revista digital mensual — newsletter gratuito + suscripción paga, escrita por
 - Notificar edición: `POST /api/admin/editions/[id]/notify` → `sendNewEditionEmail` a `role='subscriber'`
 - **Suscriptoras migradas:** tab "Migradas" (`status=migrated`) lista `subscriber_migrations` incluidas las sin cuenta (`searchMigratedSubscribersForAdmin`); stat `totalMigrated` + card `migrated_subscribers` en dashboard.
 
+## Revista bilingüe (ES/EN)
+- **Modelo:** `editions` = el EJEMPLAR/producto (id, edition_number, kind, featured, published_at); `edition_languages` = la VERSIÓN localizada (edition_id FK CASCADE, language 'es'|'en', title, description, cover_url, pdf_url, badge; UNIQUE(edition_id, language)). UN ejemplar → dos versiones; el EN es opcional (estado "English coming soon").
+- **Migración `018` = EXPAND** (agrega `edition_languages`, backfill ES desde las columnas legacy, `editions_edition_number_unique` parcial). **Las columnas legacy (`title/description/cover_url/pdf_url/badge`) de `editions` SIGUEN EXISTIENDO** hasta la migración `019` (CONTRACT, aún no escrita): NO dropearlas ni asumir que ya no están. Mover cualquier lectura de `editions.*content*` a `edition_languages`.
+- **Acceso por idioma:** helpers de `src/lib/editions.ts` (`getEditions(lang)`, `getFeaturedEdition(lang)`, `getFreeArticle(lang)`, `getEditionBySlug(slug, lang)`, `getEditionLanguages(id)`) devuelven `EditionView` = ejemplar + versión elegida + `isFallback` (EN pedido sin versión → cae a ES) + `hasEn`. Usar SIEMPRE estos helpers, no queries sueltas.
+- **`/api/pdf/{id}` retrocompatible:** `id` puede ser `edition_languages.id` (nuevo) O `editions.id` legacy (emails viejos) + `?lang=` (default es, fallback ES). No romper esa resolución.
+- **Admin:** form bilingüe (`EditionForm`) manda `kind`, `edition_number`, `featured` + `es_*`/`en_*` (title/description/cover_url/pdf_url/badge). EN vacío = se omite/elimina la versión EN (limpiar toda la sección EN quita el inglés). Validación en `src/lib/admin/editions.ts` (`editionFormToInput`/`validateEditionInput`). Uploads: `/api/admin/uploads/sign` acepta `language`; `buildStoragePath` incluye `-{lang}` (`pdfs/revista-{n}-{es}.pdf`, `covers/edicion-{n}-{es}-{ts}.ext`). Uploads todo-o-nada (4 slots).
+- **`scripts/import-pdfs.mjs` está DEPRECADO** (escribe columnas legacy; re-correrlo falla). Alta mensual = `/admin/ediciones`.
+- **Tipos (`database.types.ts`):** `edition_languages.Relationships → editions` declarado (habilita el embed to-one `editions(...)` en `/api/pdf`). NO declarar la relación parent-side en `editions` (tipa mal el embed `edition_languages(*)` como objeto single; usar dos queries como en `src/lib/admin/editions.ts`).
+- Email "nueva edición" linkea a `/{SITE_URL}/revista/edicion-{N}` (NUNCA `/revista/{id}`).
+
 ## Estructura
 ```
 triba/
@@ -89,13 +99,25 @@ triba/
 - **Reembolso MP:** `refund.ts` usa la cadena `authorized_payments/search` → `payments/{id}/refunds` (NO `payments/search?preapproval_id=`, que MP rechaza con 400).
 - Imports idempotentes: `node --env-file=.env scripts/import-wp-subscribers.mjs <csv>` y `scripts/recreate-migrated-billing.mjs`. Excluidas test: `ing.azularganaras@gmail.com`, `comunidadtriba@gmail.com`. MP sin email vía API (10 `pending` + 2022 `Abono mensual`): no recuperables sin export de WooCommerce.
 
+## i18n (Fase C — páginas públicas EN, completa)
+- `astro.config.mjs`: `i18n: { locales: ["es","en"], defaultLocale: "es", routing: { prefixDefaultLocale: false } }` → `/` = es, `/en/` = en. `/es/` NO existe (404; el locale default no tiene prefijo).
+- **Patrón de rutas FÍSICAS (SSR), NO `[lang]`:** NO usar `src/pages/[lang]/...` con `getStaticPaths` — en SSR el router ignora `getStaticPaths` (log "ignored in dynamic page") y `[lang]` solo matchea con segmento: `/es/` y `/en/` sí, pero `/` (locale default sin prefijo) queda 404. Cada página ES + su par `src/pages/en/*.astro` renderizan UN componente compartido `<X lang>` en `src/components/`. Actuales: `Home`, `MagazinePage` (revista), `EditionDetail` (revista/[slug]), `SubscribePage` (suscribirme), `CreatorsPage` (triba-creators), `AuthPage` (iniciar-sesion). `lang` llega por `Astro.props`, nunca por `Astro.params`.
+- Diccionarios tipados: `src/i18n/ui.ts` (`t(lang)`, tipo `Locale`, claves: nav, footer, layout, notFound, accountMenu, newsletter, home, magazine, edition, subscribe, creators, auth). Helpers: `src/i18n/locale.ts` → `EN_ROUTES` (Set de rutas canónicas ES con versión EN: `/`, `/revista`, `/suscribirme`, `/triba-creators`, `/iniciar-sesion`), `isEnRoute(path)` (cubre sub-rutas dinámicas: `/revista` matchea `/revista/edicion-3`), `isEnPath`, `getLocaleFromUrl`, `toEsPath`, `localizePath` (cae a ES si la ruta no está en `EN_ROUTES`), `switchPath`.
+- `locals.locale` lo setea el middleware (`getLocaleFromUrl(context.url)`, con fallback a cookie `triba_locale` — semilla para Fase E, no cambia el render: las rutas físicas deciden). `<html lang={locale}>` y `og:locale` desde el dict.
+- Switcher en `Navbar`: links `data-locale-switcher="es|en"` (desktop + mobile) con `aria-current="true"` en el activo; script inline `setupLocaleSwitcher` setea cookie `triba_locale=<es|en>; path=/; max-age=31536000; SameSite=Lax` (client-side, no hay server handling). Todos los links internos (nav, logo, footer, CTAs) pasan por `localizePath`/`switchPath` → el idioma "pega" navegando; el switcher es la única forma de cambiar.
+- `404.astro` es locale-aware (usa `getLocaleFromUrl`; `/en/*` inexistente → 404 en inglés).
+- Datos a scripts por `data-*` (p.ej. `data-messages={JSON.stringify(...)}` en `NewsletterForm`, `CheckoutButton`, `CreatorsPage`, `AuthPage`) — nunca `{expr}` en `<script>`.
+- Dependencias localizadas: `subscriptionStatusInfo(status, locale)` (`src/lib/subscription-status.ts`, labels ES/EN); `CheckoutButton` y `FlipCover`/`MagazineCard`/`MagazineCarousel`/`MagazineSlider` aceptan `lang`; `CheckoutButton` redirige a `/en/iniciar-sesion` cuando la página es EN; `/api/pdf/{id}?lang=` en el detalle EN. `mi-cuenta`, `privacidad`, `terminos`, `/admin*` quedan ES.
+
 ## Próximo
 - Reintentar 4 faltantes de Sender (`jimena.1310@outlook.es`, `valentinave.98@gmail.com`, `sylvanalopez45@gmail.com`, `mariaclaudiaherrera2009@hotmail.com`) con el import tras `2026-08-04T17:02:44Z` (429).
 - Avisar a las 6 MP mapeadas (candecanevari06, ana_cari76@hotmail, yobelenbianco, maianeer30, agustinasafarian, victoriaguinea) que se registren en el sitio nuevo: hasta no crear cuenta, pagan pero no tienen acceso.
 - Limpiar `comunidadtriba+liveverify1785776465@gmail.com` de Sender. Evaluar plan pago Sender si sube volumen.
 
 ## Deuda de tipos
-**`npx astro check` → 0 errores · `npm run build` OK** (5-Ago-2026).
+**`npx astro check` → 0 errores · `npm run build` OK** (20-Ago-2026, Fase C completa: páginas públicas EN — revista, detalle, suscribirme, creators, iniciar-sesion — con `EN_ROUTES` + `isEnRoute`, links 100% locale-aware, checkout/login redirigen a `/en/...`).
+- Pendiente: migración `019` (CONTRACT) cuando el código esté verificado en prod con el modelo nuevo — dropea columnas legacy de `editions`.
+- Próximas fases: D (panel suscriptora agrupado por ejemplar + toggle + `mi-cuenta` EN), E (emails por `preferred_locale`).
 
 ⚠️ `src/lib/database.types.ts` debe mantenerse en formato canónico y sincronizado con `supabase/migrations/` (tablas, columnas, funciones): si falta una clave, todo `.from()` resuelve a `never[]`.
 

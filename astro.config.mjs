@@ -6,6 +6,11 @@ import vercel from "@astrojs/vercel";
 
 export default defineConfig({
   site: "https://www.universotriba.com",
+  i18n: {
+    locales: ["es", "en"],
+    defaultLocale: "es",
+    routing: { prefixDefaultLocale: false },
+  },
   devToolbar: { enabled: false },
   // checkOrigin rechaza todo POST multipart en Vercel (el Origin del browser nunca
   // coincide con url.origin del runtime). Desactivado porque la única subida de

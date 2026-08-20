@@ -1,4 +1,7 @@
 ---
+import { localizePath } from "../i18n/locale";
+import type { Locale } from "../i18n/ui";
+
 export interface Props {
   image: string;
   alt: string;
@@ -8,6 +11,7 @@ export interface Props {
   textSize?: "text-sm" | "text-base";
   pad?: "p-4" | "p-6";
   badge?: string | null;
+  lang?: Locale;
 }
 
 const {
@@ -19,7 +23,14 @@ const {
   textSize = "text-base",
   pad = "p-6",
   badge = null,
+  lang = "es",
 } = Astro.props;
+
+const backLink = {
+  prefix: lang === "en" ? "To see the magazine you need to" : "Para ver la revista debes",
+  word: lang === "en" ? "subscribe" : "suscribirte",
+};
+const subscribeHref = localizePath("/suscribirme", lang);
 ---
 
 <div class="card-flip relative aspect-[3/4] cursor-pointer">
@@ -33,7 +44,7 @@ const {
       )}
     </div>
     <div class={`card-flip-back absolute inset-0 ${rounded} border-2 border-triba-black flex flex-col items-center justify-center ${pad} text-center ${flipColor}`}>
-      <p class={`font-sans ${backTextClass} ${textSize} leading-relaxed text-balance`}>Para ver la revista debes <a href="/suscribirme" class="font-bold underline hover:text-triba-red transition-colors">suscribirte</a></p>
+      <p class={`font-sans ${backTextClass} ${textSize} leading-relaxed text-balance`}>{backLink.prefix} <a href={subscribeHref} class="font-bold underline hover:text-triba-red transition-colors">{backLink.word}</a></p>
     </div>
   </div>
 </div>

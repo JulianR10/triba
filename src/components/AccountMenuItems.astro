@@ -1,5 +1,6 @@
 ---
 import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
+import { t, type Locale } from "../i18n/ui";
 
 interface Sub {
   status?: string | null;
@@ -12,53 +13,60 @@ interface Props {
   role: string | null;
   sub: Sub | null;
   periodEndLabel: string;
+  lang?: Locale;
 }
 
-const { role, sub, periodEndLabel } = Astro.props;
+const { role, sub, periodEndLabel, lang = "es" } = Astro.props;
+const dict = t(lang);
 
 const isActiveSub = isActiveSubscription(sub?.status, sub?.current_period_end ?? undefined);
-const info = subscriptionStatusInfo(sub?.status);
+const info = subscriptionStatusInfo(sub?.status, lang);
 const isAdmin = role === "admin";
 
 let label = info.label;
 let action: string | null = info.action ?? null;
 if (sub?.status === "migrated" && !isActiveSub) {
   // Access window (7 days) already elapsed → treat as not subscribed.
-  label = "Aún no estás suscripta";
+  label = dict.accountMenu.notSubscribed;
   action = null;
 }
+
+const planLabel = dict.accountMenu.planVia
+  .replace("{currency}", sub?.plan_currency ?? "")
+  .replace("{provider}", sub?.provider ?? "");
+const expiresLabel = dict.accountMenu.expires.replace("{date}", periodEndLabel);
 
 ---
 {
   isAdmin ? (
     <>
       <a href="/admin" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-brown hover:text-triba-red py-2 transition-colors">
-        Panel de administración →
+        {dict.accountMenu.adminPanel}
       </a>
       <hr class="border-triba-black/10 my-2" />
-      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>
+      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">{dict.accountMenu.signOut}</button>
     </>
   ) : isActiveSub ? (
     <>
       <a href="/mi-cuenta" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">
-        Ir a mi perfil →
+        {dict.accountMenu.myProfile}
       </a>
       <hr class="border-triba-black/10 my-2" />
       <div class="mb-3">
-        <p class="font-heading text-xs uppercase tracking-wider text-triba-green mb-1">Suscripción activa</p>
+        <p class="font-heading text-xs uppercase tracking-wider text-triba-green mb-1">{dict.accountMenu.activeSubscription}</p>
         <p class="font-sans text-xs text-triba-brown">
-          Plan <span class="font-bold">{sub?.plan_currency}</span> vía <span class="font-bold capitalize">{sub?.provider}</span>
+          {planLabel}
         </p>
-        {periodEndLabel && <p class="font-sans text-[10px] text-triba-brown/50">Vence {periodEndLabel}</p>}
+        {periodEndLabel && <p class="font-sans text-[10px] text-triba-brown/50">{expiresLabel}</p>}
       </div>
       {
         sub?.provider === "stripe"
-          ? <button type="button" class="manage-sub-btn block w-full text-left font-sans text-xs text-triba-brown hover:text-triba-red hover:underline py-1.5 transition-colors">Gestionar suscripción</button>
-          : <p class="font-sans text-[10px] text-triba-brown/50 mb-1">Gestioná desde tu cuenta de Mercado Pago</p>
+          ? <button type="button" class="manage-sub-btn block w-full text-left font-sans text-xs text-triba-brown hover:text-triba-red hover:underline py-1.5 transition-colors">{dict.accountMenu.manageSubscription}</button>
+          : <p class="font-sans text-[10px] text-triba-brown/50 mb-1">{dict.accountMenu.manageFromMp}</p>
       }
-      <button type="button" class="cancel-sub-btn block w-full text-left font-sans text-xs text-triba-red hover:underline py-1.5 transition-colors">Cancelar suscripción</button>
+      <button type="button" class="cancel-sub-btn block w-full text-left font-sans text-xs text-triba-red hover:underline py-1.5 transition-colors">{dict.accountMenu.cancelSubscription}</button>
       <hr class="border-triba-black/10 my-2" />
-      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>
+      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">{dict.accountMenu.signOut}</button>
     </>
   ) : (
     <>
@@ -71,11 +79,11 @@ if (sub?.status === "migrated" && !isActiveSub) {
         </button>
       ) : (
         <a href="/suscribirme" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
-          Suscribirme
+          {dict.accountMenu.subscribe}
         </a>
       )}
       <hr class="border-triba-black/10 my-2" />
-      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">Cerrar sesión</button>
+      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">{dict.accountMenu.signOut}</button>
     </>
   )
 }

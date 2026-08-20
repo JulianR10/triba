@@ -14,9 +14,11 @@ const edition = await getEditionForAdmin(editionId);
 if (!edition) {
   return Astro.redirect("/admin/ediciones");
 }
+const esVersion = edition.versions.find((v) => v.language === "es");
+const editionTitle = esVersion?.title ?? `Edición ${edition.edition_number ?? ""}`;
 ---
 
-<AdminLayout title={`Editar #${edition.edition_number} — ${edition.title}`} active="ediciones">
+<AdminLayout title={`Editar #${edition.edition_number} — ${editionTitle}`} active="ediciones">
   {edition.featured && (
     <p class="font-sans text-base text-triba-brown/70 mb-6">
       <span class="inline-block px-2 py-0.5 rounded-full bg-triba-green text-triba-brown font-heading text-[10px] uppercase tracking-wider">Destacada</span>

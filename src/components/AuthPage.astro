@@ -1,0 +1,434 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import Input from "../components/Input.astro";
+import { t, type Locale } from "../i18n/ui";
+
+const { lang = "es" } = Astro.props as { lang?: Locale };
+const dict = t(lang);
+const canonical = lang === "en" ? "/en/iniciar-sesion" : "/iniciar-sesion";
+
+const params = new URLSearchParams(Astro.url.search);
+const isRecovery = params.get("recovery") === "true";
+const initialMode = params.get("signup") === "true" ? "signup" : "login";
+
+const authMessages = {
+  lang,
+  signIn: dict.auth.signIn,
+  signInBusy: dict.auth.signInBusy,
+  verifyBusy: dict.auth.verifyBusy,
+  creatingAccount: dict.auth.creatingAccount,
+  createAccount: dict.auth.createAccount,
+  connectionError: dict.auth.connectionError,
+  passwordMismatch: dict.auth.passwordMismatch,
+  passwordTooShort: dict.auth.passwordTooShort,
+  emailExists: dict.auth.emailExists,
+  enterEmail: dict.auth.enterEmail,
+  recoveryPath: lang === "en" ? "/en/iniciar-sesion?recovery=true" : "/iniciar-sesion?recovery=true",
+};
+---
+
+<style>
+  #navbar {
+    position: relative !important;
+    transform: none !important;
+  }
+</style>
+
+<Layout title={dict.auth.title} description={dict.auth.description} canonical={canonical} lang={lang} navLogoAlways>
+  <section class="flex-1 flex items-center justify-center page-gutter bg-triba-bone py-10" data-auth-messages={JSON.stringify(authMessages)}>
+    <div class="w-full max-w-md">
+
+      <div id="checkout-pending-banner" class="hidden bg-triba-green/30 border-2 border-triba-green rounded-xl p-4 mb-4 text-center relative" data-checkout-pending>
+        <button type="button" class="absolute top-2 right-3 font-sans text-triba-brown/60 hover:text-triba-brown transition-colors" data-dismiss-banner aria-label={dict.auth.close}>×</button>
+        <p class="font-sans text-base text-triba-brown" set:html={dict.auth.checkoutBanner}>
+        </p>
+      </div>
+
+      <div id="login-card" class={"bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 reveal " + (isRecovery || initialMode === "signup" ? "hidden" : "")} data-reveal>
+        <h1 class="font-heading text-xl uppercase tracking-wider text-triba-brown text-center mb-8">{dict.auth.loginTitle}</h1>
+        <form class="space-y-5" id="login-form">
+          <Input label={dict.auth.email} name="email" type="email" required />
+          <Input label={dict.auth.password} name="password" type="password" required />
+          <div id="login-error" class="font-sans text-sm text-triba-red hidden"></div>
+          <Button variant="primary" fullWidth type="submit">{dict.auth.signIn}</Button>
+        </form>
+        <div class="mt-6 text-center space-y-2">
+          <button type="button" class="font-sans text-base text-triba-red hover:text-triba-brown transition-colors" id="forgot-password">{dict.auth.forgot}</button>
+          <p class="font-sans text-base text-triba-brown/60">
+            {dict.auth.noAccount}{" "}
+            <button type="button" id="go-signup" class="text-triba-red hover:text-triba-brown transition-colors font-medium">{dict.auth.createAccount}</button>
+          </p>
+        </div>
+      </div>
+
+      <div id="signup-card" class={"bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 reveal " + (initialMode === "signup" ? "" : "hidden")} data-reveal>
+        <h1 class="font-heading text-xl uppercase tracking-wider text-triba-brown text-center mb-8">{dict.auth.signupTitle}</h1>
+        <form class="space-y-5" id="signup-form">
+          <Input label={dict.auth.email} name="email" type="email" required />
+          <Input label={dict.auth.password} name="password" type="password" required />
+          <Input label={dict.auth.confirmPassword} name="confirm" type="password" required />
+          <p class="font-sans text-xs text-triba-brown/60">{dict.auth.minChars}</p>
+          <div id="signup-error" class="font-sans text-sm text-triba-red hidden"></div>
+          <Button variant="primary" fullWidth type="submit">{dict.auth.createAccount}</Button>
+        </form>
+        <div class="mt-6 text-center">
+          <p class="font-sans text-base text-triba-brown/60">
+            {dict.auth.hasAccount}{" "}
+            <button type="button" id="go-login" class="text-triba-red hover:text-triba-brown transition-colors font-medium">{dict.auth.signInLink}</button>
+          </p>
+        </div>
+      </div>
+
+      <div id="forgot-card" class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 hidden reveal" data-reveal>
+        <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">{dict.auth.forgotTitle}</h2>
+        <p class="font-sans text-base text-triba-brown/70 text-center mb-6">{dict.auth.forgotLead}</p>
+        <form class="space-y-5" id="forgot-form">
+          <Input label={dict.auth.email} name="email" type="email" required />
+          <div id="forgot-error" class="font-sans text-sm text-triba-red hidden"></div>
+          <Button variant="primary" fullWidth type="submit">{dict.auth.sendLink}</Button>
+        </form>
+        <div class="mt-4 text-center">
+          <button type="button" class="font-sans text-base text-triba-brown/60 hover:text-triba-brown transition-colors" id="back-to-login">{dict.auth.backToLogin}</button>
+        </div>
+      </div>
+
+      <div id="recovery-success" class="hidden max-w-md mx-auto mt-8 p-6 bg-triba-green/30 border-2 border-triba-green rounded-xl text-center">
+        <p class="font-sans text-triba-brown text-base">{dict.auth.recoverySuccess}</p>
+      </div>
+
+      <div id="check-email-card" class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 hidden reveal" data-reveal>
+        <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">{dict.auth.checkEmailTitle}</h2>
+        <p class="font-sans text-base text-triba-brown/80 text-center mb-2">{dict.auth.checkEmailLead}</p>
+        <p class="font-sans text-base text-triba-brown/60 text-center mb-6">{dict.auth.checkEmailBody}</p>
+        <div class="text-center">
+          <button type="button" class="font-sans text-base text-triba-red hover:text-triba-brown transition-colors" id="check-email-back">{dict.auth.backToLogin}</button>
+        </div>
+      </div>
+
+      <div id="reset-card" class={"bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 reveal " + (isRecovery ? "" : "hidden")} data-reveal>
+        <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">{dict.auth.resetTitle}</h2>
+        <p class="font-sans text-base text-triba-brown/70 text-center mb-6">{dict.auth.resetLead}</p>
+        <form class="space-y-5" id="reset-form">
+          <Input label={dict.auth.newPassword} name="password" type="password" required />
+          <Input label={dict.auth.confirmPassword} name="confirm" type="password" required />
+          <div id="reset-error" class="font-sans text-sm text-triba-red hidden"></div>
+          <Button variant="primary" fullWidth type="submit">{dict.auth.updatePassword}</Button>
+        </form>
+      </div>
+
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { supabase } from "../lib/supabase";
+  import { getCheckoutIntent } from "../lib/checkout-intent";
+  import { onPageCycle } from "../lib/onPageCycle";
+
+  function setup() {
+  if (!supabase) return;
+
+  const section = document.querySelector("[data-auth-messages]") as HTMLElement | null;
+  const messages: Record<string, string> = {
+    signIn: "Ingresar",
+    signInBusy: "Ingresando...",
+    verifyBusy: "Verificando permisos...",
+    creatingAccount: "Creando cuenta...",
+    createAccount: "Crear cuenta",
+    connectionError: "Error de conexión. Intentalo de nuevo.",
+    passwordMismatch: "Las contraseñas no coinciden",
+    passwordTooShort: "La contraseña debe tener al menos 6 caracteres",
+    emailExists: "Ya existe una cuenta con este email. Iniciá sesión para continuar.",
+    enterEmail: "Ingresá tu email",
+    recoveryPath: "/iniciar-sesion?recovery=true",
+  };
+  const raw = section?.getAttribute("data-auth-messages");
+  if (raw) {
+    try { Object.assign(messages, JSON.parse(raw)); } catch { /* keep defaults */ }
+  }
+
+  const pendingBanner = document.getElementById("checkout-pending-banner");
+  const pending = getCheckoutIntent();
+  if (pendingBanner) {
+    pendingBanner.classList.toggle("hidden", !pending);
+  }
+
+  const dismissBannerBtn = document.getElementById("checkout-pending-banner")?.querySelector("[data-dismiss-banner]");
+  if (dismissBannerBtn) {
+    dismissBannerBtn.addEventListener("click", () => {
+      const banner = document.getElementById("checkout-pending-banner");
+      if (banner) banner.classList.add("hidden");
+    });
+  }
+
+  const loginCard = document.getElementById("login-card");
+  const signupCard = document.getElementById("signup-card");
+  const forgotCard = document.getElementById("forgot-card");
+  const resetCard = document.getElementById("reset-card");
+  const checkEmailCard = document.getElementById("check-email-card");
+  const recoverySuccess = document.getElementById("recovery-success")!;
+
+  const allCards = [loginCard, signupCard, forgotCard, resetCard, checkEmailCard];
+
+  const forgotBtn = document.getElementById("forgot-password");
+  const backBtn = document.getElementById("back-to-login");
+  const goSignupBtn = document.getElementById("go-signup");
+  const goLoginBtn = document.getElementById("go-login");
+  const checkEmailBackBtn = document.getElementById("check-email-back");
+
+  const loginForm = document.getElementById("login-form");
+  const loginError = document.getElementById("login-error")!;
+
+  const signupForm = document.getElementById("signup-form");
+  const signupError = document.getElementById("signup-error")!;
+
+  const forgotForm = document.getElementById("forgot-form");
+  const forgotError = document.getElementById("forgot-error")!;
+
+  const resetForm = document.getElementById("reset-form");
+  const resetError = document.getElementById("reset-error")!;
+
+  function showCard(card: HTMLElement | null) {
+    allCards.forEach((c) => {
+      if (c) c.classList.add("hidden");
+    });
+    if (recoverySuccess) recoverySuccess.classList.add("hidden");
+    if (card) card.classList.remove("hidden");
+  }
+
+  function isSafeRedirect(url: string | null) {
+    if (!url) return false;
+    try {
+      const parsed = new URL(url, window.location.origin);
+      return parsed.origin === window.location.origin;
+    } catch {
+      return false;
+    }
+  }
+
+  function getSafeRedirect() {
+    const params = new URLSearchParams(window.location.search);
+    const redirect = params.get("redirect");
+    return isSafeRedirect(redirect) && redirect ? redirect : "/mi-cuenta";
+  }
+
+  if (forgotBtn) {
+    forgotBtn.addEventListener("click", () => showCard(forgotCard));
+  }
+
+  if (backBtn) {
+    backBtn.addEventListener("click", () => showCard(loginCard));
+  }
+
+  if (goSignupBtn) {
+    goSignupBtn.addEventListener("click", () => showCard(signupCard));
+  }
+
+  if (goLoginBtn) {
+    goLoginBtn.addEventListener("click", () => showCard(loginCard));
+  }
+
+  if (checkEmailBackBtn) {
+    checkEmailBackBtn.addEventListener("click", () => showCard(loginCard));
+  }
+
+  if (loginForm) {
+    loginForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      loginError.classList.add("hidden");
+      loginError.textContent = "";
+
+      const email = (loginForm.querySelector("[name=email]") as HTMLInputElement).value;
+      const password = (loginForm.querySelector("[name=password]") as HTMLInputElement).value;
+      const submitBtn = loginForm.querySelector("button[type=submit]") as HTMLButtonElement | null;
+      const defaultLabel = submitBtn?.textContent || messages.signIn;
+      const setBusy = (label: string) => {
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.textContent = label;
+        }
+      };
+      const reset = () => {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = defaultLabel;
+        }
+      };
+
+      setBusy(messages.signInBusy);
+
+      try {
+        const { error: authError } = await supabase!.auth.signInWithPassword({ email, password });
+        if (authError) {
+          loginError.textContent = authError.message;
+          loginError.classList.remove("hidden");
+          return;
+        }
+
+        const explicitRedirect = getSafeRedirect();
+        const hasExplicitRedirect = new URLSearchParams(window.location.search).get("redirect");
+        if (hasExplicitRedirect) {
+          window.location.href = explicitRedirect;
+          return;
+        }
+
+        setBusy(messages.verifyBusy);
+
+        let role = null;
+        try {
+          const { data: { user } } = await supabase!.auth.getUser();
+          if (user) {
+            const { data: profile } = await supabase!
+              .from("profiles")
+              .select("role")
+              .eq("id", user.id)
+              .single();
+            role = profile?.role ?? null;
+          }
+        } catch (err) {
+          console.error("No se pudo leer el role del user, fallback a /mi-cuenta:", err);
+        }
+
+        window.location.href = role === "admin" ? "/admin" : "/mi-cuenta";
+      } catch (err) {
+        loginError.textContent = messages.connectionError;
+        loginError.classList.remove("hidden");
+      } finally {
+        reset();
+      }
+    });
+  }
+
+  if (signupForm) {
+    signupForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      signupError.classList.add("hidden");
+      signupError.textContent = "";
+
+      const email = (signupForm.querySelector("[name=email]") as HTMLInputElement).value;
+      const password = (signupForm.querySelector("[name=password]") as HTMLInputElement).value;
+      const confirm = (signupForm.querySelector("[name=confirm]") as HTMLInputElement).value;
+
+      if (password !== confirm) {
+        signupError.textContent = messages.passwordMismatch;
+        signupError.classList.remove("hidden");
+        return;
+      }
+
+      if (password.length < 6) {
+        signupError.textContent = messages.passwordTooShort;
+        signupError.classList.remove("hidden");
+        return;
+      }
+
+      const redirect = getSafeRedirect();
+      const emailRedirectTo = window.location.origin + redirect;
+
+      const submitBtn = signupForm.querySelector("button[type=submit]") as HTMLButtonElement | null;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = messages.creatingAccount;
+      }
+
+      const { data, error } = await supabase!.auth.signUp({
+        email,
+        password,
+        options: { emailRedirectTo },
+      });
+
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = messages.createAccount;
+      }
+
+      if (error) {
+        signupError.textContent = /already registered|already exists/i.test(error.message)
+          ? messages.emailExists
+          : error.message;
+        signupError.classList.remove("hidden");
+        return;
+      }
+
+      if (data.session) {
+        window.location.href = redirect;
+        return;
+      }
+
+      if (data.user && (data.user.identities || []).length === 0) {
+        signupError.textContent = messages.emailExists;
+        signupError.classList.remove("hidden");
+        return;
+      }
+
+      showCard(checkEmailCard);
+    });
+  }
+
+  if (forgotForm) {
+    forgotForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      forgotError.classList.add("hidden");
+      forgotError.textContent = "";
+
+      const email = (forgotForm.querySelector("[name=email]") as HTMLInputElement).value;
+      if (!email) {
+        forgotError.textContent = messages.enterEmail;
+        forgotError.classList.remove("hidden");
+        return;
+      }
+
+      const { error } = await supabase!.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin + messages.recoveryPath,
+      });
+      if (error) {
+        forgotError.textContent = error.message;
+        forgotError.classList.remove("hidden");
+        return;
+      }
+      showCard(null);
+      recoverySuccess.classList.remove("hidden");
+    });
+  }
+
+  if (resetForm) {
+    resetForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      resetError.classList.add("hidden");
+      resetError.textContent = "";
+
+      const password = (resetForm.querySelector("[name=password]") as HTMLInputElement).value;
+      const confirm = (resetForm.querySelector("[name=confirm]") as HTMLInputElement).value;
+
+      if (password !== confirm) {
+        resetError.textContent = messages.passwordMismatch;
+        resetError.classList.remove("hidden");
+        return;
+      }
+
+      if (password.length < 6) {
+        resetError.textContent = messages.passwordTooShort;
+        resetError.classList.remove("hidden");
+        return;
+      }
+
+      const { error } = await supabase!.auth.updateUser({ password });
+      if (error) {
+        resetError.textContent = error.message;
+        resetError.classList.remove("hidden");
+        return;
+      }
+
+      window.location.href = "/mi-cuenta";
+    });
+  }
+
+  const pageParams = new URLSearchParams(window.location.search);
+  if (pageParams.get("recovery") === "true" && !pageParams.get("code")) {
+    showCard(resetCard);
+  }
+
+  }
+
+  onPageCycle(setup);
+</script>

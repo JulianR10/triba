@@ -96,7 +96,9 @@ export async function sendWelcomeEmail(
   }
 }
 
-function newEditionHtml(edition: { title: string; edition_number: number; cover_url: string; description: string; id: number }) {
+function newEditionHtml(edition: { title: string; edition_number: number | null; cover_url: string; description: string; id: number }) {
+  const editionLabel = edition.edition_number ? `Edición #${edition.edition_number}: ${edition.title}` : edition.title;
+  const ctaLink = edition.edition_number ? `${SITE_URL}/revista/edicion-${edition.edition_number}` : `${SITE_URL}/revista`;
   return `<!DOCTYPE html>
 <html lang="es">
   <head>
@@ -115,7 +117,7 @@ function newEditionHtml(edition: { title: string; edition_number: number; cover_
                   ¡Nueva edición!
                 </h1>
                 <p style="font-family:Montserrat,Arial,sans-serif;font-size:15px;color:#35220A;margin:0;">
-                  Edición #${edition.edition_number}: ${edition.title}
+                  ${editionLabel}
                 </p>
               </td>
             </tr>
@@ -136,7 +138,7 @@ function newEditionHtml(edition: { title: string; edition_number: number; cover_
                 <table role="presentation" border="0" cellpadding="0" cellspacing="0">
                   <tr>
                     <td align="center" style="background-color:#E91A39;border-radius:50px;border:2px solid #35220A;">
-                      <a href="${SITE_URL}/revista/${edition.id}" target="_blank" style="display:inline-block;padding:14px 40px;font-family:Montserrat,Arial,sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;text-decoration:none;letter-spacing:1px;color:#ffffff;">
+                      <a href="${ctaLink}" target="_blank" style="display:inline-block;padding:14px 40px;font-family:Montserrat,Arial,sans-serif;font-size:14px;font-weight:700;text-transform:uppercase;text-decoration:none;letter-spacing:1px;color:#ffffff;">
                         Leer la revista
                       </a>
                     </td>
@@ -161,10 +163,10 @@ function newEditionHtml(edition: { title: string; edition_number: number; cover_
 
 export async function sendNewEditionEmail(
   to: string,
-  edition: { title: string; edition_number: number; cover_url: string; description: string; id: number },
+  edition: { title: string; edition_number: number | null; cover_url: string; description: string; id: number },
 ): Promise<void> {
   try {
-    await sendEmail(to, `¡Nueva edición de Triba! #${edition.edition_number}`, newEditionHtml(edition));
+    await sendEmail(to, edition.edition_number ? `¡Nueva edición de Triba! #${edition.edition_number}` : "¡Nueva edición de Triba!", newEditionHtml(edition));
   } catch (err) {
     logger.error({ err, to, edition }, "Sender new edition email error");
     throw err;

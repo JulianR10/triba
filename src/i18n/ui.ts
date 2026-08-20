@@ -1,0 +1,511 @@
+export type Locale = "es" | "en";
+export const DEFAULT_LOCALE: Locale = "es";
+export const LOCALES: Locale[] = ["es", "en"];
+
+import type { Word } from "../components/PatchTitle.astro";
+
+export const ui = {
+  es: {
+    ogLocale: "es_ES",
+    dateLocale: "es-AR",
+    nav: {
+      home: "Inicio",
+      magazine: "Revista",
+      subscribe: "Suscribirme",
+      creators: "Triba Creators",
+      signIn: "INICIAR SESION",
+      signOut: "CERRAR SESION",
+      myAccount: "MI CUENTA",
+      menu: "Menu",
+    },
+    footer: {
+      privacy: "Privacidad",
+      terms: "Términos y condiciones",
+      madeBy: "Hecho por",
+    },
+    layout: {
+      defaultTitle: "Comunidad Triba — Revista digital hecha por y para mujeres",
+      defaultDescription:
+        "Triba es una revista digital mensual escrita por y para mujeres. Cultura, arte, identidad y todo lo que nos interesa.",
+      jsonLdDescription:
+        "Revista digital mensual escrita por y para mujeres. Cultura, arte, identidad.",
+    },
+    notFound: {
+      title: "Página no encontrada",
+      message: "Esta página no existe o fue removida.",
+      backHome: "Volver al inicio",
+    },
+    accountMenu: {
+      adminPanel: "Panel de administración →",
+      myProfile: "Ir a mi perfil →",
+      activeSubscription: "Suscripción activa",
+      planVia: "Plan {currency} vía {provider}",
+      expires: "Vence {date}",
+      manageSubscription: "Gestionar suscripción",
+      manageFromMp: "Gestioná desde tu cuenta de Mercado Pago",
+      cancelSubscription: "Cancelar suscripción",
+      signOut: "Cerrar sesión",
+      notSubscribed: "Aún no estás suscripta",
+      subscribe: "Suscribirme",
+    },
+    newsletter: {
+      placeholder: "tu email",
+      subscribe: "Suscribirme",
+      thanks: "¡Gracias por suscribirte!",
+      existingResynced: "Ya estás suscripta — te reenviamos la bienvenida",
+      existing: "Ya estás suscripta",
+      error: "Error al suscribirte. Intentalo de nuevo.",
+      networkError: "Error de conexión. Intentalo de nuevo.",
+    },
+    home: {
+      title: "Inicio",
+      description:
+        "Triba es una revista digital mensual escrita por y para mujeres. Descubrí nuestra comunidad, ediciones, newsletter y mucho más.",
+      tagline: "Tu nueva lectura favorita<br />en forma de revista digital",
+      subscribe: "Suscribirme",
+      freeNewsletter: "Recibir newsletter gratis",
+      whatAreWe: "¿Qué somos?",
+      bullets: [
+        "Una revista digital mensual",
+        "Escrita por mujeres de todo el mundo",
+        "Cultura, arte, identidad, y todo lo que nos interesa",
+      ],
+      paragraph1:
+        "Nos gusta pensar que somos un universo cultural, porque las posibilidades son infinitas. Hoy existimos de esta forma pero hay muchos proyectos por delante.",
+      paragraph2:
+        "Nacimos de la necesidad de volver a consumir contenido de calidad, y creemos en la magia que existe cuando mujeres de todo el mundo crean juntas.",
+      escrita: "ESCRITA",
+      por: "POR",
+      y: "Y",
+      para: "PARA",
+      mujeres: "MUJERES",
+      collaborations:
+        "Todos los meses sumamos colaboradoras a nuestra revista y nos encanta recibir nuevas propuestas.<br /><br />Hasta ahora hemos tenido Triba creators que escriben desde España, Argentina, Estados Unidos, Puerto Rico, México, Colombia, Francia, Chile, Uruguay, etc.<br /><br />Triba es un proyecto universal que se enriquece en la convivencia de diferentes voces provenientes de todo el mundo, la suma de culturas y puntos de vista que se nutren entre sí es uno de nuestros pilares más importantes.",
+      newsletterTitle: "newsletter gratuito",
+      newsletterLead: "Recibí triba gratis todos los meses",
+      newsletterBody:
+        "Dos artículos periodísticos + un artículo de la revista de muestra, directo a tu casilla de correo.",
+      becomeCreator: "Conviértete en Triba Creator",
+      creatorParagraph1:
+        "A Triba la construimos entre todas las personas que forman parte de nuestra comunidad. Cada nueva edición suma voces, ideas y experiencias que enriquecen el proyecto y lo hacen crecer.",
+      creatorParagraph2:
+        "Podés colaborar escribiendo artículos, ilustrando, diseñando, fotografiando, compartiendo proyectos o aportando cualquier contenido que inspire y aporte valor a quienes nos leen.",
+      creatorParagraph3:
+        "Si sentís que tenés algo para contar, enseñar o crear, queremos conocerte. Siempre estamos abiertos a incorporar nuevos colaboradores y descubrir nuevas perspectivas.",
+      wantToBeCreator: "Quiero ser Triba Creator",
+      seeMore: "Ver más",
+      carouselLabel: "Carrusel de ediciones",
+      altCover: "Portada {n}",
+    },
+    magazine: {
+      title: "Revista",
+      description:
+        "Explorá las ediciones de Triba, nuestra revista digital mensual. Leé online, descargá PDF y descubrí artículos de cultura, arte e identidad.",
+      patchTitle: "Nuestra revista",
+      featuredParagraphs: [
+        "Todos los meses publicamos una nueva edición de nuestra revista, hecha por y para mujeres. Estamos felices de compartir con ustedes la tercera edición!",
+        "Con la participación de las colaboradoras fundadoras y algunas Triba Creators que se suman este mes. \"El show debe continuar\" viene a recordarnos un poco quienes fuimos y quienes somos hoy, transitando por 15 artículos diferentes pero igual de inspiradores.",
+        "Esperamos que disfrutes tu lectura, nos vemos el mes que viene.",
+      ],
+      continueReading: "Seguir leyendo",
+      iWantIt: "LA QUIERO!",
+      latestEdition: "Última edición",
+      coverAlt: "Portada de {title}",
+      freeArticlePatch: [
+        [
+          { t: "¡ECHALE", bg: "bg-triba-cream", tx: "text-triba-black" },
+          { t: "UN", bg: "bg-triba-white", tx: "text-triba-black" },
+          { t: "VISTAZO", bg: "bg-triba-pink", tx: "text-triba-black" },
+          { t: "A", bg: "bg-triba-blue/20", tx: "text-triba-black" },
+          { t: "UNO", bg: "bg-triba-bone", tx: "text-triba-black" },
+        ],
+        [
+          { t: "DE", bg: "bg-triba-light-cream", tx: "text-triba-black" },
+          { t: "NUESTROS", bg: "bg-triba-cream", tx: "text-triba-black" },
+          { t: "ARTICULOS", bg: "bg-triba-green", tx: "text-triba-black" },
+          { t: "!", bg: "bg-triba-pink", tx: "text-triba-black" },
+        ],
+      ] as Word[][],
+      freeArticleLead1:
+        "Como sabemos que no se puede desear lo que no se conoce, queremos regalarte un artículo gratis de la última edición de nuestra revista.",
+      freeArticleLead2: "Si disfrutas de tu lectura, te esperamos en la suscripción!",
+      subscribe: "Suscribirme",
+    },
+    edition: {
+      titleSuffix: "Revista",
+      editionLabel: "Edición #{n}",
+      readHere: "Leer aquí",
+      downloadPdf: "Descargar PDF",
+      preview: "Previsualización",
+      seeAll: "Ver todas las ediciones",
+      coverAlt: "Portada de {title}",
+    },
+    subscribe: {
+      title: "Suscribirme",
+      description:
+        "Elegí tu plan de suscripción a Triba: newsletter gratuito o suscripción paga con acceso a la revista completa, archivo y descarga PDF. Pago seguro con Stripe o Mercado Pago.",
+      patchTitle: "Nuestra suscripción",
+      recommended: "Recomendado",
+      subTitle: "Suscripción Triba",
+      bullets: [
+        "NEWSLETTER INCLUIDO",
+        "NUESTRA REVISTA COMPLETA (+15 ARTICULOS) TODOS LOS MESES",
+        "ACCESO AL ARCHIVO DE TODAS LAS EDICIONES",
+        "DESCARGA LA REVISTA CON TU NOMBRE",
+      ],
+      accessNote: "Accedés a través de tu perfil de usuario en nuestro sitio web",
+      period: "/mes",
+      monthlyNote: "Suscripción mensual. Cancelá cuando quieras.",
+      newsTitle: "Newsletter gratuito",
+      newsBullets: [
+        "2 ARTÍCULOS PERIODÍSTICOS POR MES",
+        "1 ARTÍCULO SELECTO DE NUESTRA REVISTA",
+      ],
+      newsNote: "Te llega a tu correo todos los meses, como un blog de noticias",
+      newsButton: "Quiero el newsletter",
+      socialProof:
+        "\"Somos una comunidad de mujeres que escriben para mujeres. Cada suscripción nos ayuda a seguir creciendo.\"",
+      team: "— Equipo Triba",
+      faqTitle: "Preguntas frecuentes",
+      faqs: [
+        {
+          q: "¿Cuándo llega la revista?",
+          a: "La subimos siempre a mitad de mes, pero nos gusta jugar con la sorpresa así que nunca repetimos un día exacto. Lo mejor sucede cuando no te lo esperas!",
+        },
+        {
+          q: "¿Puedo cancelar mi suscripción?",
+          a: "Sí, podés cancelar en cualquier momento desde tu cuenta. Sin preguntas ni complicaciones.",
+        },
+        {
+          q: "¿Cómo accedo a la revista?",
+          a: "Una vez suscripta, vas a poder leerla online desde nuestro visor o descargarla en PDF.",
+        },
+      ],
+      checkoutCanceled: "Pago cancelado. No se realizó ningún cargo. Podés intentar de nuevo cuando quieras.",
+      checkoutPending: "Tu pago está siendo procesado. Te avisaremos por email cuando se confirme.",
+      close: "Cerrar",
+      newsletterPlaceholder: "tu@email.com",
+    },
+    creators: {
+      title: "Triba Creators",
+      description:
+        "Sumate como Triba Creator: escribí, diseñá, fotografiá o aportá tu arte a nuestra revista digital. ¡Te esperamos!",
+      patchTitle: "Sumate como Triba Creator",
+      paragraphs: [
+        "A Triba la construimos entre todas y es por eso que todos los meses sumamos nuevas Triba Creator a nuestro equipo de colaboradoras.",
+        "Podés sumarte como escritora, diseñadora, artista, periodista o lo que quieras :) Siempre que sientas que tenés algo para aportar a este universo sos bienvenida a enviarnos tu propuesta.",
+        "Evaluamos todas las propuestas y de acuerdo a nuestras necesidades vamos incorporándolas al proyecto.",
+      ],
+      imgAlt: "Creatividad sin límites",
+      formTitle: "Formulario de contacto",
+      name: "Nombre",
+      email: "Email",
+      country: "País y Ciudad",
+      contribution: "¿Qué querés aportar?",
+      areas: ["Escritura", "Producción", "Fotografía", "Diseño gráfico", "Arte", "Otros"],
+      proposal: "Contanos tu propuesta",
+      work: "¿Dónde podemos ver tu trabajo?",
+      submit: "Enviar postulación",
+      sending: "Enviando...",
+      success: "¡Gracias por postularte! Te vamos a contactar pronto.",
+      error: "Error al enviar. Intentalo de nuevo.",
+      networkError: "Error de conexión. Intentalo de nuevo.",
+    },
+    auth: {
+      title: "Iniciar sesión",
+      description:
+        "Accedé a tu cuenta de Triba para leer la revista, gestionar tu suscripción y acceder al archivo.",
+      checkoutBanner:
+        "Estás por suscribirte a la revista. <strong class=\"text-triba-brown\">Creá tu cuenta gratis</strong> para continuar con el pago.",
+      loginTitle: "Iniciar sesión",
+      email: "Email",
+      password: "Contraseña",
+      signIn: "Ingresar",
+      forgot: "Olvidé mi contraseña",
+      noAccount: "No tenés cuenta?",
+      createAccount: "Crear cuenta",
+      signupTitle: "Crear cuenta",
+      confirmPassword: "Confirmar contraseña",
+      minChars: "Mínimo 6 caracteres.",
+      hasAccount: "Ya tenés cuenta?",
+      signInLink: "Iniciar sesión",
+      forgotTitle: "Recuperar contraseña",
+      forgotLead: "Ingresá tu email y te enviaremos un link para restablecer tu contraseña.",
+      sendLink: "Enviar link",
+      backToLogin: "Volver al login",
+      recoverySuccess:
+        "Te enviamos un email para restablecer tu contraseña. Revisá tu bandeja de entrada.",
+      checkEmailTitle: "Revisá tu email",
+      checkEmailLead: "Te enviamos un link de confirmación.",
+      checkEmailBody:
+        "Hacé click en el link que te llegó por email para activar tu cuenta y continuar con tu suscripción.",
+      resetTitle: "Nueva contraseña",
+      resetLead: "Ingresá tu nueva contraseña para acceder a tu cuenta.",
+      newPassword: "Nueva contraseña",
+      updatePassword: "Actualizar contraseña",
+      close: "Cerrar",
+      signInBusy: "Ingresando...",
+      verifyBusy: "Verificando permisos...",
+      creatingAccount: "Creando cuenta...",
+      connectionError: "Error de conexión. Intentalo de nuevo.",
+      passwordMismatch: "Las contraseñas no coinciden",
+      passwordTooShort: "La contraseña debe tener al menos 6 caracteres",
+      emailExists: "Ya existe una cuenta con este email. Iniciá sesión para continuar.",
+      enterEmail: "Ingresá tu email",
+    },
+  },
+  en: {
+    ogLocale: "en_US",
+    dateLocale: "en-US",
+    nav: {
+      home: "Home",
+      magazine: "Magazine",
+      subscribe: "Subscribe",
+      creators: "Triba Creators",
+      signIn: "SIGN IN",
+      signOut: "SIGN OUT",
+      myAccount: "MY ACCOUNT",
+      menu: "Menu",
+    },
+    footer: {
+      privacy: "Privacy",
+      terms: "Terms & Conditions",
+      madeBy: "Made by",
+    },
+    layout: {
+      defaultTitle: "Comunidad Triba — Digital magazine by and for women",
+      defaultDescription:
+        "Triba is a monthly digital magazine written by and for women. Culture, art, identity and everything we care about.",
+      jsonLdDescription:
+        "Monthly digital magazine written by and for women. Culture, art, identity.",
+    },
+    notFound: {
+      title: "Page not found",
+      message: "This page doesn't exist or was removed.",
+      backHome: "Back to home",
+    },
+    accountMenu: {
+      adminPanel: "Admin panel →",
+      myProfile: "Go to my profile →",
+      activeSubscription: "Active subscription",
+      planVia: "Plan {currency} via {provider}",
+      expires: "Expires {date}",
+      manageSubscription: "Manage subscription",
+      manageFromMp: "Manage it from your Mercado Pago account",
+      cancelSubscription: "Cancel subscription",
+      signOut: "Sign out",
+      notSubscribed: "You're not subscribed yet",
+      subscribe: "Subscribe",
+    },
+    newsletter: {
+      placeholder: "your email",
+      subscribe: "Subscribe",
+      thanks: "Thanks for subscribing!",
+      existingResynced: "You're already subscribed — we sent you the welcome again",
+      existing: "You're already subscribed",
+      error: "There was an error subscribing. Try again.",
+      networkError: "Connection error. Try again.",
+    },
+    home: {
+      title: "Home",
+      description:
+        "Triba is a monthly digital magazine written by and for women. Discover our community, editions, newsletter and much more.",
+      tagline: "Your new favorite read<br />in the shape of a digital magazine",
+      subscribe: "Subscribe",
+      freeNewsletter: "Get the free newsletter",
+      whatAreWe: "WHAT ARE WE?",
+      bullets: [
+        "A monthly digital magazine",
+        "Written by women from all over the world",
+        "Culture, art, identity, and everything we care about",
+      ],
+      paragraph1:
+        "We like to think of ourselves as a cultural universe, because the possibilities are endless. Today we exist in this form but there are many projects ahead.",
+      paragraph2:
+        "We were born out of the need to go back to quality content, and we believe in the magic that happens when women from all over the world create together.",
+      escrita: "WRITTEN",
+      por: "BY",
+      y: "AND",
+      para: "FOR",
+      mujeres: "WOMEN",
+      collaborations:
+        "Every month we add contributors to our magazine and we love receiving new proposals.<br /><br />So far we've had Triba Creators writing from Spain, Argentina, the United States, Puerto Rico, Mexico, Colombia, France, Chile, Uruguay, etc.<br /><br />Triba is a universal project enriched by different voices from all over the world. The sum of cultures and viewpoints feeding each other is one of our most important pillars.",
+      newsletterTitle: "free newsletter",
+      newsletterLead: "Get triba for free every month",
+      newsletterBody:
+        "Two journalistic articles + one sample magazine article, straight to your inbox.",
+      becomeCreator: "Become a Triba Creator",
+      creatorParagraph1:
+        "Triba is built by all the people who are part of our community. Each new edition adds voices, ideas and experiences that enrich the project and make it grow.",
+      creatorParagraph2:
+        "You can contribute by writing articles, illustrating, designing, taking photos, sharing projects, or bringing any content that inspires and adds value to those who read us.",
+      creatorParagraph3:
+        "If you feel you have something to tell, teach or create, we want to meet you. We're always open to welcoming new contributors and discovering new perspectives.",
+      wantToBeCreator: "I want to be a Triba Creator",
+      seeMore: "See more",
+      carouselLabel: "Editions carousel",
+      altCover: "Cover {n}",
+    },
+    magazine: {
+      title: "Magazine",
+      description:
+        "Explore Triba's editions, our monthly digital magazine. Read online, download the PDF and discover articles about culture, art and identity.",
+      patchTitle: "Our magazine",
+      featuredParagraphs: [
+        "Every month we publish a new edition of our magazine, made by and for women. We're happy to share the third edition with you!",
+        "With the founding contributors and some Triba Creators joining this month. \"The show must go on\" reminds us a bit of who we were and who we are today, across 15 different yet equally inspiring articles.",
+        "We hope you enjoy your reading — see you next month.",
+      ],
+      continueReading: "Keep reading",
+      iWantIt: "I WANT IT!",
+      latestEdition: "Latest edition",
+      coverAlt: "Cover of {title}",
+      freeArticlePatch: [
+        [
+          { t: "TAKE", bg: "bg-triba-cream", tx: "text-triba-black" },
+          { t: "A", bg: "bg-triba-white", tx: "text-triba-black" },
+          { t: "LOOK", bg: "bg-triba-pink", tx: "text-triba-black" },
+          { t: "AT", bg: "bg-triba-blue/20", tx: "text-triba-black" },
+          { t: "ONE", bg: "bg-triba-bone", tx: "text-triba-black" },
+        ],
+        [
+          { t: "OF", bg: "bg-triba-light-cream", tx: "text-triba-black" },
+          { t: "OUR", bg: "bg-triba-cream", tx: "text-triba-black" },
+          { t: "ARTICLES!", bg: "bg-triba-green", tx: "text-triba-black" },
+        ],
+      ] as Word[][],
+      freeArticleLead1:
+        "Since we know you can't desire what you don't know, we want to gift you a free article from the latest edition of our magazine.",
+      freeArticleLead2: "If you enjoy your reading, we'll be waiting for you on the subscription!",
+      subscribe: "Subscribe",
+    },
+    edition: {
+      titleSuffix: "Magazine",
+      editionLabel: "Edition #{n}",
+      readHere: "Read here",
+      downloadPdf: "Download PDF",
+      preview: "Preview",
+      seeAll: "See all editions",
+      coverAlt: "Cover of {title}",
+    },
+    subscribe: {
+      title: "Subscribe",
+      description:
+        "Choose your Triba subscription plan: free newsletter or paid subscription with access to the full magazine, archive and PDF download. Secure payment with Stripe or Mercado Pago.",
+      patchTitle: "Our subscription",
+      recommended: "Recommended",
+      subTitle: "Triba subscription",
+      bullets: [
+        "NEWSLETTER INCLUDED",
+        "OUR FULL MAGAZINE (+15 ARTICLES) EVERY MONTH",
+        "ACCESS TO THE ARCHIVE OF ALL EDITIONS",
+        "DOWNLOAD THE MAGAZINE WITH YOUR NAME",
+      ],
+      accessNote: "You access it through your user profile on our website",
+      period: "/mo",
+      monthlyNote: "Monthly subscription. Cancel anytime.",
+      newsTitle: "Free newsletter",
+      newsBullets: [
+        "2 JOURNALISTIC ARTICLES PER MONTH",
+        "1 FEATURED ARTICLE FROM OUR MAGAZINE",
+      ],
+      newsNote: "It lands in your inbox every month, like a news blog",
+      newsButton: "I want the newsletter",
+      socialProof:
+        "\"We are a community of women who write for women. Every subscription helps us keep growing.\"",
+      team: "— Triba Team",
+      faqTitle: "Frequently asked questions",
+      faqs: [
+        {
+          q: "When does the magazine arrive?",
+          a: "We always upload it mid-month, but we like to play with surprise so we never repeat the exact day. The best things happen when you least expect them!",
+        },
+        {
+          q: "Can I cancel my subscription?",
+          a: "Yes, you can cancel anytime from your account. No questions asked, no complications.",
+        },
+        {
+          q: "How do I access the magazine?",
+          a: "Once you're subscribed, you can read it online from our viewer or download it as a PDF.",
+        },
+      ],
+      checkoutCanceled: "Payment canceled. No charge was made. You can try again whenever you want.",
+      checkoutPending: "Your payment is being processed. We'll email you when it's confirmed.",
+      close: "Close",
+      newsletterPlaceholder: "you@email.com",
+    },
+    creators: {
+      title: "Triba Creators",
+      description:
+        "Join as a Triba Creator: write, design, photograph or bring your art to our digital magazine. We're waiting for you!",
+      patchTitle: "Join as a Triba Creator",
+      paragraphs: [
+        "Triba is built by everyone, which is why every month we add new Triba Creators to our team of contributors.",
+        "You can join as a writer, designer, artist, journalist or whatever you want :) As long as you feel you have something to bring to this universe, you're welcome to send us your proposal.",
+        "We evaluate every proposal and, depending on our needs, we bring them into the project.",
+      ],
+      imgAlt: "Creativity without limits",
+      formTitle: "Contact form",
+      name: "Name",
+      email: "Email",
+      country: "Country & City",
+      contribution: "What do you want to contribute?",
+      areas: ["Writing", "Production", "Photography", "Graphic design", "Art", "Other"],
+      proposal: "Tell us your proposal",
+      work: "Where can we see your work?",
+      submit: "Submit application",
+      sending: "Sending...",
+      success: "Thanks for applying! We'll get back to you soon.",
+      error: "There was an error sending it. Try again.",
+      networkError: "Connection error. Try again.",
+    },
+    auth: {
+      title: "Sign in",
+      description:
+        "Access your Triba account to read the magazine, manage your subscription and access the archive.",
+      checkoutBanner:
+        "You're about to subscribe to the magazine. <strong class=\"text-triba-brown\">Create your free account</strong> to continue with the payment.",
+      loginTitle: "Sign in",
+      email: "Email",
+      password: "Password",
+      signIn: "Sign in",
+      forgot: "Forgot your password?",
+      noAccount: "Don't have an account?",
+      createAccount: "Create account",
+      signupTitle: "Create account",
+      confirmPassword: "Confirm password",
+      minChars: "Minimum 6 characters.",
+      hasAccount: "Already have an account?",
+      signInLink: "Sign in",
+      forgotTitle: "Recover password",
+      forgotLead: "Enter your email and we'll send you a link to reset your password.",
+      sendLink: "Send link",
+      backToLogin: "Back to login",
+      recoverySuccess:
+        "We sent you an email to reset your password. Check your inbox.",
+      checkEmailTitle: "Check your email",
+      checkEmailLead: "We sent you a confirmation link.",
+      checkEmailBody:
+        "Click the link you received by email to activate your account and continue with your subscription.",
+      resetTitle: "New password",
+      resetLead: "Enter your new password to access your account.",
+      newPassword: "New password",
+      updatePassword: "Update password",
+      close: "Close",
+      signInBusy: "Signing in...",
+      verifyBusy: "Verifying permissions...",
+      creatingAccount: "Creating account...",
+      connectionError: "Connection error. Try again.",
+      passwordMismatch: "Passwords don't match",
+      passwordTooShort: "Password must be at least 6 characters",
+      emailExists: "An account already exists with this email. Sign in to continue.",
+      enterEmail: "Enter your email",
+    },
+  },
+} as const;
+
+export type UI = (typeof ui)[Locale];
+
+export function t(locale: Locale): UI {
+  return ui[locale];
+}
