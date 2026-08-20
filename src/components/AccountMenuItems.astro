@@ -1,6 +1,7 @@
 ---
 import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
 import { t, type Locale } from "../i18n/ui";
+import { localizePath } from "../i18n/locale";
 
 interface Sub {
   status?: string | null;
@@ -48,7 +49,7 @@ const expiresLabel = dict.accountMenu.expires.replace("{date}", periodEndLabel);
     </>
   ) : isActiveSub ? (
     <>
-      <a href="/mi-cuenta" class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">
+      <a href={localizePath("/mi-cuenta", lang)} class="block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">
         {dict.accountMenu.myProfile}
       </a>
       <hr class="border-triba-black/10 my-2" />
@@ -78,7 +79,7 @@ const expiresLabel = dict.accountMenu.expires.replace("{date}", periodEndLabel);
           {action}
         </button>
       ) : (
-        <a href="/suscribirme" class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
+        <a href={localizePath("/suscribirme", lang)} class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
           {dict.accountMenu.subscribe}
         </a>
       )}

@@ -1,0 +1,229 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PatchTitle from "../components/PatchTitle.astro";
+import { t, type Locale } from "../i18n/ui";
+
+interface Section {
+  h: string;
+  body: string[];
+}
+
+const { lang = "es" } = Astro.props as { lang?: Locale };
+const dict = t(lang);
+const canonical = lang === "en" ? "/en/privacidad" : "/privacidad";
+
+const es: Section[] = [
+  {
+    h: "1. Responsable del tratamiento",
+    body: [
+      "<p>Triba es una revista digital mensual. Al utilizar nuestro sitio web y suscribirte a nuestros servicios, confías tus datos personales. Esta política explica qué datos recopilamos, cómo los usamos y qué derechos tienes.</p>",
+      `<p class="mt-2">Contacto: <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a></p>`,
+    ],
+  },
+  {
+    h: "2. Datos que recopilamos",
+    body: [
+      `<ul class="list-disc pl-5 space-y-1">
+        <li><strong>Datos de cuenta:</strong> nombre y correo electrónico al registrarte.</li>
+        <li><strong>Datos de pago:</strong> no almacenamos números de tarjeta ni datos financieros. Los pagos son procesados por Stripe y Mercado Pago según sus propias políticas de privacidad.</li>
+        <li><strong>Datos de navegación:</strong> información anónima sobre tu interacción con el sitio (páginas visitadas, tiempo de sesión) para mejorar la experiencia.</li>
+        <li><strong>Comunicaciones:</strong> mensajes que nos envías a través del formulario de contacto, feedback o postulación como creadora.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "3. Finalidad del tratamiento",
+    body: [
+      `<ul class="list-disc pl-5 space-y-1">
+        <li>Gestionar tu suscripción y acceso a la revista.</li>
+        <li>Enviarte el newsletter gratuito si te suscribiste a él.</li>
+        <li>Procesar pagos a través de los proveedores de pago que elijas.</li>
+        <li>Responder a tus consultas, feedback y postulaciones.</li>
+        <li>Mejorar nuestro sitio web y servicios.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "4. Base legal",
+    body: [
+      "<p>El tratamiento de tus datos se basa en:</p>",
+      `<ul class="list-disc pl-5 space-y-1">
+        <li><strong>Ejecución de un contrato:</strong> gestión de la suscripción y acceso a la revista.</li>
+        <li><strong>Consentimiento:</strong> newsletter, comunicaciones y postulaciones.</li>
+        <li><strong>Interés legítimo:</strong> mejora del sitio y análisis de uso.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "5. Almacenamiento y seguridad",
+    body: [
+      "<p>Tus datos se almacenan en <strong>Supabase</strong>, proveedor de base de datos y autenticación con servidores en la Unión Europea. Implementamos medidas de seguridad técnicas y organizativas para proteger tu información contra accesos no autorizados, pérdida o alteración.</p>",
+    ],
+  },
+  {
+    h: "6. Compartición de datos",
+    body: [
+      "<p>No vendemos tus datos personales a terceros. Compartimos datos únicamente con:</p>",
+      `<ul class="list-disc pl-5 space-y-1">
+        <li><strong>Supabase:</strong> autenticación y base de datos.</li>
+        <li><strong>Stripe, Mercado Pago:</strong> procesamiento de pagos (solo los datos necesarios para la transacción).</li>
+        <li><strong>Google (Gmail):</strong> envío de correos transaccionales y newsletter.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "7. Tus derechos",
+    body: [
+      `<p>Puedes ejercer los siguientes derechos en cualquier momento escribiéndonos a <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a>:</p>`,
+      `<ul class="list-disc pl-5 space-y-1">
+        <li><strong>Acceso:</strong> conocer qué datos tenemos sobre ti.</li>
+        <li><strong>Rectificación:</strong> corregir datos inexactos o incompletos.</li>
+        <li><strong>Supresión:</strong> solicitar la eliminación de tus datos.</li>
+        <li><strong>Oposición:</strong> oponerte al tratamiento de tus datos.</li>
+        <li><strong>Portabilidad:</strong> recibir tus datos en formato estructurado.</li>
+        <li><strong>Retirar el consentimiento:</strong> en cualquier momento, sin afectar la legalidad del tratamiento previo.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "8. Cookies",
+    body: [
+      "<p>Utilizamos cookies esenciales para el funcionamiento del sitio (sesión de usuario, autenticación). No utilizamos cookies de rastreo publicitario. Puedes configurar tu navegador para rechazar todas las cookies, pero algunas funciones del sitio podrían no estar disponibles.</p>",
+    ],
+  },
+  {
+    h: "9. Conservación de datos",
+    body: [
+      "<p>Conservamos tus datos mientras mantengas una cuenta activa. Al cancelar tu suscripción o solicitar la eliminación de tu cuenta, tus datos se eliminan en un plazo máximo de 30 días, salvo obligación legal de retenerlos por más tiempo.</p>",
+    ],
+  },
+  {
+    h: "10. Cambios en esta política",
+    body: [
+      "<p>Podemos actualizar esta política de privacidad periódicamente. Te notificaremos los cambios significativos a través del sitio web o por correo electrónico.</p>",
+      `<p class="mt-2 text-triba-brown/60">Última actualización: julio de 2026.</p>`,
+    ],
+  },
+];
+
+const en: Section[] = [
+  {
+    h: "1. Data controller",
+    body: [
+      "<p>Triba is a monthly digital magazine. By using our website and subscribing to our services, you entrust us with your personal data. This policy explains what data we collect, how we use it and what rights you have.</p>",
+      `<p class="mt-2">Contact: <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a></p>`,
+    ],
+  },
+  {
+    h: "2. Data we collect",
+    body: [
+      `<ul class="list-disc pl-5 space-y-1">
+        <li><strong>Account data:</strong> name and email address when you register.</li>
+        <li><strong>Payment data:</strong> we don't store card numbers or financial data. Payments are processed by Stripe and Mercado Pago under their own privacy policies.</li>
+        <li><strong>Browsing data:</strong> anonymous information about your interaction with the site (pages visited, session time) to improve the experience.</li>
+        <li><strong>Communications:</strong> messages you send us through the contact form, feedback or creator applications.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "3. Purpose of processing",
+    body: [
+      `<ul class="list-disc pl-5 space-y-1">
+        <li>Manage your subscription and access to the magazine.</li>
+        <li>Send you the free newsletter if you subscribed to it.</li>
+        <li>Process payments through the payment providers you choose.</li>
+        <li>Answer your questions, feedback and applications.</li>
+        <li>Improve our website and services.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "4. Legal basis",
+    body: [
+      "<p>The processing of your data is based on:</p>",
+      `<ul class="list-disc pl-5 space-y-1">
+        <li><strong>Performance of a contract:</strong> managing the subscription and access to the magazine.</li>
+        <li><strong>Consent:</strong> newsletter, communications and applications.</li>
+        <li><strong>Legitimate interest:</strong> site improvement and usage analysis.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "5. Storage and security",
+    body: [
+      "<p>Your data is stored on <strong>Supabase</strong>, a database and authentication provider with servers in the European Union. We implement technical and organizational security measures to protect your information against unauthorized access, loss or alteration.</p>",
+    ],
+  },
+  {
+    h: "6. Data sharing",
+    body: [
+      "<p>We don't sell your personal data to third parties. We only share data with:</p>",
+      `<ul class="list-disc pl-5 space-y-1">
+        <li><strong>Supabase:</strong> authentication and database.</li>
+        <li><strong>Stripe, Mercado Pago:</strong> payment processing (only the data needed for the transaction).</li>
+        <li><strong>Google (Gmail):</strong> sending transactional emails and the newsletter.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "7. Your rights",
+    body: [
+      `<p>You can exercise the following rights at any time by writing to <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a>:</p>`,
+      `<ul class="list-disc pl-5 space-y-1">
+        <li><strong>Access:</strong> know what data we hold about you.</li>
+        <li><strong>Rectification:</strong> correct inaccurate or incomplete data.</li>
+        <li><strong>Erasure:</strong> request the deletion of your data.</li>
+        <li><strong>Objection:</strong> object to the processing of your data.</li>
+        <li><strong>Portability:</strong> receive your data in a structured format.</li>
+        <li><strong>Withdraw consent:</strong> at any time, without affecting the lawfulness of prior processing.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "8. Cookies",
+    body: [
+      "<p>We use essential cookies for the site to work (user session, authentication). We don't use advertising tracking cookies. You can configure your browser to reject all cookies, but some site features might not be available.</p>",
+    ],
+  },
+  {
+    h: "9. Data retention",
+    body: [
+      "<p>We keep your data while you have an active account. When you cancel your subscription or request account deletion, your data is deleted within a maximum of 30 days, unless we're legally required to keep it longer.</p>",
+    ],
+  },
+  {
+    h: "10. Changes to this policy",
+    body: [
+      "<p>We may update this privacy policy periodically. We'll notify you of significant changes through the website or by email.</p>",
+      `<p class="mt-2 text-triba-brown/60">Last updated: July 2026.</p>`,
+    ],
+  },
+];
+
+const content = lang === "en" ? en : es;
+const title = dict.privacy.title;
+const description = dict.privacy.description;
+---
+
+<Layout title={title} description={description} canonical={canonical} lang={lang} navLogoAlways>
+  <section class="page-shell page-gutter bg-triba-bone">
+    <div class="max-w-3xl mx-auto">
+
+      <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content={title} tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
+      </div>
+
+      <div class="space-y-6 font-sans text-base text-triba-brown leading-relaxed reveal-stagger" data-reveal>
+        {content.map((s) => (
+          <section>
+            <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">{s.h}</h2>
+            {s.body.map((html) => (
+              <div set:html={html} class="space-y-2" />
+            ))}
+          </section>
+        ))}
+      </div>
+
+    </div>
+  </section>
+</Layout>

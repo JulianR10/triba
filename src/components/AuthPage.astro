@@ -25,6 +25,7 @@ const authMessages = {
   emailExists: dict.auth.emailExists,
   enterEmail: dict.auth.enterEmail,
   recoveryPath: lang === "en" ? "/en/iniciar-sesion?recovery=true" : "/iniciar-sesion?recovery=true",
+  accountPath: lang === "en" ? "/en/mi-cuenta" : "/mi-cuenta",
 };
 ---
 
@@ -142,6 +143,7 @@ const authMessages = {
     emailExists: "Ya existe una cuenta con este email. Iniciá sesión para continuar.",
     enterEmail: "Ingresá tu email",
     recoveryPath: "/iniciar-sesion?recovery=true",
+    accountPath: "/mi-cuenta",
   };
   const raw = section?.getAttribute("data-auth-messages");
   if (raw) {
@@ -210,7 +212,7 @@ const authMessages = {
   function getSafeRedirect() {
     const params = new URLSearchParams(window.location.search);
     const redirect = params.get("redirect");
-    return isSafeRedirect(redirect) && redirect ? redirect : "/mi-cuenta";
+    return isSafeRedirect(redirect) && redirect ? redirect : messages.accountPath;
   }
 
   if (forgotBtn) {
@@ -290,7 +292,7 @@ const authMessages = {
           console.error("No se pudo leer el role del user, fallback a /mi-cuenta:", err);
         }
 
-        window.location.href = role === "admin" ? "/admin" : "/mi-cuenta";
+        window.location.href = role === "admin" ? "/admin" : messages.accountPath;
       } catch (err) {
         loginError.textContent = messages.connectionError;
         loginError.classList.remove("hidden");
@@ -419,7 +421,7 @@ const authMessages = {
         return;
       }
 
-      window.location.href = "/mi-cuenta";
+      window.location.href = messages.accountPath;
     });
   }
 

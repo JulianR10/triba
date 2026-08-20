@@ -1,0 +1,171 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PatchTitle from "../components/PatchTitle.astro";
+import { t, type Locale } from "../i18n/ui";
+
+interface Section {
+  h: string;
+  body: string[];
+}
+
+const { lang = "es" } = Astro.props as { lang?: Locale };
+const dict = t(lang);
+const canonical = lang === "en" ? "/en/terminos" : "/terminos";
+
+const es: Section[] = [
+  {
+    h: "1. Aceptación de los términos",
+    body: [
+      "<p>Al acceder a Triba y utilizar cualquiera de nuestros servicios, aceptas estos términos y condiciones. Si no estás de acuerdo, no uses el sitio.</p>",
+    ],
+  },
+  {
+    h: "2. Descripción del servicio",
+    body: [
+      "<p>Triba es una revista digital mensual escrita por y para mujeres. Ofrecemos:</p>",
+      `<ul class="list-disc pl-5 space-y-1 mt-2">
+        <li>Newsletter gratuito mensual con contenido seleccionado.</li>
+        <li>Suscripción paga con acceso a la revista completa, archivo histórico y descarga PDF.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "3. Suscripción y pagos",
+    body: [
+      `<ul class="list-disc pl-5 space-y-1">
+        <li>La suscripción se renueva automáticamente cada mes según el plan elegido.</li>
+        <li>Los precios se muestran en la moneda correspondiente (EUR, USD o ARS) e incluyen impuestos cuando corresponda.</li>
+        <li>Los pagos son procesados por Stripe y Mercado Pago. No almacenamos datos de tarjetas.</li>
+        <li>Podes cancelar tu suscripción en cualquier momento desde tu cuenta. La cancelación se hace efectiva al final del período en curso.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "4. Uso del contenido",
+    body: [
+      "<p>Todos los contenidos publicados en Triba (artículos, ilustraciones, fotografías, diseños) están protegidos por derechos de autor. No podes reproducir, distribuir ni modificar el contenido sin autorización expresa.</p>",
+      `<p class="mt-2">Las suscriptoras pueden descargar el PDF de cada edición para uso personal. No está permitida su redistribución.</p>`,
+    ],
+  },
+  {
+    h: "5. Cuenta de usuario",
+    body: [
+      `<ul class="list-disc pl-5 space-y-1">
+        <li>Sos responsable de mantener la confidencialidad de tu contraseña.</li>
+        <li>No podes compartir tu cuenta ni tu acceso con terceros.</li>
+        <li>Nos reservamos el derecho de suspender cuentas que violen estos términos.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "6. Reembolsos",
+    body: [
+      `<p>No ofrecemos reembolsos por períodos parciales. Si consideras que hay un error en un cobro, escribinos a <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a> y lo revisamos.</p>`,
+    ],
+  },
+  {
+    h: "7. Modificaciones",
+    body: [
+      "<p>Podemos actualizar estos términos en cualquier momento. Los cambios se publican en esta página y entran en vigencia al momento de su publicación. Recomendamos revisar periódicamente.</p>",
+    ],
+  },
+  {
+    h: "8. Contacto",
+    body: [
+      `<p>Para cualquier consulta sobre estos términos: <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a></p>`,
+    ],
+  },
+];
+
+const en: Section[] = [
+  {
+    h: "1. Acceptance of the terms",
+    body: [
+      "<p>By accessing Triba and using any of our services, you accept these terms and conditions. If you don't agree, don't use the site.</p>",
+    ],
+  },
+  {
+    h: "2. Description of the service",
+    body: [
+      "<p>Triba is a monthly digital magazine written by and for women. We offer:</p>",
+      `<ul class="list-disc pl-5 space-y-1 mt-2">
+        <li>A free monthly newsletter with selected content.</li>
+        <li>A paid subscription with access to the full magazine, the historical archive and PDF download.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "3. Subscription and payments",
+    body: [
+      `<ul class="list-disc pl-5 space-y-1">
+        <li>The subscription renews automatically every month according to the plan you chose.</li>
+        <li>Prices are shown in the relevant currency (EUR, USD or ARS) and include taxes when applicable.</li>
+        <li>Payments are processed by Stripe and Mercado Pago. We don't store card data.</li>
+        <li>You can cancel your subscription at any time from your account. The cancellation takes effect at the end of the current period.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "4. Use of content",
+    body: [
+      "<p>All content published in Triba (articles, illustrations, photographs, designs) is protected by copyright. You can't reproduce, distribute or modify the content without express authorization.</p>",
+      `<p class="mt-2">Subscribers can download the PDF of each edition for personal use. Redistribution is not allowed.</p>`,
+    ],
+  },
+  {
+    h: "5. User account",
+    body: [
+      `<ul class="list-disc pl-5 space-y-1">
+        <li>You're responsible for keeping your password confidential.</li>
+        <li>You can't share your account or access with third parties.</li>
+        <li>We reserve the right to suspend accounts that violate these terms.</li>
+      </ul>`,
+    ],
+  },
+  {
+    h: "6. Refunds",
+    body: [
+      `<p>We don't offer refunds for partial periods. If you believe there's an error in a charge, write to us at <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a> and we'll review it.</p>`,
+    ],
+  },
+  {
+    h: "7. Modifications",
+    body: [
+      "<p>We may update these terms at any time. Changes are published on this page and take effect at the moment of publication. We recommend checking periodically.</p>",
+    ],
+  },
+  {
+    h: "8. Contact",
+    body: [
+      `<p>For any question about these terms: <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a></p>`,
+    ],
+  },
+];
+
+const content = lang === "en" ? en : es;
+const title = dict.terms.title;
+const description = dict.terms.description;
+---
+
+<Layout title={title} description={description} canonical={canonical} lang={lang} navLogoAlways>
+  <section class="page-shell page-gutter bg-triba-bone">
+    <div class="max-w-3xl mx-auto">
+
+      <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content={title} tag="h1" class="text-4xl md:text-5xl text-triba-brown" />
+      </div>
+
+      <div class="space-y-6 font-sans text-base text-triba-brown leading-relaxed reveal-stagger" data-reveal>
+        {content.map((s) => (
+          <section>
+            <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">{s.h}</h2>
+            {s.body.map((html) => (
+              <div set:html={html} class="space-y-2" />
+            ))}
+          </section>
+        ))}
+      </div>
+
+    </div>
+  </section>
+</Layout>

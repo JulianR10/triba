@@ -12,6 +12,9 @@ export const EN_ROUTES: ReadonlySet<string> = new Set([
   "/suscribirme",
   "/triba-creators",
   "/iniciar-sesion",
+  "/mi-cuenta",
+  "/privacidad",
+  "/terminos",
 ]);
 
 export function isEnPath(pathname: string): boolean {
