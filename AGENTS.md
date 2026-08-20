@@ -63,13 +63,14 @@ Revista digital mensual — newsletter gratuito + suscripción paga, escrita por
 
 ## Revista bilingüe (ES/EN)
 - **Modelo:** `editions` = el EJEMPLAR/producto (id, edition_number, kind, featured, published_at); `edition_languages` = la VERSIÓN localizada (edition_id FK CASCADE, language 'es'|'en', title, description, cover_url, pdf_url, badge; UNIQUE(edition_id, language)). UN ejemplar → dos versiones; el EN es opcional (estado "English coming soon").
-- **Migración `018` = EXPAND** (agrega `edition_languages`, backfill ES desde las columnas legacy, `editions_edition_number_unique` parcial). **Las columnas legacy (`title/description/cover_url/pdf_url/badge`) de `editions` SIGUEN EXISTIENDO** hasta la migración `019` (CONTRACT, aún no escrita): NO dropearlas ni asumir que ya no están. Mover cualquier lectura de `editions.*content*` a `edition_languages`.
+- **Migración `018` = EXPAND** (agrega `edition_languages`, backfill ES desde las columnas legacy, `editions_edition_number_unique` parcial). **Migración `019` = CONTRACT (APLICADA):** ya no existen `title/description/cover_url/pdf_url/badge` en `editions` (dropeadas; la app no debe leerlas). `editions` = solo `id, edition_number, kind, featured, published_at, created_at`. Todo el contenido vive en `edition_languages`. `019` también agrega `profiles.preferred_locale` (text, default 'es', check `es|en`).
 - **Acceso por idioma:** helpers de `src/lib/editions.ts` (`getEditions(lang)`, `getFeaturedEdition(lang)`, `getFreeArticle(lang)`, `getEditionBySlug(slug, lang)`, `getEditionLanguages(id)`) devuelven `EditionView` = ejemplar + versión elegida + `isFallback` (EN pedido sin versión → cae a ES) + `hasEn`. Usar SIEMPRE estos helpers, no queries sueltas.
 - **`/api/pdf/{id}` retrocompatible:** `id` puede ser `edition_languages.id` (nuevo) O `editions.id` legacy (emails viejos) + `?lang=` (default es, fallback ES). No romper esa resolución.
 - **Admin:** form bilingüe (`EditionForm`) manda `kind`, `edition_number`, `featured` + `es_*`/`en_*` (title/description/cover_url/pdf_url/badge). EN vacío = se omite/elimina la versión EN (limpiar toda la sección EN quita el inglés). Validación en `src/lib/admin/editions.ts` (`editionFormToInput`/`validateEditionInput`). Uploads: `/api/admin/uploads/sign` acepta `language`; `buildStoragePath` incluye `-{lang}` (`pdfs/revista-{n}-{es}.pdf`, `covers/edicion-{n}-{es}-{ts}.ext`). Uploads todo-o-nada (4 slots).
 - **`scripts/import-pdfs.mjs` está DEPRECADO** (escribe columnas legacy; re-correrlo falla). Alta mensual = `/admin/ediciones`.
 - **Tipos (`database.types.ts`):** `edition_languages.Relationships → editions` declarado (habilita el embed to-one `editions(...)` en `/api/pdf`). NO declarar la relación parent-side en `editions` (tipa mal el embed `edition_languages(*)` como objeto single; usar dos queries como en `src/lib/admin/editions.ts`).
-- Email "nueva edición" linkea a `/{SITE_URL}/revista/edicion-{N}` (NUNCA `/revista/{id}`).
+- Email "nueva edición" linkea a `/{SITE_URL}/revista/edicion-{N}` (NUNCA `/revista/{id}`); para suscriptoras con `preferred_locale='en'` a `/{SITE_URL}/en/revista/edicion-{N}`.
+- **Fase E (emails por `preferred_locale`):** `src/lib/email.ts` está localizado (`sendWelcomeEmail(to, showCta, locale)` / `sendNewEditionEmail(to, edition, locale)`, ES/EN + links `/en/...`). `preferred_locale` se setea en: signup desde la página EN (`AuthPage` → `POST /api/locale`) y al togglear el switcher con sesión (`Navbar` → `POST /api/locale`). Webhooks (`stripe.ts`/`mercadopago.ts`) resuelven el locale con `getPreferredLocale(userId)` de `src/lib/locale-pref.ts`. `notify.ts` usa `preferred_locale` por suscriptora y manda la versión EN de `edition_languages` si existe (fallback ES).
 
 ## Estructura
 ```
@@ -115,9 +116,8 @@ triba/
 - Limpiar `comunidadtriba+liveverify1785776465@gmail.com` de Sender. Evaluar plan pago Sender si sube volumen.
 
 ## Deuda de tipos
-**`npx astro check` → 0 errores · `npm run build` OK** (20-Ago-2026, Fase D completa: `mi-cuenta`, `privacidad` y `terminos` EN — dict `miCuenta`/`privacy`/`terms`, redirects post-login locale-aware, carrusel "Tus tomos" con `localizePath`).
-- Pendiente: migración `019` (CONTRACT + `profiles.preferred_locale`) cuando el código esté verificado en prod con el modelo nuevo — dropea columnas legacy de `editions` (hoy en Fase D NO se tocó la DB).
-- Próximas fases: E (emails por `preferred_locale`), cargar contenido EN de ediciones en `/admin/ediciones` (hoy `edition_languages` solo tiene `es`).
+**`npx astro check` → 0 errores · `npm run build` OK** (20-Ago-2026, Fase E completa: migración `019` CONTRACT aplicada a prod — `editions` sin columnas legacy, `profiles.preferred_locale` con check `es|en` —; emails localizados por `preferred_locale` en `email.ts`, webhooks, `notify.ts` y `/api/locale`).
+- Pendiente: cargar contenido EN de ediciones en `/admin/ediciones` (hoy `edition_languages` solo tiene `es`; los emails/lecciones EN caen a fallback ES).
 
 ⚠️ `src/lib/database.types.ts` debe mantenerse en formato canónico y sincronizado con `supabase/migrations/` (tablas, columnas, funciones): si falta una clave, todo `.from()` resuelve a `never[]`.
 

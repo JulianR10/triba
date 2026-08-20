@@ -7,6 +7,7 @@ import { ok, error } from "../../../lib/response";
 import { logger } from "../../../lib/logger";
 import { syncPaidSubscriber } from "../../../lib/sender";
 import { sendWelcomeEmail } from "../../../lib/email";
+import { getPreferredLocale } from "../../../lib/locale-pref";
 
 const VERIFY_SIGNATURES = true;
 
@@ -98,7 +99,9 @@ export const POST: APIRoute = async ({ request }) => {
             syncPaidSubscriber(email).catch((err) =>
               logger.error({ err, email }, "Sender sync error (stripe)"),
             );
-            sendWelcomeEmail(email, false).catch((err) =>
+            getPreferredLocale(userId).then((locale) =>
+              sendWelcomeEmail(email, false, locale),
+            ).catch((err) =>
               logger.error({ err, email }, "Welcome email error (stripe)"),
             );
           }

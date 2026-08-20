@@ -6,6 +6,7 @@ import { ok, error } from "../../../lib/response";
 import { logger } from "../../../lib/logger";
 import { syncPaidSubscriber } from "../../../lib/sender";
 import { sendWelcomeEmail } from "../../../lib/email";
+import { getPreferredLocale } from "../../../lib/locale-pref";
 
 const isSignatureVerificationEnabled = import.meta.env.VERIFY_MP_SIGNATURES !== "false";
 const MP_API_BASE = "https://api.mercadopago.com";
@@ -196,7 +197,9 @@ async function activateSubscription({
     syncPaidSubscriber(email).catch((err) =>
       logger.error({ err, email }, "Sender sync error (mercadopago)"),
     );
-    sendWelcomeEmail(email, false).catch((err) =>
+    getPreferredLocale(userId).then((locale) =>
+      sendWelcomeEmail(email, false, locale),
+    ).catch((err) =>
       logger.error({ err, email }, "Welcome email error (mercadopago)"),
     );
   }

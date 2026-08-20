@@ -8,6 +8,7 @@ export interface Database {
           id: string;
           email: string;
           role: "free" | "subscriber" | "admin";
+          preferred_locale: "es" | "en";
           subscription_id: string | null;
           created_at: string;
           updated_at: string;
@@ -16,6 +17,7 @@ export interface Database {
           id: string;
           email: string;
           role?: "free" | "subscriber" | "admin";
+          preferred_locale?: "es" | "en";
           subscription_id?: string | null;
           created_at?: string;
           updated_at?: string;
@@ -24,6 +26,7 @@ export interface Database {
           id?: string;
           email?: string;
           role?: "free" | "subscriber" | "admin";
+          preferred_locale?: "es" | "en";
           subscription_id?: string | null;
           created_at?: string;
           updated_at?: string;

@@ -353,6 +353,16 @@ const authMessages = {
       }
 
       if (data.session) {
+        if (messages.lang === "en") {
+          fetch("/api/locale", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: "Bearer " + data.session.access_token,
+            },
+            body: JSON.stringify({ locale: "en" }),
+          }).catch(function () {});
+        }
         window.location.href = redirect;
         return;
       }

@@ -41,9 +41,16 @@ export const POST: APIRoute = async ({ params, locals }) => {
     return ok({ notified: 0, total: 0 });
   }
 
+  const { data: enVersion } = await supabaseAdmin
+    .from("edition_languages")
+    .select("title, description, cover_url")
+    .eq("edition_id", editionId)
+    .eq("language", "en")
+    .maybeSingle();
+
   const { data: rows, error: subsError } = await supabaseAdmin
     .from("profiles")
-    .select("email")
+    .select("email, preferred_locale")
     .eq("role", "subscriber");
 
   if (subsError) {
@@ -52,7 +59,9 @@ export const POST: APIRoute = async ({ params, locals }) => {
   }
 
   const all = rows ?? [];
-  const subscribers = all.filter((s): s is { email: string } => typeof s.email === "string" && s.email.length > 0);
+  const subscribers = all.filter((s): s is { email: string; preferred_locale: "es" | "en" } =>
+    typeof s.email === "string" && s.email.length > 0
+  );
   const noEmail = all.length - subscribers.length;
 
   if (subscribers.length === 0) {
@@ -64,13 +73,15 @@ export const POST: APIRoute = async ({ params, locals }) => {
 
   for (const sub of subscribers) {
     try {
+      const en = sub.preferred_locale === "en" && enVersion && enVersion.cover_url ? enVersion : null;
+      const version = en ?? esVersion;
       await sendNewEditionEmail(sub.email, {
         id: issue.id,
         edition_number: issue.edition_number,
-        title: esVersion.title,
-        description: esVersion.description,
-        cover_url: esVersion.cover_url,
-      });
+        title: version.title,
+        description: version.description,
+        cover_url: version.cover_url!,
+      }, en ? "en" : "es");
       notified++;
     } catch (err) {
       failed++;
