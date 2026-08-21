@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
@@ -40,8 +41,8 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
   const [scale, setScale] = useState(1);
   const [expanded, setExpanded] = useState(false);
   const [nativeFs, setNativeFs] = useState(false);
-  const [viewportWidth, setViewportWidth] = useState(0);
-  const [viewportHeight, setViewportHeight] = useState(0);
+  const [viewportWidth, setViewportWidth] = useState(() => typeof window !== "undefined" ? window.innerWidth : 0);
+  const [viewportHeight, setViewportHeight] = useState(() => typeof window !== "undefined" ? window.innerHeight : 0);
   const aspectRatioRef = useRef(0.707);
   const [aspectRatio, setAspectRatio] = useState(0.707);
   const [pageHeight, setPageHeight] = useState<number>(0);
@@ -107,12 +108,21 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
   useEffect(() => {
     if (!expanded) return;
     function updateDimensions() {
-      setViewportWidth(window.innerWidth);
-      setViewportHeight(window.innerHeight);
+      const vw = window.visualViewport?.width ?? window.innerWidth;
+      const vh = window.visualViewport?.height ?? window.innerHeight;
+      setViewportWidth(vw);
+      setViewportHeight(vh);
     }
     updateDimensions();
     window.addEventListener("resize", updateDimensions);
-    return () => window.removeEventListener("resize", updateDimensions);
+    window.visualViewport?.addEventListener("resize", updateDimensions);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("resize", updateDimensions);
+      window.visualViewport?.removeEventListener("resize", updateDimensions);
+      document.body.style.overflow = prevOverflow;
+    };
   }, [expanded]);
 
   const resetInline = () => {
@@ -191,22 +201,24 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
 
   const pageWidth = expanded
     ? (() => {
-        const maxW = viewportWidth - 32;
-        const maxH = viewportHeight > 110 ? viewportHeight - 110 : viewportHeight * 0.9;
-        let w = Math.min(maxW * 0.9, viewportWidth * 0.85, 1000);
+        const vw = viewportWidth || window.innerWidth;
+        const vh = viewportHeight || window.innerHeight;
+        const maxW = Math.max(280, vw - 32);
+        const maxH = vh > 110 ? vh - 110 : vh * 0.9;
+        let w = Math.min(maxW * 0.9, vw * 0.85, 1000);
         if (maxH > 0 && aspectRatio > 0) {
           const h = w / aspectRatio;
           if (h > maxH) w = maxH * aspectRatio;
         }
-        return Math.floor(Math.min(w, maxW));
+        return Math.floor(Math.max(280, Math.min(w, maxW)));
       })()
     : 340;
 
   const fullscreenClasses = expanded
-    ? "fixed inset-0 z-50 bg-triba-bone flex flex-col"
+    ? "fixed inset-0 z-[80] bg-triba-bone flex flex-col h-[100dvh] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
     : "flex flex-col items-center";
 
-  return (
+  const content = (
     <div
       ref={containerRef}
       className={(fullscreenClasses + " " + className).trim()}
@@ -397,4 +409,9 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
       )}
     </div>
   );
+
+  if (expanded && typeof document !== "undefined" && document.body) {
+    return createPortal(content, document.body);
+  }
+  return content;
 }
