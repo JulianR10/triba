@@ -39,6 +39,18 @@ export const GET: APIRoute = async ({ params, request, url }) => {
 
   let version = asVersion as VersionWithIssue | null;
 
+  if (version && !version.pdf_url) {
+    const { data: esFallback } = await supabaseAdmin
+      .from("edition_languages")
+      .select("id, edition_id, language, pdf_url, editions(id, featured, kind, edition_number)")
+      .eq("edition_id", version.edition_id)
+      .eq("language", "es")
+      .maybeSingle();
+    if (esFallback && (esFallback as VersionWithIssue).pdf_url) {
+      version = { ...version, pdf_url: (esFallback as VersionWithIssue).pdf_url };
+    }
+  }
+
   if (!version) {
     const lang = url.searchParams.get("lang") === "en" ? "en" : "es";
     const { data: all } = await supabaseAdmin
@@ -47,6 +59,10 @@ export const GET: APIRoute = async ({ params, request, url }) => {
       .eq("edition_id", id);
     const rows = (all ?? []) as VersionWithIssue[];
     version = rows.find((v) => v.language === lang) ?? rows.find((v) => v.language === "es") ?? null;
+    if (version && !version.pdf_url) {
+      const esFallback = rows.find((v) => v.language === "es" && v.pdf_url);
+      if (esFallback) version = { ...version, pdf_url: esFallback.pdf_url };
+    }
   }
 
   if (!version) {

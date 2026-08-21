@@ -116,8 +116,8 @@ triba/
 - Limpiar `comunidadtriba+liveverify1785776465@gmail.com` de Sender. Evaluar plan pago Sender si sube volumen.
 
 ## Deuda de tipos
-**`npx astro check` → 0 errores · `npm run build` OK** (20-Ago-2026, Fase E completa: migración `019` CONTRACT aplicada a prod — `editions` sin columnas legacy, `profiles.preferred_locale` con check `es|en` —; emails localizados por `preferred_locale` en `email.ts`, webhooks, `notify.ts` y `/api/locale`).
-- Pendiente: cargar contenido EN de ediciones en `/admin/ediciones` (hoy `edition_languages` solo tiene `es`; los emails/lecciones EN caen a fallback ES).
+**`npx astro check` → 0 errores · `npm run build` OK** (21-Ago-2026, Bilingüe completo: `019` CONTRACT + `preferred_locale` + herencia cover/PDF EN→ES (`resolveEditionView`/`/api/pdf`) + badge `EN coming soon` + contenido EN de 4 ediciones cargado (`scripts/load-en-editions.mjs`)).
+- Pendiente: próxima edición mensual — rellenar sección EN en `/admin/ediciones` al publicar; futuras sin EN mostrarán `EN coming soon` y PDF heredado de ES.
 
 ⚠️ `src/lib/database.types.ts` debe mantenerse en formato canónico y sincronizado con `supabase/migrations/` (tablas, columnas, funciones): si falta una clave, todo `.from()` resuelve a `never[]`.
 

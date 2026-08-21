@@ -40,7 +40,7 @@ const editions = allEditions.map((e, i) => ({
   cover: e.cover_url ?? "",
   pdf: e.pdf_url ? `/api/pdf/${e.id}?lang=${lang}` : "#",
   featured: e.featured,
-  badge: e.badge,
+  badge: !e.hasEn ? (dict.magazine as { comingSoon?: string }).comingSoon ?? "EN coming soon" : e.badge,
   flipColor: ["bg-triba-pink/80", "bg-triba-blue/80", "bg-triba-red/80"][i % 3],
   backTextClass: ["text-triba-brown", "text-triba-white", "text-triba-brown"][i % 3],
 }));

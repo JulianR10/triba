@@ -110,6 +110,7 @@ export const ui = {
       continueReading: "Seguir leyendo",
       iWantIt: "LA QUIERO!",
       latestEdition: "Última edición",
+      comingSoon: "EN próximamente",
       coverAlt: "Portada de {title}",
       freeArticlePatch: [
         [
@@ -412,6 +413,7 @@ export const ui = {
       continueReading: "Keep reading",
       iWantIt: "I WANT IT!",
       latestEdition: "Latest edition",
+      comingSoon: "EN coming soon",
       coverAlt: "Cover of {title}",
       freeArticlePatch: [
         [
