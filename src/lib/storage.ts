@@ -59,33 +59,6 @@ export function buildStoragePath(
   return `covers/edicion-${editionNumber}-${lang}-${Date.now()}.${ext}`;
 }
 
-export async function uploadEditionFile(
-  file: File,
-  kind: EditionFileKind,
-  editionNumber: number,
-  opts?: StoragePathOptions
-): Promise<UploadResult> {
-  const rule = FILE_RULES[kind];
-  if (file.size > rule.maxBytes) {
-    const mb = (rule.maxBytes / 1024 / 1024).toFixed(0);
-    throw new Error(`Archivo demasiado grande. Máximo ${mb} MB.`);
-  }
-  if (!rule.mime.test(file.type)) {
-    throw new Error(`Tipo de archivo no permitido: ${file.type || "desconocido"}`);
-  }
-
-  const ext = fileExt(file.name) || (kind === "pdf" ? "pdf" : "jpg");
-  const path = buildStoragePath(kind, editionNumber, ext, opts);
-
-  const { error } = await supabaseAdmin.storage.from(BUCKET).upload(path, file, {
-    contentType: file.type,
-    upsert: true,
-  });
-  if (error) throw new Error(`Error subiendo archivo: ${error.message}`);
-
-  return { url: getPublicUrl(path), path };
-}
-
 export async function getSignedPdfUrl(
   pdfUrl: string,
   options?: { download?: boolean; ttl?: number }
@@ -109,4 +82,15 @@ export function isStorageConfigured(): boolean {
     import.meta.env.SUPABASE_URL ||
     import.meta.env.VITE_SUPABASE_URL
   ) && !!import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
+}
+
+export async function removeStoragePaths(paths: string[]): Promise<{ removed: number }> {
+  const clean = [...new Set(paths.filter((p): p is string => typeof p === "string" && !!p))];
+  if (clean.length === 0) return { removed: 0 };
+  // Guard: only allow known prefixes to avoid accidental deletes
+  const allowed = clean.filter((p) => p.startsWith("covers/") || p.startsWith("pdfs/"));
+  if (allowed.length === 0) return { removed: 0 };
+  const { error } = await supabaseAdmin.storage.from(BUCKET).remove(allowed);
+  if (error) throw new Error(`Error limpiando storage: ${error.message}`);
+  return { removed: allowed.length };
 }

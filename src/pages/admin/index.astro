@@ -41,7 +41,8 @@ const cards = [
   {
     label: "Newsletter",
     value: stats.newsletter_count,
-    color: "bg-triba-bone",
+    sub: stats.newsletter_pending_sync > 0 ? `${stats.newsletter_pending_sync} pendiente${stats.newsletter_pending_sync === 1 ? "" : "s"} de sync` : undefined,
+    color: stats.newsletter_pending_sync > 0 ? "bg-triba-red/10" : "bg-triba-bone",
   },
   {
     label: "Suscripciones canceladas",
@@ -62,7 +63,6 @@ const cards = [
   <p class="font-sans text-base text-triba-brown/70 mb-8">
     Accesos rápidos para operar Triba: crear una edición, ver suscriptoras, responder creators.
   </p>
-
   <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
     {
       cards.map((card) => {
@@ -81,6 +81,13 @@ const cards = [
       })
     }
   </div>
+
+  {stats.newsletter_pending_sync > 0 && (
+    <div class="mb-6 p-4 bg-triba-red/10 border-2 border-triba-red rounded-xl">
+      <p class="font-heading text-xs uppercase tracking-wider text-triba-red mb-1">Newsletter — sync pendiente</p>
+      <p class="font-sans text-sm text-triba-brown/80">Hay {stats.newsletter_pending_sync} suscripción{stats.newsletter_pending_sync === 1 ? "" : "es"} sin welcome en Sender (429 previo). Ejecutá <code class="bg-triba-white px-1 rounded">node --env-file=.env scripts/resync-newsletters.mjs</code> o reintentá desde el flujo 23505.</p>
+    </div>
+  )}
 
   <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6">
     <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">Acciones rápidas</h2>

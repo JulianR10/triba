@@ -25,18 +25,30 @@ let profile: Profile | null = null;
 let subscription: Subscription | null = null;
 
 if (user) {
-  const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-  profile = p;
-  if (profile?.subscription_id) {
-    const { data: s } = await supabase.from("subscriptions").select("*").eq("id", profile.subscription_id).single();
-    subscription = s;
+  // P7: preferir locals centralizados (middleware), fallback a queries directas
+  const localsProfile = (Astro.locals as any).profile as Profile | null | undefined;
+  const localsSubscription = (Astro.locals as any).subscription as Subscription | null | undefined;
+  const localsHasActive = (Astro.locals as any).hasActiveSub as boolean | undefined;
+  if (localsProfile !== undefined) {
+    profile = localsProfile;
+    subscription = localsSubscription ?? null;
+  } else {
+    const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).single();
+    profile = p;
+    if (profile?.subscription_id) {
+      const { data: s } = await supabase.from("subscriptions").select("*").eq("id", profile.subscription_id).single();
+      subscription = s;
+    }
   }
 }
 
-const hasActiveSub = isActiveSubscription(
-  subscription?.status ?? null,
-  subscription?.current_period_end ?? undefined,
-);
+const hasActiveSub =
+  typeof (Astro.locals as any).hasActiveSub === "boolean"
+    ? (Astro.locals as any).hasActiveSub
+    : isActiveSubscription(
+        subscription?.status ?? null,
+        subscription?.current_period_end ?? undefined,
+      );
 
 const subscriptionInfo = subscriptionStatusInfo(subscription?.status, lang);
 
@@ -97,6 +109,7 @@ const miCuentaMessages = {
   feedbackThanks: dict.miCuenta.feedbackThanks,
   feedbackConn: dict.miCuenta.feedbackConn,
   processingNote2: dict.miCuenta.processingNote2,
+  processingNetworkError: dict.miCuenta.processingNetworkError,
   comingSoon: comingSoonLabel,
   badgeEn: "EN",
 };
@@ -234,7 +247,7 @@ const miCuentaMessages = {
             <PatchTitle content={featured.title} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
             <div class="-mx-5 md:mx-0">
-              <PDFViewer pdfUrl={featuredPdfSignedUrl || ''} client:only="react" />
+              <PDFViewer pdfUrl={featuredPdfSignedUrl || ''} lang={lang} client:only="react" />
             </div>
 
             <p class="font-heading text-xs uppercase tracking-[0.2em] text-triba-brown/40 text-center mt-6">{dict.miCuenta.viewerHint}</p>
@@ -338,6 +351,7 @@ const miCuentaMessages = {
     feedbackThanks: "¡Gracias por tu feedback!",
     feedbackConn: "Error de conexión. Intentalo de nuevo.",
     processingNote2: "Todavía estamos confirmando tu pago. Si se demora más de un minuto, actualizá la página.",
+    processingNetworkError: "Conexión inestable, seguimos intentando...",
     comingSoon: "EN coming soon",
     badgeEn: "EN",
   };
@@ -368,6 +382,9 @@ const miCuentaMessages = {
     }, function () {
       var note = document.querySelector("[data-processing-note]");
       if (note) note.textContent = messages.processingNote2;
+    }, function () {
+      var note = document.querySelector("[data-processing-note]");
+      if (note) note.textContent = messages.processingNetworkError;
     });
   }
 

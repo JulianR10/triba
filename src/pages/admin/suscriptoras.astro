@@ -140,6 +140,15 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       if (typeof data.totalRefunded === "number") {
         statRefunded.textContent = String(data.totalRefunded);
       }
+      if (currentFilter === "pending" || currentFilter === "refunded") {
+        statActive.textContent = "—";
+        statCanceled.textContent = "—";
+        statNosub.textContent = "—";
+      } else {
+        if (typeof data.totalActive === "number") statActive.textContent = String(data.totalActive);
+        if (typeof data.totalCanceled === "number") statCanceled.textContent = String(data.totalCanceled);
+        if (typeof data.totalNone === "number") statNosub.textContent = String(data.totalNone);
+      }
 
       if (rows.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-triba-brown/50 font-sans text-sm">No se encontraron suscriptoras.</td></tr>`;
@@ -237,27 +246,11 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       prevBtn.disabled = page <= 1;
       nextBtn.disabled = page >= totalPages;
 
-      updateStats(rows);
       bindCancelButtons();
       bindRefundButtons();
     } catch {
       tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-8 text-center text-triba-red/70 font-sans text-sm">Error al cargar</td></tr>`;
     }
-  }
-
-  function updateStats(rows: any[]) {
-    if (currentFilter === "pending" || currentFilter === "refunded") {
-      statActive.textContent = "—";
-      statCanceled.textContent = "—";
-      statNosub.textContent = "—";
-      return;
-    }
-    const active = rows.filter((r: any) => r.subscription?.status === "active" || r.subscription?.status === "migrated").length;
-    const canceled = rows.filter((r: any) => r.subscription?.status === "canceled").length;
-    const none = rows.filter((r: any) => r.profile && !r.subscription).length;
-    statActive.textContent = String(active);
-    statCanceled.textContent = String(canceled);
-    statNosub.textContent = String(none);
   }
 
   function bindCancelButtons() {

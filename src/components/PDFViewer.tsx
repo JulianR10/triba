@@ -32,9 +32,10 @@ function useIsVisible(ref: React.RefObject<HTMLDivElement | null>) {
 interface Props {
   pdfUrl: string;
   className?: string;
+  lang?: "es" | "en";
 }
 
-export default function PDFViewer({ pdfUrl, className = "" }: Props) {
+export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [numPages, setNumPages] = useState(0);
   const [pageNumber, setPageNumber] = useState(1);
@@ -47,16 +48,40 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
   const [aspectRatio, setAspectRatio] = useState(0.707);
   const [pageHeight, setPageHeight] = useState<number>(0);
   const [err, setErr] = useState<string>("");
+  const [errType, setErrType] = useState<"generic" | "expired" | "timeout">("generic");
   const [retryKey, setRetryKey] = useState(0);
   const visible = useIsVisible(containerRef);
+  const mountTimeRef = useRef<number>(Date.now());
+
+  const msg = {
+    expiredTitle: lang === "en" ? "Link expired" : "El enlace expiró",
+    expiredBody: lang === "en" ? "Your viewing session lasts 30 minutes. Reload the page to generate a new link." : "Tu sesión de visualización dura 30 minutos. Recargá la página para generar un nuevo enlace.",
+    expiredAction: lang === "en" ? "Reload page" : "Recargar página",
+    loadErrorTitle: lang === "en" ? "Could not load the magazine" : "No se pudo cargar la revista",
+    retry: lang === "en" ? "Try again" : "Reintentar",
+    loading: lang === "en" ? "Loading magazine..." : "Cargando revista...",
+    unavailable: lang === "en" ? "PDF not available" : "PDF no disponible",
+    errorGeneric: lang === "en" ? "Error loading PDF" : "Error al cargar el PDF",
+    timeout: lang === "en" ? "The magazine took too long to load. Check your connection and try again." : "La revista tardó demasiado en cargar. Revisá tu conexión e intentá de nuevo.",
+  };
+
+  function isExpiredError(errorMsg: string, ageMs: number): boolean {
+    // Signed URLs 30m; after ~25m any 403/Failed fetch is likely expiry
+    const expiredPattern = /403|401|400|expired|token|unauthorized|signature|access.?denied/i;
+    if (ageMs > 25 * 60 * 1000 && expiredPattern.test(errorMsg)) return true;
+    // Also treat explicit token/signature errors as expired even early
+    if (/expired|token.*invalid|signature.*invalid|access.?denied/i.test(errorMsg)) return true;
+    return false;
+  }
 
   useEffect(() => {
     if (err || numPages > 0) return;
     const timer = setTimeout(() => {
-      setErr("La revista tardó demasiado en cargar. Revisá tu conexión e intentá de nuevo.");
+      setErr(msg.timeout);
+      setErrType("timeout");
     }, 25000);
     return () => clearTimeout(timer);
-  }, [err, numPages]);
+  }, [err, numPages, msg.timeout]);
 
   useEffect(() => {
     setViewportWidth(window.innerWidth);
@@ -161,6 +186,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
     setScale(1);
     setPageHeight(0);
     setErr("");
+    setErrType("generic");
   }, []);
 
   const handlePageLoadSuccess = useCallback((page: any) => {
@@ -193,7 +219,7 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
     return (
       <div className="aspect-[3/4] max-w-sm mx-auto md:mx-0 rounded-xl border-2 border-triba-black bg-triba-cream flex items-center justify-center">
         <p className="font-heading text-base text-triba-brown/40 text-center px-4">
-          PDF no disponible
+          {msg.unavailable}
         </p>
       </div>
     );
@@ -237,28 +263,38 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
           {err ? (
             <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-red/10 flex flex-col items-center justify-center gap-4 px-6 text-center">
               <p className="font-heading text-base text-triba-red/70">
-                No se pudo cargar la revista
+                {errType === "expired" ? msg.expiredTitle : msg.loadErrorTitle}
               </p>
               {err && (
                 <p className="font-sans text-xs text-triba-brown/60 max-w-[260px]">
-                  {err}
+                  {errType === "expired" ? msg.expiredBody : err}
                 </p>
               )}
-              <button
-                onClick={() => {
-                  setErr("");
-                  setPageHeight(0);
-                  setRetryKey((k) => k + 1);
-                }}
-                className="font-sans text-sm font-semibold text-triba-white bg-triba-red hover:bg-triba-red/90 rounded-full px-5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-triba-red"
-              >
-                Reintentar
-              </button>
+              {errType === "expired" ? (
+                <button
+                  onClick={() => window.location.reload()}
+                  className="font-sans text-sm font-semibold text-triba-white bg-triba-brown hover:bg-triba-brown/90 rounded-full px-5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-triba-brown"
+                >
+                  {msg.expiredAction}
+                </button>
+              ) : (
+                <button
+                  onClick={() => {
+                    setErr("");
+                    setErrType("generic");
+                    setPageHeight(0);
+                    setRetryKey((k) => k + 1);
+                  }}
+                  className="font-sans text-sm font-semibold text-triba-white bg-triba-red hover:bg-triba-red/90 rounded-full px-5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-triba-red"
+                >
+                  {msg.retry}
+                </button>
+              )}
             </div>
           ) : !visible ? (
             <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-cream flex items-center justify-center">
               <p className="font-heading text-base text-triba-brown/40">
-                Cargando revista...
+                {msg.loading}
               </p>
             </div>
           ) : (
@@ -267,19 +303,27 @@ export default function PDFViewer({ pdfUrl, className = "" }: Props) {
               file={pdfUrl}
               onLoadSuccess={handleDocumentLoadSuccess}
               onLoadError={(e: unknown) => {
-                setErr(e instanceof Error ? e.message : "No se pudo abrir la revista");
+                const raw = e instanceof Error ? e.message : "No se pudo abrir la revista";
+                const age = Date.now() - mountTimeRef.current;
+                if (isExpiredError(raw, age)) {
+                  setErr(msg.expiredBody);
+                  setErrType("expired");
+                } else {
+                  setErr(raw);
+                  setErrType("generic");
+                }
               }}
               loading={
                 <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-cream flex items-center justify-center">
                   <p className="font-heading text-base text-triba-brown/40">
-                    Cargando revista...
+                    {msg.loading}
                   </p>
                 </div>
               }
               error={
                 <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-red/10 flex items-center justify-center">
                   <p className="font-heading text-base text-triba-red/60">
-                    Error al cargar el PDF
+                    {msg.errorGeneric}
                   </p>
                 </div>
               }

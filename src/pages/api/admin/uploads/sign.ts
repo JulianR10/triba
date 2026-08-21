@@ -29,6 +29,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return error("filename es obligatorio", 400);
   }
 
+  // P14: valida solo header Content-Type (no magic bytes). El file se sube directo a Storage vía signedUrl (bypassa Vercel), por lo que el server no ve bytes. Riesgo menor; Supabase valida extensión y el bucket es privado.
   const rule = FILE_RULES[kind];
   const mime = typeof body.contentType === "string" ? body.contentType : "";
   if (!rule.mime.test(mime)) {

@@ -1,7 +1,8 @@
 import { defineMiddleware } from "astro/middleware";
 import { createSupabaseServerClient } from "./lib/supabase-server";
 import { supabaseAdmin } from "./lib/supabase-admin";
-import type { Profile } from "./lib/types";
+import type { Profile, Subscription } from "./lib/types";
+import { isActiveSubscription } from "./lib/subscription-status";
 import { getLocaleFromUrl } from "./i18n/locale";
 import { DEFAULT_LOCALE, type Locale } from "./i18n/ui";
 
@@ -55,19 +56,33 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const isAdminRoute =
     pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
 
+  // P7: gate centralizado — fetch profile+subscription once per request for any authenticated user
   let profile: Profile | null = null;
-  if (user && isAdminRoute) {
-    const { data } = await supabaseAdmin
+  let subscription: Subscription | null = null;
+  let hasActiveSub = false;
+  if (user) {
+    const { data: p } = await supabaseAdmin
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
-    profile = (data as Profile | null) ?? null;
+    profile = (p as Profile | null) ?? null;
+    if (profile?.subscription_id) {
+      const { data: s } = await supabaseAdmin
+        .from("subscriptions")
+        .select("*")
+        .eq("id", profile.subscription_id)
+        .single();
+      subscription = (s as Subscription | null) ?? null;
+      hasActiveSub = isActiveSubscription(subscription?.status, subscription?.current_period_end ?? undefined);
+    }
   }
 
   context.locals.supabase = supabase;
   context.locals.user = user;
   context.locals.profile = profile;
+  context.locals.subscription = subscription;
+  context.locals.hasActiveSub = hasActiveSub;
 
   // The URL is authoritative for existing routes; the `triba_locale` cookie is
   // only a fallback (e.g. locale-neutral 404s) and the seed for Fase E

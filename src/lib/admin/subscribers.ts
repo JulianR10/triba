@@ -26,6 +26,9 @@ export interface SearchSubscribersResult {
   totalMigrated: number;
   totalPending: number;
   totalRefunded: number;
+  totalActive: number;
+  totalCanceled: number;
+  totalNone: number;
 }
 
 export interface MigratedSubscriberRow {
@@ -265,9 +268,28 @@ export async function searchSubscribersForAdmin(
     allRows = allRows.filter((r) => !!r.migrationId && !!r.migrationRefunded);
   }
 
+  // Global stats (respect search, ignore status/pagination) — fixes P2
+  const totalActive = profileRows.filter((r) =>
+    isActiveSubscription(r.subscription?.status, r.subscription?.current_period_end ?? undefined),
+  ).length;
+  const totalCanceled = profileRows.filter((r) => r.subscription?.status === "canceled").length;
+  const totalNone = profileRows.filter((r) => !!r.profile && !r.subscription).length;
+
   const total = allRows.length;
   const totalPages = Math.ceil(total / pageSize);
   const rows = allRows.slice((page - 1) * pageSize, page * pageSize);
 
-  return { rows, total, page, pageSize, totalPages, totalMigrated: totalMigrated || 0, totalPending, totalRefunded };
+  return {
+    rows,
+    total,
+    page,
+    pageSize,
+    totalPages,
+    totalMigrated: totalMigrated || 0,
+    totalPending,
+    totalRefunded,
+    totalActive,
+    totalCanceled,
+    totalNone,
+  };
 }

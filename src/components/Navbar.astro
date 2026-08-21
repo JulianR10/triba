@@ -23,15 +23,30 @@ const user = session?.user ?? null;
 let profileRole: string | null = null;
 let accountSub: any = null;
 if (user) {
-  const { data: p } = await supabase.from("profiles").select("role, subscription_id").eq("id", user.id).single();
-  profileRole = p?.role ?? null;
-  if (p?.subscription_id) {
-    const { data: s } = await supabase
-      .from("subscriptions")
-      .select("status, provider, plan_currency, current_period_end")
-      .eq("id", p.subscription_id)
-      .single();
-    accountSub = s;
+  // P7: preferir gate centralizado del middleware (locals), fallback a query directa
+  const localsProfile = (Astro.locals as any).profile as import("../lib/types").Profile | null | undefined;
+  const localsSubscription = (Astro.locals as any).subscription as import("../lib/types").Subscription | null | undefined;
+  if (localsProfile !== undefined) {
+    profileRole = localsProfile?.role ?? null;
+    accountSub = localsSubscription
+      ? {
+          status: localsSubscription.status,
+          provider: localsSubscription.provider,
+          plan_currency: localsSubscription.plan_currency,
+          current_period_end: localsSubscription.current_period_end,
+        }
+      : null;
+  } else {
+    const { data: p } = await supabase.from("profiles").select("role, subscription_id").eq("id", user.id).single();
+    profileRole = p?.role ?? null;
+    if (p?.subscription_id) {
+      const { data: s } = await supabase
+        .from("subscriptions")
+        .select("status, provider, plan_currency, current_period_end")
+        .eq("id", p.subscription_id)
+        .single();
+      accountSub = s;
+    }
   }
 }
 

@@ -147,8 +147,8 @@ WEBHOOKS:
   POST /api/webhook/mercadopago  WebhookSignatureValidator
 ADMIN (requireAdmin vía locals):
   POST /api/admin/uploads/sign
-  POST /api/admin/editions · GET/PATCH/DELETE /api/admin/editions/:id · POST .../notify
-  GET  /api/admin/subscribers · export · migrate · :id/cancel · :id/refund
+  POST /api/admin/editions · GET/PATCH/DELETE /api/admin/editions/:id · POST .../notify (body {emails?} → retry filtrado, resp {failures})
+  GET  /api/admin/subscribers · export · migrate · :id/cancel · :id/refund  (resp totalActive/totalCanceled/totalNone globales)
   GET/PATCH /api/admin/creators
 ```
 
@@ -156,7 +156,7 @@ ADMIN (requireAdmin vía locals):
 
 ## 2. FLUJOS FUNCIONALES CON RAMIFICACIONES
 
-### FLOW-01 · Newsletter gratis  ★core-conversión
+### FLOW-01 · Newsletter gratis  ★core-conversión *(actualizado 2026-08-22 — $ST-04 mitigado)*
 ```
 [Usuaria] ingresá email → submit COMP-02/07
   → handler: btn.disabled=true (in-flight) + aria-live
@@ -164,17 +164,17 @@ ADMIN (requireAdmin vía locals):
      → rate-limit IP 5/min ── excedido → 429 "Demasiados intentos" → msg error → reintenta
      → validación email (regex) ── inválido → 400
      → insert newsletters
-        ── OK → syncSenderForEmail(email)
-             ├─ Sender OK → sender_synced=true → {ok:true} → "¡Gracias por suscribirte!" + limpia input
-             └─ Sender FALLA (429 cuota/red) → sender_synced=false + guarda sender_sync_error → {ok:true} ← ★
-                  SILENCIOSO: user ve éxito pero la welcome NUNCA llega (sintoma: las 4 faltantes de AGENTS "Próximo")
+        ── OK → syncSenderForEmail(email) con retry backoff (429/5xx → sleep 800ms*2^attempt + retry-after, máx 2 reintentos en src/lib/sender.ts)
+             ├─ Sender OK (incl. retry) → sender_synced=true, sender_synced_at=now, sender_sync_error=null → {ok:true} → "¡Gracias por suscribirte!"
+             └─ Sender FALLA tras retries → sender_synced=false + sender_sync_error (slice 500) → {ok:true} (user ve éxito) + logger.error + visible en admin: dashboard card "Newsletter" muestra "N pendientes de sync" y banner "Ejecutá resync-newsletters.mjs"
+                  Resync: siguiente POST con mismo email (23505) o script scripts/resync-newsletters.mjs re-dispara automatización idempotente
         ── 23505 (ya existe) → lee sender_synced
-             ├─ false → re-alta Sender → {existing:true, resynced:true} → "te reenviamos la bienvenida"
+             ├─ false → re-alta Sender (con mismo retry) → {existing:true, resynced:true} → "te reenviamos la bienvenida"
              └─ true  → {existing:true, resynced:false} → "Ya estás suscripta"
         ── otro error → 500 → msg "Error al suscribirte"
   → finally: btn re-habilitado
 ESTADOS: idle / sending(disabled) / success / existing / resynced / connection-error / server-error
-DEPENDENCIA: Sender grupo newsletter-gratuito (automatización welcome) · tabla newsletters · rate_limits
+DEPENDENCIA: Sender grupo newsletter-gratuito (automatización welcome) · tabla newsletters · rate_limits · src/lib/admin index dashboard newsletter_pending_sync
 ```
 
 ### FLOW-02 · Login
@@ -306,17 +306,18 @@ MP POST (WebhookSignatureValidator, sin toleranceSeconds; no secret → 500; mal
 ESTADOS: approved-created / approved-renewal / pending(no-op) / unresolved-user(warn) / error
 ```
 
-### FLOW-10 · Polling post-pago  ⭐
+### FLOW-10 · Polling post-pago  ⭐ *(actualizado 2026-08-22 — P4)*
 ```
 Gatillo: PAGE-06 SSR con outcome success|pending + panel "Procesando..." (sin sub aún)
-  → startCheckoutPoll cada 3s, máx 20 intentos (~60s)
+  → startCheckoutPoll(getToken, onTimeout, onNetworkError) cada 3s, máx 20 intentos (~60s)
      → GET /api/subscription-status (Bearer token) → subscription.status
-       ├─ active|migrated → reload (SSR re-renderiza panel con acceso)
-       └─ no → reintenta
-     ├─ timeout → msg "Todavía estamos confirmando tu pago. Si se demora más de un minuto, actualizá la página."
-     └─ fetch error → silencioso, reintenta (sin feedback de red)
+       ├─ active|migrated → reload (SSR re-renderiza panel con acceso) + reset consecutiveFailures
+       ├─ !active → reintenta (consecutiveFailures=0)
+       └─ fetch error / !ok → consecutiveFailures++
+          └─ >=3 consecutivos → onNetworkError() una vez → "[data-processing-note]" = processingNetworkError
+     ├─ timeout (>20) → onTimeout → msg processingNote2
 ```
-> Lag real: MP devuelve a back_url antes de que el webhook active → el poll cubre ese hueco.
+> Lag real: MP devuelve a back_url antes de que el webhook active → el poll cubre ese hueco. Resuelto P4: ya no es silencioso, a los ~9s avisa "Conexión inestable, seguimos intentando...".
 
 ### FLOW-11 · Cancelar suscripción (usuario)  ⭐
 ```
@@ -371,42 +372,46 @@ PAGE-07 form (nombre/email/pais/areas checkbox≥1/propuesta/trabajo_url opciona
   → pendiente en admin: COMP-22 / FLOW-18
 ```
 
-### FLOW-15 · Admin: CRUD ediciones + upload ⭐⭐
+### FLOW-15 · Admin: CRUD ediciones + upload ⭐⭐ *(actualizado 2026-08-22 — $ST-05)*
 ```
 COMP-23 (PAGE-17 create / PAGE-18 edit)
   → kind radio magazine|free (synckind: toggle campos; free exige pdf y omite portada/featured/número)
   → submit (btn "Creando..." disabled)
     → 1) upload directo a Supabase Storage (bypassa límite 4.5MB de Vercel):
-       POST /api/admin/uploads/sign {kind,filename,contentType,size,editionNumber?,slug?}
+       POST /api/admin/uploads/sign {kind,filename,contentType,size,editionNumber?,slug?,language?}
          → requireAdmin · kind(400) · filename(400) · mime FILE_RULES(400) · size>max(400) · cover sin número(400)
-         → createSignedUploadUrl(path,{upsert:true}) → {signedUrl, publicUrl}
+         → createSignedUploadUrl(path,{upsert:true}) → {signedUrl, publicUrl, path}  (path canónico)
        → PUT directo al signedUrl (solo Content-Type) ── fail → throw → msg error
-       → fd.set(cover_url/pdf_url, publicUrl)
+       → fd.set(cover_url/pdf_url, publicUrl) + uploadedPaths.push(path)
     → 2) POST /api/admin/editions | PATCH /api/admin/editions/:id  (FormData SIN files)
        POST: kind · cover_url obligatorio si magazine(400) · validateEditionInput(400)
               · número duplicado → 409 · featured→ unset featured previa
        PATCH: fallback a current · nº duplicado ≠self → 409 · featured new → unset
-    → ok → toast + redirect /admin/ediciones
+       └─ !ok (400/409/500) o catch → POST /api/admin/uploads/cleanup {paths: uploadedPaths} → remove(paths) (solo covers/pdfs) — fire-and-forget
+    → ok → toast + redirect /admin/ediciones (no limpia)
   → DELETE (solo edit): confirm → DELETE → redirect
-★ HUECHOS: si el PUT sube el archivo y luego el POST/PATCH/validation falla, queda archivo huérfano
-  en storage sin registro → nunca se limpia.
+★ resuelto 2026-08-22: PUT→POST fallido ya no deja huérfano del submit actual (cleanup fire-and-forget vía src/lib/storage.ts:removeStoragePaths + /api/admin/uploads/cleanup.ts). Huérfanos históricos siguen pendientes de script de barrido.
 ```
 
-### FLOW-16 · Admin: Notificar edición
+### FLOW-16 · Admin: Notificar edición  *(actualizado 2026-08-22)*
 ```
-PAGE-18 botón → confirm → POST /api/admin/editions/:id/notify
-  → requireAdmin · edition(404) · kind!=magazine o sin cover → {notified:0}
+PAGE-18 botón → confirm → POST /api/admin/editions/:id/notify  (body opcional {emails:[]})
+  → requireAdmin · edition(404) · kind!=magazine o sin cover → {notified:0, failures:[]}
   → profiles role=subscriber → sendNewEditionEmail (Sender /message/send) uno a uno
-  → {notified, total, failed}
-  → msg "Notificadas: X de Y (N fallaron)" · toast
-★ sin retry por email, sin lista de destinatarias fallidas accionable
+     · sin body → todas · con {emails} → solo esas (retry filtrado)
+  → {notified, total, failed, noEmail, failures:[{email,error}]}
+  → UI:
+     · msg "Notificadas: X de Y (N fallaron)" · toast
+     · si failures.length>0 → lista scroll + botones [Reintentar fallidas → POST con {emails}] [Copiar emails]
+     · reintento muestra "Reintento: X de Y ok — todas ok / N aún fallaron"
+★ resuelto 2026-08-22: ya no es sin retry; failures accionable + retry filtrado no duplica a exitosas
 ```
 
 ### FLOW-17 · Admin: suscriptoras (la página más densa)
 ```
 PAGE-12 → GET /api/admin/subscribers?page&status&search&pageSize(=20 default)
   → mezcla profiles(con sub) + subscriber_migrations sin cuenta (pend. registro) con estados Stripe en vivo
-  → stats: activas/canceladas/sin-sub calculadas SOLO de la página actual ★ · pend/refund del server (total global)
+  → stats: todas globales desde el server (2026-08-22: totalActive/totalCanceled/totalNone + pend/refund) — respeta search, ignora status/page ★ antes por página, engañoso
   acciones:
    · filtros tabs → reload; búsqueda debounce 300ms; paginación prev/next
    · export → window.open /api/admin/subscribers/export?status... (CSV; estado actual filtrado)
@@ -443,9 +448,9 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 | $ST-01 | `past_due` / `incomplete` / `trialing` | AccountMenuItems, mi-cuenta gate, admin | Se muestran "Aún no estás suscripta" — confunde a una pagadora con cobro fallido; no hay aviso de "falló tu pago" |
 | $ST-02 | Migrated caducada | Flujo automático | Nada obliga a revocar el acceso tras los 7 días si no paga (no hay job/cron; solo lo resuelve un nuevo pago o acción admin) |
 | $ST-03 | Email null en profiles | notificar edición | se filtran (no cuentan como `failed`) y se reporta `noEmail` | **hecho** |
-| $ST-04 | Newsletter sync silenciosa | FLOW-01 | éxito visible pero `sender_synced=false` (429 de Sender) y la welcome nunca llega; la usuaria cree que está suscripta al pago |
-| $ST-05 | Upload huérfano | FLOW-15 | archivo subido a storage sin edición que lo referencie; no hay limpieza |
-| $ST-06 | PDF expiró 30min | COMP-12 | "Reintentar" remonta el `<Document>` con la MISMA URL firmada expirada → loop de error sin mensaje real |
+| $ST-04 | Newsletter sync silenciosa | FLOW-01 | éxito visible pero `sender_synced=false` (429 de Sender) y la welcome nunca llega; la usuaria cree que está suscripta al pago | **mitigado 2026-08-22** (retry 429/5xx en `sender.ts` + dashboard `newsletter_pending_sync` + banner resync) |
+| $ST-05 | Upload huérfano | FLOW-15 | archivo subido a storage sin edición que lo referencie; no hay limpieza | **hecho 2026-08-22** (cleanup del submit actual vía `removeStoragePaths`/`/api/admin/uploads/cleanup`; históricos pendientes) |
+| $ST-06 | PDF expiró 30min | COMP-12 | "Reintentar" remonta el `<Document>` con la MISMA URL firmada expirada → loop de error sin mensaje real | **hecho 2026-08-22** (`PDFViewer.tsx` bifurca `expired` → `Recargar página` + `lang`) |
 | $ST-07 | PDF 401 como JSON | FLOW-12 | Descargar sin sesión/rol → JSON crudo, no redirige a login | **hecho** |
 
 ---
@@ -454,25 +459,25 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 
 **Complejidad**
 - **P1 (FLOW-09 webhook MP)**: 3 cadenas de resolución de usuario (external_reference → payer_email → authorized_payments → listUsers paginado), cada una con no-op silencioso. Es el flujo más frágil del sistema; por algo existe el reconcile script.
-- **P2 (COMP-18 Suscriptoras)**: dos modelos (profile+subscription y migration sin cuenta) en una sola tabla con stats parciales por página → difícil de leer y de mantener. La lógica de render se construye con strings en el front.
-- **P3 (FLOW-15 EditionForm)**: secuencia sign → PUT → POST con 3 estados intermedios y sin rollback.
-- **P4 (FLOW-10 polling)**: timeout sin feedback de red; el único mensaje llega ~60s.
+- **P2 (COMP-18 Suscriptoras)**: dos modelos (profile+subscription y migration sin cuenta) en una sola tabla con stats parciales por página → difícil de leer y de mantener. La lógica de render se construye con strings en el front. *(resuelto 2026-08-22: stats movidas al server `totalActive/totalCanceled/totalNone` globales, `updateStats(rows)` eliminado)*
+- **P3 (FLOW-15 EditionForm)**: secuencia sign → PUT → POST con 3 estados intermedios y sin rollback. *(mitigado 2026-08-22: rollback del submit actual con cleanup; sin transacción global)*
+- **P4 (FLOW-10 polling)**: timeout sin feedback de red; el único mensaje llega ~60s. *(resuelto 2026-08-22: 3 fallos consecutivos → onNetworkError)*
 
 **Acoplamientos fuertes**
 - **P5**: el cierre de sesión/cancelar/gestionar del sitio público dependen del **Navbar (COMP-01)** presente (delegación global de eventos). Si se aísla la página del navbar, se rompen. (El toast ya es compartido: `src/lib/ui.ts` — P6 resuelto 2026-08-14.)
-- **P7**: el gate de acceso (isActiveSubscription) se recalcula en 5 lugares distintos (Navbar, revista, mi-cuenta, /api/pdf, AccountMenuItems) con queries repetidas por request → centralizable en middleware/locals.
+- **P7**: el gate de acceso (isActiveSubscription) se recalcula en 5 lugares distintos (Navbar, revista, mi-cuenta, /api/pdf, AccountMenuItems) con queries repetidas por request → centralizable en middleware/locals. *(resuelto 2026-08-23: `src/middleware.ts:53` centraliza `profile+subscription+hasActiveSub` en `App.Locals`; `src/env.d.ts:4` + consumers `Navbar.astro:23`/`MyAccountPage.astro:27`/`MagazinePage.astro:22`/`api/pdf/[editionId].ts:84` prefieren locals con fallback; `isActiveSubscription` corrige `current_period_end` para migrated)*
 - **P8**: handshake de checkout con localStorage (`checkout-intent`) + 2 consumidores (login y suscribirme) + cleanup en mi-cuenta. Funciona, pero es estado global frágil con TTL implícito (24h).
 - **P9**: dos formularios de newsletter con la misma lógica pero markup duplicado (COMP-02 y COMP-07).
 
 **Loops / sin salida**
-- **P10**: reintentar PDF expirado (ver $ST-06) → estado sin salida real salvo reload.
+- **P10**: reintentar PDF expirado (ver $ST-06) → estado sin salida real salvo reload. *(resuelto 2026-08-22: $ST-06 ahora distingue `expired` → `location.reload()`)*
 - **P11**: si `cancel_subscription` RPC falla tras cancelar en el gateway → el user queda "activo" en BD pero cancelado en el proveedor; solo el webhook `subscription.updated` (si viene) re-sincroniza. No hay auto-corrección.
 
 **Bugs latentes / riesgo**
-- **P12**: `signUp` con confirm OFF: `check-email-card` es rama muerta (mantener o remover con intención).
-- **P13**: `STRIPE_PRICE_ARS` se define pero la UI siempre manda ARS a MP (código de proveedor tolerante, no es bug).
-- **P14**: `.astro` con contentType de MIME por archivo en `sign` acepta MIME falso (solo valida header, no magic bytes) — menor.
-- **P15**: `uploadEditionFile` en `storage.ts` es código legacy (documentado en AGENTS.md) — candidato a borrar.
+- **P12**: `signUp` con confirm OFF: `check-email-card` es rama muerta (mantener o remover con intención). *(documentado 2026-08-22: `src/components/AuthPage.astro:101` comentado como fallback con confirm OFF)*
+- **P13**: `STRIPE_PRICE_ARS` se define pero la UI siempre manda ARS a MP (código de proveedor tolerante, no es bug). *(documentado 2026-08-22: `src/lib/stripe.ts:11` comentado)*
+- **P14**: `.astro` con contentType de MIME por archivo en `sign` acepta MIME falso (solo valida header, no magic bytes) — menor. *(documentado 2026-08-22: `src/pages/api/admin/uploads/sign.ts:32` comentado — header-only, upload directo bypasa server)*
+- **P15**: `uploadEditionFile` en `storage.ts` es código legacy (documentado en AGENTS.md) — candidato a borrar. *(borrado 2026-08-22: `src/lib/storage.ts:62` eliminado)*
 
 ---
 
@@ -488,24 +493,24 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 
 **5. Más dependencias:** COMP-01 Navbar (auth + dropdown + logout + portal + cancel, afecta a todas las públicas) · COMP-12 PDFViewer (2 páginas + gate `/api/pdf`) · gateway providers (Stripe/MP cargan en create-checkout, portal, cancel, refund, webhooks).
 
-**6. Estados débiles/faltantes:** $ST-04 newsletter sync silenciosa · $ST-06 PDF expirado. (Resueltos: $ST-01, $ST-02, $ST-03, $ST-07.)
+**6. Estados débiles/faltantes:** —. (Resueltos: $ST-01, $ST-02, $ST-03, $ST-07 · FLOW-16 failures accionable · P2 stats globales · P4 polling · $ST-06/P10 expirado · $ST-05 huérfano del submit actual / P3 mitigado · $ST-04 mitigado con retry+dashboard.)
 
 **7. Optimizar primero:** (a) consolidar gate de acceso y rol en middleware (elimina P7 y base para $ST-01/$ST-02); (b) exponer estado de pago del proveedor en mi-cuenta (past_due → CTA "actualizá tu pago"); (c) resolver $ST-04 (reintento Sender con backoff o alerta al admin); (d) cleanup de archivos huérfanos en FLOW-15; (e) aislar la lógica de cuenta (logout/portal/cancel) del Navbar.
 
 **8. Orden de optimización por zonas (sin solaparse):**
 ```
 FASE 1 (cimientos, toca pocas piezas):
-  Zona AUTH/CORE  → middleware + locals.subscription + gate único (P7 · $ST-01/$ST-02)
-  Zona PAGOS      → expone estado gateway al perfil (past_due/incomplete) + mensajes en mi-cuenta y dropdown (P11 · $ST-01)
+   Zona AUTH/CORE  → middleware + locals.subscription + gate único (P7 — hecho 2026-08-23 · $ST-01/$ST-02 ya resueltos antes)
+   Zona PAGOS      → expone estado gateway al perfil (past_due/incomplete) + mensajes en mi-cuenta y dropdown (P11 · $ST-01)
 FASE 2 (fiabilidad):
-  Zona NEWSLETTER → retry Sender con cola/backoff + visibilidad en admin (P9→información compartida, $ST-04)
-  Zona PDF        → mensaje de expiración + link de descarga regenerada (P10 · $ST-06)
+   Zona NEWSLETTER → retry Sender con cola/backoff + visibilidad en admin (P9→información compartida, $ST-04 — mitigado 2026-08-22, Fase 1)
+   Zona PDF        → mensaje de expiración + link de descarga regenerada (P10 · $ST-06 — hecho 2026-08-22, Fase 1)
 FASE 3 (admin):
-  Zona EDICIONES → limpieza de uploads huérfanos + estados de submit por paso (P3 · $ST-05)
-  Zona SUSCRIPTORAS → refactor de la tabla mixta (P2) + mover stats al server (no por página)
+    Zona EDICIONES → limpieza de uploads huérfanos + estados de submit por paso (P3 · $ST-05 — cleanup submit actual hecho 2026-08-22, históricos pendientes)
+    Zona SUSCRIPTORAS → refactor de la tabla mixta (P2 — stats al server hecho 2026-08-22) · FLOW-16 failures hecho 2026-08-22
 FASE 4 (arquitectura):
-  Zona CUENTA  → desacoplar logout/portal/cancel del Navbar (P5 · P6)
-  Zona LEGACY  → limpiar ramas muertas (P12, P15, P14) y documentar $ST-03
+   Zona CUENTA  → desacoplar logout/portal/cancel del Navbar (P5 · P6)
+   Zona LEGACY  → limpiar ramas muertas (P12, P15, P14 — hecho 2026-08-22) y documentar $ST-03
 ```
 
 ---
@@ -517,47 +522,51 @@ Lista priorizada por urgencia (referencias al mapa). Los primeros ítems cuestan
 > **Resueltas en 2026-08-13** (borradas de la lista): `$ST-02` (expiración migrated valida `current_period_end` en los 6 callers incl. AccountMenuItems) · `$ST-01` (labels por estado + CTA "Actualizar medio de pago" → `/api/portal`) · `P11` (mitigado: guard provider `migrated`/sin id + `providerWarnings` surfaceados en dropdown y panel).
 >
 > **Resueltas en 2026-08-14** (borradas de la lista): `$ST-07` (PDF sin acceso → 302 a `/iniciar-sesion?redirect=` o `/suscribirme`, sin JSON) · `P5/P6` (toast compartido `src/lib/ui.ts`, auto-crea contenedor; cancelar desde el dropdown del público ya muestra toast de éxito) · `$ST-03` (notify filtra emails null y reporta `noEmail`).
+>
+> **Resueltas en 2026-08-22** (Fase 1 — nulo/bajo riesgo): `P2` (stats suscriptoras `totalActive/totalCanceled/totalNone` movidos al server `src/lib/admin/subscribers.ts:19`/`src/pages/admin/suscriptoras.astro:137`; ya no se calculan por página — fix `updateStats(rows)` → `data.total*`) · `FLOW-16` (notify devuelve `failures[]` `src/pages/api/admin/editions/[id]/notify.ts:83` + UI accionable `src/pages/admin/ediciones/[id].astro:43` con lista, `Reintentar fallidas` filtrado por `emails` y `Copiar emails`) · `P4` (`src/scripts/checkout-poll.ts:17` + `src/components/MyAccountPage.astro:323` + `src/i18n/ui.ts:miCuenta.processingNetworkError` — tras 3 fallos consecutivos ~9s muestra "Conexión inestable, seguimos intentando..." sin esperar 60s) · `$ST-06/P10` (`src/components/PDFViewer.tsx:37` `lang` + `errType` + `isExpiredError` con `mountTimeRef`/`Recargar página` `location.reload()`; callers `MyAccountPage.astro`/`EditionDetail.astro`/`MagazinePage.astro` pasan `lang`; `src/i18n/ui.ts:miCuenta.pdf*`) · `$ST-05/P3` (`src/lib/storage.ts:removeStoragePaths` + `src/pages/api/admin/uploads/cleanup.ts` + `src/components/admin/EditionForm.astro:323` tracking `uploadedPaths` + `cleanupUploaded()` fire-and-forget en `!res.ok` y `catch`) · `$ST-04` (`src/lib/sender.ts:request` retry 429/5xx con backoff + `src/lib/admin/index.ts:newsletter_pending_sync` + `src/pages/admin/index.astro` banner/card) · `Nivel5` (`P12` `src/components/AuthPage.astro:101` documentado, `P13` `src/lib/stripe.ts:11` documentado, `P15` `src/lib/storage.ts:62` borrado, `P14` `src/pages/api/admin/uploads/sign.ts:32` documentado).
+>
+> **Resueltas en 2026-08-23** (Fase 1 cimientos): `P7` (`src/middleware.ts:47` gate centralizado `profile+subscription+hasActiveSub` con `isActiveSubscription` incluyendo `current_period_end`; `src/env.d.ts:5` `App.Locals.subscription/hasActiveSub`; consumers `src/components/Navbar.astro:23`/`src/components/MyAccountPage.astro:27`/`src/components/MagazinePage.astro:22`/`src/pages/api/pdf/[editionId].ts:84` prefieren `Astro.locals`/`locals` con fallback; `src/lib/subscription-status.ts:50` `active` coherente).
 
 ### 🟠 Nivel 2 — Muy importante: retención y conversión
 
 **1. `$ST-04` — Falla silenciosa del sync de newsletter** · `FLOW-01`, `api/newsletter.ts`, `sender.ts`
 El alta devuelve "¡Gracias por suscribirte!" aunque Sender haya rechazado (429/red) → la welcome nunca llega y la usuaria cree que está suscripta. Es exactamente el síntoma de las 4 emails faltantes de AGENTS "Próximo". (El resync idempotente del handler `existing` ya existe; falta backoff/cola para el alta inicial que falla.)
 *Cambio:* reintento con backoff, o aviso explícito, o cola de resync + visibilidad admin.
-*Esfuerzo:* medio. · Estado: pendiente.
+*Esfuerzo:* medio. · Estado: **mitigado 2026-08-22** (`src/lib/sender.ts:request` retry 429/5xx máx 2 con `retry-after`; dashboard `src/lib/admin/index.ts:newsletter_pending_sync` visible en `src/pages/admin/index.astro`; reintento definitivo sigue vía `POST /api/newsletter` con mismo email (23505 resynced) o `scripts/resync-newsletters.mjs`).
 
 ### 🟡 Nivel 3 — Correctitud de datos / admin
 
 **2. `P2` — Stats de suscriptoras calculadas solo de la página actual** · `COMP-18`, `suscriptoras.astro`
 Activas/canceladas/sin-sub se cuentan sobre las 20 filas de la página, no el total real → números engañosos en el dashboard-contact.
 *Cambio:* mover esos counts al server (como ya se hace con `totalPending`/`totalRefunded`).
-*Esfuerzo:* bajo. · Estado: pendiente.
+*Esfuerzo:* bajo. · Estado: **hecho 2026-08-22**.
 
 **3. `$ST-05` — Uploads huérfanos** · `FLOW-15`, `EditionForm.astro`
 Si el PUT sube a Storage y luego el POST/PATCH falla, el archivo queda huérfano para siempre.
 *Cambio:* limpiar por path si la edición no se creó / no referencia el path.
-*Esfuerzo:* medio. · Estado: pendiente.
+*Esfuerzo:* medio. · Estado: **hecho 2026-08-22** (cleanup del submit actual `removeStoragePaths` + `/api/admin/uploads/cleanup`; históricos requieren script de barrido).
 
 **4. `FLOW-16` — Notificación sin lista de fallidas accionable** · `notify.ts`
 Se reporta "N fallaron" pero no hay retry ni lista.
 *Cambio:* devolver las fallidas (email+error) y permitir reintento.
-*Esfuerzo:* bajo-medio. · Estado: pendiente.
+*Esfuerzo:* bajo-medio. · Estado: **hecho 2026-08-22**.
 
 ### 🟢 Nivel 4 — Robustez de UX
 
 **5. `$ST-06` — "Reintentar" no resuelve PDF expirado** · `PDFViewer.tsx`
 La URL firmada (30 min) expira y el botón remonta el `<Document>` con la misma URL → loop de error sin mensaje real.
 *Cambio:* mensaje de expiración + regenerar URL (o instruir recarga).
-*Esfuerzo:* medio. · Estado: pendiente.
+*Esfuerzo:* medio. · Estado: **hecho 2026-08-22** (`src/components/PDFViewer.tsx:37` `isExpiredError` + `errType` `expired` → `Recargar página`; timeout separado).
 
 **6. `P4` — Polling sin feedback de red** · `checkout-poll.ts`
 Si el fetch falla en silencio se reintenta sin avisar; el único mensaje llega a los ~60s de timeout.
 *Cambio:* mensaje/simple tras N intentos fallidos consecutivos.
-*Esfuerzo:* bajo. · Estado: pendiente.
+*Esfuerzo:* bajo. · Estado: **hecho 2026-08-22** (`src/scripts/checkout-poll.ts:12` threshold 3 + `onNetworkError`, `src/i18n/ui.ts:miCuenta.processingNetworkError`).
 
 **7. `P7` — Gate de acceso repetido en 5 lugares** · Navbar, revista, mi-cuenta, `/api/pdf`, AccountMenuItems
 Queries idénticas por request y la regla `active|migrated` vive dispersa (riesgo de divergencia futura). El helper `isActiveSubscription` ya es la fuente única de la regla; falta consolidar las queries en middleware/locals.
 *Cambio:* consolidar en middleware/locals como fuente única.
-*Esfuerzo:* medio (toca varias páginas). · Estado: pendiente.
+*Esfuerzo:* medio (toca varias páginas). · Estado: **hecho 2026-08-23** (`src/middleware.ts:47` + `src/env.d.ts:5` `subscription/hasActiveSub`; consumers con preferencia locals).
 
 **8. `P8` — Handshake de checkout con `localStorage`** · `checkout-intent.ts`
 Estado global frágil con 2 consumidores y TTL implícito. No es urgente, pero es candidato a simplificarse al tocar pagos.
@@ -565,10 +574,10 @@ Estado global frágil con 2 consumidores y TTL implícito. No es urgente, pero e
 
 ### ⚪ Nivel 5 — Deuda técnica / limpieza (sin urgencia)
 
-**9. `P12`** — `check-email-card` rama muerta (confirm OFF) — decidir remover o documentar.
-**10. `P13`** — `STRIPE_PRICE_ARS` definido pero no usado en UI.
-**11. `P15`** — `uploadEditionFile` legacy en `storage.ts` — borrar.
-**12. `P14`** — `sign` solo valida MIME por header, no magic bytes — menor.
+**9. `P12`** — `check-email-card` rama muerta (confirm OFF) — decidir remover o documentar. · **hecho 2026-08-22** (documentado `src/components/AuthPage.astro:101` como fallback).
+**10. `P13`** — `STRIPE_PRICE_ARS` definido pero no usado en UI. · **hecho 2026-08-22** (documentado `src/lib/stripe.ts:11` tolerante).
+**11. `P15`** — `uploadEditionFile` legacy en `storage.ts` — borrar. · **hecho 2026-08-22** (borrado `src/lib/storage.ts:62`).
+**12. `P14`** — `sign` solo valida MIME por header, no magic bytes — menor. · **hecho 2026-08-22** (documentado `src/pages/api/admin/uploads/sign.ts:32` header-only).
 
 ### Cómo trabajar estos ítems
 

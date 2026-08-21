@@ -50,7 +50,8 @@ export function subscriptionStatusInfo(
 
   const label = STATUS_LABELS[status]?.[locale] ?? status;
   const action = STATUS_ACTIONS[status]?.[locale] ?? null;
-  const active = status === "active" || status === "migrated";
+  // P7: active coherente con isActiveSubscription para migrated (requiere no expirada); callers con fecha usan hasActiveSub aparte
+  const active = isActiveSubscription(status);
 
   return { active, label, action };
 }

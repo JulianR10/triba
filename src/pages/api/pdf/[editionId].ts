@@ -23,7 +23,7 @@ interface VersionWithIssue {
   } | null;
 }
 
-export const GET: APIRoute = async ({ params, request, url }) => {
+export const GET: APIRoute = async ({ params, request, url, locals }) => {
   const id = Number(params.editionId);
   if (!Number.isInteger(id)) {
     return error("ID inválido", 400);
@@ -87,7 +87,14 @@ export const GET: APIRoute = async ({ params, request, url }) => {
 
   let allowed = false;
 
-  if (user) {
+  // P7: preferir gate centralizado del middleware (locals) si está disponible
+  const localsHasActive = (locals as any)?.hasActiveSub as boolean | undefined;
+  const localsProfile = (locals as any)?.profile as import("../../../lib/types").Profile | null | undefined;
+  const localsSub = (locals as any)?.subscription as import("../../../lib/types").Subscription | null | undefined;
+  if (localsProfile !== undefined) {
+    if (localsProfile?.role === "admin") allowed = true;
+    else if (localsHasActive) allowed = true;
+  } else if (user) {
     const { data: profile } = await supabaseAdmin
       .from("profiles")
       .select("role, subscription_id")
@@ -99,10 +106,10 @@ export const GET: APIRoute = async ({ params, request, url }) => {
     } else if (profile?.role === "subscriber" && profile?.subscription_id) {
       const { data: sub } = await supabaseAdmin
         .from("subscriptions")
-        .select("status")
+        .select("status, current_period_end")
         .eq("id", profile.subscription_id)
         .single();
-      if (isActiveSubscription(sub?.status)) {
+      if (isActiveSubscription(sub?.status, (sub as any)?.current_period_end ?? undefined)) {
         allowed = true;
       }
     }

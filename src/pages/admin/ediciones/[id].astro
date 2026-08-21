@@ -36,18 +36,129 @@ const editionTitle = esVersion?.title ?? `Edición ${edition.edition_number ?? "
       Notificar suscriptoras
     </button>
     <p id="notify-msg" class="font-sans text-sm hidden mt-3"></p>
+    <div id="notify-failures" class="hidden mt-3"></div>
   </div>
 </AdminLayout>
 
 <script>
   import { onPageCycle } from "../../../lib/onPageCycle";
+  function escapeHtmlAttr(s: string): string {
+    return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  }
   function setupNotifyButton() {
     const btn = document.getElementById("notify-subscribers-btn") as HTMLButtonElement | null;
     const msg = document.getElementById("notify-msg");
-    if (!btn || !msg) return;
+    const failuresEl = document.getElementById("notify-failures");
+    if (!btn || !msg || !failuresEl) return;
 
     if ((btn as any)._notifyBound) return;
     (btn as any)._notifyBound = true;
+
+    let lastFailures: Array<{email:string;error:string}> = [];
+
+    function renderFailures(failures: Array<{email:string;error:string}>) {
+      lastFailures = failures;
+      if (!failures || failures.length === 0) {
+        failuresEl!.classList.add("hidden");
+        failuresEl!.innerHTML = "";
+        return;
+      }
+      failuresEl!.classList.remove("hidden");
+      failuresEl!.innerHTML = `
+        <div class="bg-triba-white rounded-lg border border-triba-black/20 p-3">
+          <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">Fallidas (${failures.length})</p>
+          <ul class="space-y-1 max-h-48 overflow-auto">
+            ${failures.map((f) => `<li class="font-sans text-xs text-triba-brown flex justify-between gap-2"><span>${escapeHtmlAttr(f.email)}</span><span class="text-triba-red/70 truncate max-w-[16rem]">${escapeHtmlAttr(f.error || "error")}</span></li>`).join("")}
+          </ul>
+          <div class="flex gap-2 mt-3">
+            <button id="retry-failed-btn" type="button" class="rounded-button bg-triba-brown text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Reintentar fallidas</button>
+            <button id="copy-failed-btn" type="button" class="rounded-button bg-triba-white text-triba-brown border-2 border-triba-black/20 px-4 py-2 font-heading text-xs uppercase tracking-wider hover:border-triba-black transition-all">Copiar emails</button>
+          </div>
+        </div>`;
+
+      document.getElementById("retry-failed-btn")?.addEventListener("click", async () => {
+        const retryBtn = document.getElementById("retry-failed-btn") as HTMLButtonElement | null;
+        if (!retryBtn || lastFailures.length === 0) return;
+        const editionId = btn!.dataset.editionId;
+        retryBtn.disabled = true;
+        retryBtn.textContent = "Reintentando...";
+        try {
+          const res = await fetch(`/api/admin/editions/${editionId}/notify`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ emails: lastFailures.map((f) => f.email) }),
+          });
+          const data = await res.json();
+          if (!res.ok) {
+            (window as any).adminToast?.(data.error || "Error al reintentar", "error");
+            return;
+          }
+          msg!.textContent = `Reintento: ${data.notified} de ${data.total} ok${data.failed ? ` (${data.failed} aún fallaron)` : " — todas ok"}`;
+          msg!.className = data.failed
+            ? "font-sans text-sm text-triba-brown bg-triba-cream border border-triba-black/20 rounded p-3"
+            : "font-sans text-sm text-triba-green bg-triba-green/10 border border-triba-green rounded p-3";
+          msg!.classList.remove("hidden");
+          if (data.failures && data.failures.length > 0) {
+            renderFailures(data.failures);
+          } else {
+            renderFailures([]);
+            (window as any).adminToast?.("Todas reenviadas", "success");
+          }
+        } catch {
+          (window as any).adminToast?.("Error de conexión", "error");
+        } finally {
+          retryBtn.disabled = false;
+          retryBtn.textContent = "Reintentar fallidas";
+        }
+      });
+
+      document.getElementById("copy-failed-btn")?.addEventListener("click", async () => {
+        const text = lastFailures.map((f) => f.email).join(", ");
+        try {
+          await navigator.clipboard.writeText(text);
+          (window as any).adminToast?.("Emails copiados", "success");
+        } catch {
+          (window as any).adminToast?.(text, "success");
+        }
+      });
+    }
+
+    async function doNotify(emails?: string[]) {
+      const editionId = btn!.dataset.editionId;
+      btn!.disabled = true;
+      btn!.textContent = "Enviando...";
+      failuresEl!.classList.add("hidden");
+      try {
+        const res = await fetch(`/api/admin/editions/${editionId}/notify`, {
+          method: "POST",
+          headers: emails ? { "Content-Type": "application/json" } : undefined,
+          body: emails ? JSON.stringify({ emails }) : undefined,
+        });
+        const data = await res.json();
+
+        if (!res.ok) {
+          msg!.textContent = data.error || "Error al notificar";
+          msg!.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
+          msg!.classList.remove("hidden");
+          (window as any).adminToast?.(data.error || "Error", "error");
+          return;
+        }
+
+        msg!.textContent = `Notificadas: ${data.notified} de ${data.total} suscriptoras${data.failed ? ` (${data.failed} fallaron)` : ""}${data.noEmail ? ` (${data.noEmail} sin email)` : ""}`;
+        msg!.className = "font-sans text-sm text-triba-green bg-triba-green/10 border border-triba-green rounded p-3";
+        msg!.classList.remove("hidden");
+        (window as any).adminToast?.(`${data.notified} notificadas`, "success");
+        if (data.failures) renderFailures(data.failures);
+      } catch (err) {
+        msg!.textContent = "Error de conexión";
+        msg!.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
+        msg!.classList.remove("hidden");
+        (window as any).adminToast?.("Error de conexión", "error");
+      } finally {
+        btn!.disabled = false;
+        btn!.textContent = "Notificar suscriptoras";
+      }
+    }
 
     btn.addEventListener("click", async () => {
       const confirmed = await (window as any).adminConfirm?.(
@@ -55,36 +166,7 @@ const editionTitle = esVersion?.title ?? `Edición ${edition.edition_number ?? "
         "¿Enviar email a todas las suscriptoras activas sobre esta edición?"
       );
       if (!confirmed) return;
-
-      const editionId = btn.dataset.editionId;
-      btn.disabled = true;
-      btn.textContent = "Enviando...";
-
-      try {
-        const res = await fetch(`/api/admin/editions/${editionId}/notify`, { method: "POST" });
-        const data = await res.json();
-
-        if (!res.ok) {
-          msg.textContent = data.error || "Error al notificar";
-          msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
-          msg.classList.remove("hidden");
-          (window as any).adminToast?.(data.error || "Error", "error");
-          return;
-        }
-
-        msg.textContent = `Notificadas: ${data.notified} de ${data.total} suscriptoras${data.failed ? ` (${data.failed} fallaron)` : ""}${data.noEmail ? ` (${data.noEmail} sin email)` : ""}`;
-        msg.className = "font-sans text-sm text-triba-green bg-triba-green/10 border border-triba-green rounded p-3";
-        msg.classList.remove("hidden");
-        (window as any).adminToast?.(`${data.notified} notificadas`, "success");
-      } catch (err) {
-        msg.textContent = "Error de conexión";
-        msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
-        msg.classList.remove("hidden");
-        (window as any).adminToast?.("Error de conexión", "error");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Notificar suscriptoras";
-      }
+      await doNotify();
     });
   }
 

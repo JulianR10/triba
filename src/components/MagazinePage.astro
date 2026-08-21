@@ -21,11 +21,19 @@ const { data: { session } } = await supabase.auth.getSession();
 let hasActiveSub = false;
 let subInfo: { active: boolean; label: string; action?: string | null } | null = null;
 if (session?.user) {
-  const { data: p } = await supabase.from("profiles").select("subscription_id").eq("id", session.user.id).single();
-  if (p?.subscription_id) {
-    const { data: s } = await supabase.from("subscriptions").select("status, current_period_end").eq("id", p.subscription_id).single();
-    hasActiveSub = isActiveSubscription(s?.status, s?.current_period_end);
-    subInfo = subscriptionStatusInfo(s?.status, lang);
+  // P7: preferir locals centralizados
+  const localsSub = (Astro.locals as any).subscription as import("../lib/types").Subscription | null | undefined;
+  const localsHasActive = (Astro.locals as any).hasActiveSub as boolean | undefined;
+  if (localsSub !== undefined || localsHasActive !== undefined) {
+    hasActiveSub = localsHasActive ?? isActiveSubscription(localsSub?.status as any, (localsSub as any)?.current_period_end ?? undefined);
+    subInfo = subscriptionStatusInfo((localsSub as any)?.status ?? null, lang);
+  } else {
+    const { data: p } = await supabase.from("profiles").select("subscription_id").eq("id", session.user.id).single();
+    if (p?.subscription_id) {
+      const { data: s } = await supabase.from("subscriptions").select("status, current_period_end").eq("id", p.subscription_id).single();
+      hasActiveSub = isActiveSubscription(s?.status, s?.current_period_end);
+      subInfo = subscriptionStatusInfo(s?.status, lang);
+    }
   }
 }
 
@@ -149,7 +157,7 @@ const ctaSubscribe = localizePath("/suscribirme", lang);
       <!-- Bloque 3: Vista previa de artículo -->
       <div id="visor-revista" class="scroll-anchor flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16">
         <div class="flex-1 order-2 md:order-1">
-          <PDFViewer pdfUrl={freeArticle?.pdf_url ?? "/articulo-gratis.pdf"} client:only="react" />
+          <PDFViewer pdfUrl={freeArticle?.pdf_url ?? "/articulo-gratis.pdf"} lang={lang} client:only="react" />
         </div>
         <div class="flex-1 flex flex-col justify-center order-1 md:order-2 text-center md:text-left">
           <PatchTitle tag="h2" class="mb-4 text-2xl md:text-3xl" lines={dict.magazine.freeArticlePatch} />

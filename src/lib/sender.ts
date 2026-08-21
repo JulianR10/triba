@@ -8,10 +8,15 @@ function isConfigured() {
   return !!apiKey();
 }
 
+function sleep(ms: number) {
+  return new Promise((r) => setTimeout(r, ms));
+}
+
 async function request<T>(
   method: string,
   path: string,
   body?: Record<string, unknown>,
+  attempt = 0,
 ): Promise<T> {
   const url = `${SENDER_API_BASE}${path}`;
   const res = await fetch(url, {
@@ -24,6 +29,13 @@ async function request<T>(
     body: body ? JSON.stringify(body) : undefined,
   });
   if (!res.ok) {
+    // Retry once on 429 (cuota plan free) or transient 5xx with backoff — $ST-04
+    if ((res.status === 429 || res.status >= 500) && attempt < 2) {
+      const retryAfter = Number(res.headers.get("retry-after") || 0);
+      const backoff = retryAfter ? retryAfter * 1000 : 800 * Math.pow(2, attempt);
+      await sleep(backoff);
+      return request<T>(method, path, body, attempt + 1);
+    }
     const text = await res.text().catch(() => "");
     throw new Error(`Sender API ${res.status}: ${text}`);
   }

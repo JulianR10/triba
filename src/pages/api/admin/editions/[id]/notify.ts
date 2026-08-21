@@ -7,9 +7,27 @@ import { logger } from "../../../../../lib/logger";
 
 export const prerender = false;
 
-export const POST: APIRoute = async ({ params, locals }) => {
+export const POST: APIRoute = async ({ params, locals, request }) => {
   const admin = requireAdmin(locals);
   if (admin instanceof Response) return admin;
+
+  // Optional body { emails: string[] } to retry only failed ones — backward compat: no body = all
+  let filterEmails: Set<string> | null = null;
+  try {
+    const raw = await request.clone().text();
+    if (raw) {
+      const body = JSON.parse(raw);
+      if (Array.isArray(body?.emails) && body.emails.length > 0) {
+        filterEmails = new Set(
+          body.emails
+            .filter((e: unknown) => typeof e === "string" && (e as string).includes("@"))
+            .map((e: string) => e.toLowerCase().trim()),
+        );
+      }
+    }
+  } catch {
+    // ignore malformed body — notify all
+  }
 
   const editionId = Number(params.id);
   if (!Number.isInteger(editionId)) {
@@ -59,17 +77,23 @@ export const POST: APIRoute = async ({ params, locals }) => {
   }
 
   const all = rows ?? [];
-  const subscribers = all.filter((s): s is { email: string; preferred_locale: "es" | "en" } =>
+  const allWithEmail = all.filter((s): s is { email: string; preferred_locale: "es" | "en" } =>
     typeof s.email === "string" && s.email.length > 0
   );
-  const noEmail = all.length - subscribers.length;
+  const noEmail = all.length - allWithEmail.length;
+
+  // Apply optional email filter (retry failed only)
+  const subscribers = filterEmails
+    ? allWithEmail.filter((s) => filterEmails!.has(s.email.toLowerCase().trim()))
+    : allWithEmail;
 
   if (subscribers.length === 0) {
-    return ok({ notified: 0, total: all.length, noEmail });
+    return ok({ notified: 0, total: filterEmails ? 0 : all.length, noEmail, failures: [], failed: 0 });
   }
 
   let notified = 0;
   let failed = 0;
+  const failures: Array<{ email: string; error: string }> = [];
 
   for (const sub of subscribers) {
     try {
@@ -85,9 +109,19 @@ export const POST: APIRoute = async ({ params, locals }) => {
       notified++;
     } catch (err) {
       failed++;
+      const msg = err instanceof Error ? err.message : String(err);
+      failures.push({ email: sub.email, error: msg });
       logger.error({ err, email: sub.email, editionId }, "Failed to notify subscriber");
     }
   }
 
-  return ok({ notified, total: all.length, failed, noEmail });
+  // Keep `total` as the attempted count for this call; preserve `noEmail` for backward compat.
+  // New field `failures` is actionable, `failed` stays as count.
+  return ok({
+    notified,
+    total: filterEmails ? subscribers.length : all.length,
+    failed,
+    noEmail,
+    failures,
+  });
 };

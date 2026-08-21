@@ -331,6 +331,18 @@ const enVersion = versionsByLang.get("en");
       submitBtn.textContent = mode === "create" ? "Creando..." : "Guardando...";
 
       const setState = (text: string) => { submitBtn.textContent = text; };
+      const uploadedPaths: string[] = [];
+
+      async function cleanupUploaded() {
+        if (uploadedPaths.length === 0) return;
+        try {
+          await fetch("/api/admin/uploads/cleanup", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ paths: uploadedPaths }),
+          });
+        } catch {}
+      }
 
       try {
         // Upload files FIRST, directly to Supabase Storage (bypasses the Vercel 4.5MB body limit).
@@ -347,8 +359,9 @@ const enVersion = versionsByLang.get("en");
           if (!file) continue;
           if (slot.kind === "cover" && isFree) continue;
           setState(`Subiendo ${slot.lang.toUpperCase()} (${slot.kind})...`);
-          const pub = await signAndUpload(slot.kind, file, editionNumber, isFree, slot.lang);
-          fd.set(`${slot.lang}_${slot.kind}_url`, pub);
+          const { publicUrl, path } = await signAndUpload(slot.kind, file, editionNumber, isFree, slot.lang);
+          fd.set(`${slot.lang}_${slot.kind}_url`, publicUrl);
+          if (path) uploadedPaths.push(path);
         }
         slots.forEach((slot) => { if (slot.input) fd.delete(slot.input.name); });
 
@@ -366,6 +379,7 @@ const enVersion = versionsByLang.get("en");
         try { data = raw ? JSON.parse(raw) : {}; } catch { data = {}; }
 
         if (!res.ok) {
+          await cleanupUploaded();
           const message =
             typeof data?.error === "string" && data.error
               ? data.error
@@ -382,6 +396,7 @@ const enVersion = versionsByLang.get("en");
         (window as any).adminToast?.(mode === "create" ? "Edición creada" : "Edición actualizada", "success");
         setTimeout(() => { window.location.href = "/admin/ediciones"; }, 800);
       } catch (err: any) {
+        await cleanupUploaded();
         msg.textContent = err?.message || "Error de conexión. Intentalo de nuevo.";
         msg.className = "font-sans text-sm text-triba-red bg-triba-red/10 border border-triba-red rounded p-3";
         msg.classList.remove("hidden");
@@ -392,7 +407,7 @@ const enVersion = versionsByLang.get("en");
       }
     });
 
-    async function signAndUpload(kind: "cover" | "pdf", file: File, editionNumber?: number, isFree?: boolean, language?: string): Promise<string> {
+    async function signAndUpload(kind: "cover" | "pdf", file: File, editionNumber?: number, isFree?: boolean, language?: string): Promise<{ publicUrl: string; path: string | null }> {
       const slug = kind === "pdf" && isFree ? `articulo-gratis-${Date.now()}` : undefined;
       const res = await fetch("/api/admin/uploads/sign", {
         method: "POST",
@@ -421,7 +436,7 @@ const enVersion = versionsByLang.get("en");
         throw new Error("Error subiendo archivo al storage");
       }
 
-      return sign.publicUrl as string;
+      return { publicUrl: sign.publicUrl as string, path: (sign.path as string) || null };
     }
 
     const deleteBtn = document.getElementById("delete-edition-btn") as HTMLButtonElement | null;

@@ -98,6 +98,7 @@ const authMessages = {
         <p class="font-sans text-triba-brown text-base">{dict.auth.recoverySuccess}</p>
       </div>
 
+      {/* P12: rama muerta con confirm OFF (alta instantánea). Se mantiene como fallback si Supabase activara confirm por email — no es bug, evita quedar sin UI */}
       <div id="check-email-card" class="bg-triba-cream rounded-xl border-2 border-triba-black p-8 md:p-10 hidden reveal" data-reveal>
         <h2 class="font-heading text-lg uppercase tracking-wider text-triba-brown text-center mb-4">{dict.auth.checkEmailTitle}</h2>
         <p class="font-sans text-base text-triba-brown/80 text-center mb-2">{dict.auth.checkEmailLead}</p>
@@ -373,6 +374,7 @@ const authMessages = {
         return;
       }
 
+      // P12: esta rama solo se ejecuta si Supabase tiene confirm ON (hoy OFF → nunca entra, pero se deja por seguridad)
       showCard(checkEmailCard);
     });
   }

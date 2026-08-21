@@ -40,6 +40,7 @@ export interface AdminDashboardStats {
   feedback_count: number;
   creators_pending: number;
   newsletter_count: number;
+  newsletter_pending_sync: number;
   audit_log_count: number;
 }
 
@@ -53,6 +54,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     { count: feedbackCount },
     { count: creatorsPending },
     { count: newsletterCount },
+    { count: newsletterPendingSync },
     { count: auditLogCount },
   ] = await Promise.all([
     supabaseAdmin
@@ -84,6 +86,10 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       .from("newsletters")
       .select("*", { count: "exact", head: true }),
     supabaseAdmin
+      .from("newsletters")
+      .select("*", { count: "exact", head: true })
+      .eq("sender_synced", false),
+    supabaseAdmin
       .from("admin_audit_log")
       .select("*", { count: "exact", head: true }),
   ]);
@@ -97,6 +103,7 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
     feedback_count: feedbackCount || 0,
     creators_pending: creatorsPending || 0,
     newsletter_count: newsletterCount || 0,
+    newsletter_pending_sync: newsletterPendingSync || 0,
     audit_log_count: auditLogCount || 0,
   };
 }
