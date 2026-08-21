@@ -49,30 +49,49 @@ const structuredData = {
 };
 
 const seeAllHref = `${localizePath("/mi-cuenta", lang)}#tus-tomos`;
+const comingSoonLabel = (dict.magazine as { comingSoon?: string }).comingSoon ?? "EN coming soon";
 ---
 
 <Layout {title} {description} {canonical} lang={lang} navLogoAlways>
   <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
   <section class="page-shell page-gutter bg-triba-bone">
     <div class="max-w-6xl mx-auto">
-      <div class="flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16 mb-16 md:mb-20 reveal" data-reveal>
-        <div class="flex-1 flex flex-col justify-center">
-          <p class="font-heading text-lg md:text-xl text-triba-red mb-2 uppercase tracking-wider">{dict.edition.editionLabel.replace("{n}", String(edition.edition_number ?? ""))}</p>
-          <PatchTitle content={edition.title} tag="h1" centered={false} class="text-3xl md:text-4xl text-triba-brown mb-6" />
-          <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8 whitespace-pre-line">{edition.description}</p>
-          <div class="flex flex-wrap gap-4">
-            {edition.pdf_url && (
-                <Button variant="primary" size="md" href="#visor-revista">{dict.edition.readHere}</Button>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-12 lg:gap-16 md:items-center mb-16 md:mb-20 reveal" data-reveal>
+        <p class="font-heading text-lg md:text-xl text-triba-red uppercase tracking-wider md:col-start-1 md:row-start-1 text-center md:text-left mb-0 md:mb-2">{dict.edition.editionLabel.replace("{n}", String(edition.edition_number ?? ""))}</p>
+        <div class="md:col-start-1 md:row-start-2 flex flex-col items-center md:items-start gap-2">
+          <PatchTitle content={edition.title} tag="h1" centered={true} class="text-3xl md:text-4xl text-triba-brown !text-center md:!text-left mb-0" />
+          {edition.badge && (
+            <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-white border border-triba-black/10 font-heading text-[10px] uppercase tracking-wider text-triba-brown">{edition.badge}</span>
+          )}
+          {lang === "en" && edition.isFallback && (
+            <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-bone font-heading text-[10px] uppercase tracking-wider text-triba-brown/60">{comingSoonLabel}</span>
+          )}
+          {lang === "en" && !edition.isFallback && edition.hasEn && !edition.badge && (
+            <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-green font-heading text-[10px] uppercase tracking-wider text-triba-brown">EN</span>
+          )}
+        </div>
+        <div class="md:col-start-2 md:row-start-1 md:row-span-4 flex flex-col items-center md:items-start my-2 md:my-0">
+          <div class="relative max-w-sm w-full mx-auto md:mx-0">
+            <img src={edition.cover_url} alt={dict.edition.coverAlt.replace("{title}", edition.title)} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-lg" />
+            {edition.badge && (
+              <span class="absolute top-3 right-3 inline-flex px-2.5 py-1 rounded-full bg-triba-white border border-triba-black/10 font-heading text-[10px] uppercase tracking-wider text-triba-brown shadow-sm">{edition.badge}</span>
             )}
-            {edition.pdf_url && (
-              <Button variant="default" size="md" href={`/api/pdf/${edition.id}?lang=${lang}&download=1`}>{dict.edition.downloadPdf}</Button>
+            {lang === "en" && edition.isFallback && !edition.badge && (
+              <span class="absolute top-3 right-3 inline-flex px-2.5 py-1 rounded-full bg-triba-bone font-heading text-[10px] uppercase tracking-wider text-triba-brown/60 shadow-sm">{comingSoonLabel}</span>
+            )}
+            {lang === "en" && !edition.isFallback && edition.hasEn && !edition.badge && (
+              <span class="absolute top-3 right-3 inline-flex px-2.5 py-1 rounded-full bg-triba-green font-heading text-[10px] uppercase tracking-wider text-triba-brown shadow-sm">EN</span>
             )}
           </div>
         </div>
-        <div class="flex-1">
-          <div class="max-w-sm mx-auto md:mx-0">
-            <img src={edition.cover_url} alt={dict.edition.coverAlt.replace("{title}", edition.title)} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-lg" />
-          </div>
+        <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed whitespace-pre-line md:col-start-1 md:row-start-3 text-center md:text-left mx-auto md:mx-0 max-w-lg md:max-w-none mb-0 md:mb-8 mt-2 md:mt-0">{edition.description}</p>
+        <div class="flex flex-wrap gap-4 justify-center md:justify-start md:col-start-1 md:row-start-4">
+          {edition.pdf_url && (
+              <Button variant="primary" size="md" href="#visor-revista">{dict.edition.readHere}</Button>
+          )}
+          {edition.pdf_url && (
+            <Button variant="default" size="md" href={`/api/pdf/${edition.id}?lang=${lang}&download=1`}>{dict.edition.downloadPdf}</Button>
+          )}
         </div>
       </div>
 

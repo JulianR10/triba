@@ -54,6 +54,9 @@ const editions = allEditions.map((e) => ({
   pdf: e.pdf_url ? `/api/pdf/${e.id}?lang=${lang}` : "#",
   featured: e.featured,
   badge: e.badge,
+  hasEn: e.hasEn,
+  isFallback: e.isFallback,
+  language: e.language,
   slug: `edicion-${e.edition_number}`,
   previewArticle: true,
 }));
@@ -63,6 +66,9 @@ const editionsPayload = editions.map((e) => ({
   title: e.title,
   cover: e.cover,
   edition: e.edition,
+  badge: e.badge,
+  hasEn: e.hasEn,
+  isFallback: e.isFallback,
 }));
 
 const featured = editions.find((e) => e.featured) || editions[0];
@@ -77,6 +83,7 @@ const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0]
 
 const subscribeHref = localizePath("/suscribirme", lang);
 
+const comingSoonLabel = (dict.magazine as { comingSoon?: string }).comingSoon ?? "EN coming soon";
 const miCuentaMessages = {
   lang,
   revistaBase: lang === "en" ? "/en/revista/" : "/revista/",
@@ -90,11 +97,13 @@ const miCuentaMessages = {
   feedbackThanks: dict.miCuenta.feedbackThanks,
   feedbackConn: dict.miCuenta.feedbackConn,
   processingNote2: dict.miCuenta.processingNote2,
+  comingSoon: comingSoonLabel,
+  badgeEn: "EN",
 };
 ---
 
 <Layout title={dict.miCuenta.title} description={dict.miCuenta.description} canonical={canonical} lang={lang} navLogoAlways>
-  <section style="padding-top: max(1rem, var(--nav-height, 64px))" data-mi-cuenta-messages={JSON.stringify(miCuentaMessages)}>
+  <section class="pt-0 md:pt-[max(1rem,var(--nav-height,64px))]" data-mi-cuenta-messages={JSON.stringify(miCuentaMessages)}>
     <div class="max-w-6xl mx-auto">
 
       {checkoutOutcome === "success" && (
@@ -133,30 +142,39 @@ const miCuentaMessages = {
 
       <!-- ===== HERO ===== -->
       <div class="relative overflow-hidden rounded-none md:rounded-[32px] bg-gradient-to-br from-triba-pink via-triba-pink/60 to-triba-cream px-5 md:px-14 lg:px-20 py-10 md:py-16 lg:py-20 reveal" data-reveal>
-        <div class="flex flex-col md:flex-row gap-8 md:gap-12 items-center">
-          <div class="flex-1">
-            <p class="font-heading text-sm md:text-base uppercase tracking-[0.2em] text-triba-brown/60 mb-4">{dict.miCuenta.monthlyEdition}</p>
-            <h1 class="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-triba-brown leading-tight mb-2">
-              {dict.miCuenta.hello} <span class="text-triba-red">{displayName}</span>
-            </h1>
-            <div class="mt-6 mb-6">
-              <h2 class="font-heading text-2xl md:text-3xl text-triba-brown">{featured.title}</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 md:gap-12 md:items-center">
+          <p class="font-heading text-sm md:text-base uppercase tracking-[0.2em] text-triba-brown/60 mb-4 md:col-start-1 md:row-start-1">{dict.miCuenta.monthlyEdition}</p>
+          <h1 class="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-triba-brown leading-tight mb-2 md:col-start-1 md:row-start-2">
+            {dict.miCuenta.hello} <span class="text-triba-red">{displayName}</span>
+          </h1>
+          <div class="w-full flex justify-center md:col-start-2 md:row-start-1 md:row-span-3 md:justify-end mt-4 mb-6 md:mt-0 md:mb-0">
+            <div class="w-56 sm:w-64 md:w-72 lg:w-80 -rotate-[3deg] hover:rotate-0 transition-transform duration-500">
+              <img src={featured.cover} alt={dict.miCuenta.coverAlt.replace("{title}", featured.title)} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)]" />
             </div>
-            <p class="font-sans text-base md:text-base text-triba-brown/80 leading-relaxed mb-8 max-w-lg whitespace-pre-line">
+          </div>
+          <div class="md:col-start-1 md:row-start-3">
+            <div class="mt-6 mb-3 flex flex-col items-center md:items-start gap-2">
+              <h2 class="font-heading text-2xl md:text-3xl text-triba-brown text-center md:text-left">{featured.title}</h2>
+              {featured.badge && (
+                <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-white border border-triba-black/10 font-heading text-[10px] uppercase tracking-wider text-triba-brown">{featured.badge}</span>
+              )}
+              {lang === "en" && featured.isFallback && (
+                <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-bone font-heading text-[10px] uppercase tracking-wider text-triba-brown/60">{comingSoonLabel}</span>
+              )}
+              {lang === "en" && !featured.isFallback && featured.hasEn && !featured.badge && (
+                <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-green font-heading text-[10px] uppercase tracking-wider text-triba-brown">EN</span>
+              )}
+            </div>
+            <p class="font-sans text-base md:text-base text-triba-brown/80 leading-relaxed mb-8 max-w-lg whitespace-pre-line text-center md:text-left mx-auto md:mx-0 mt-3">
               {featured.description}
             </p>
-            <div class="flex flex-wrap gap-4">
+            <div class="flex flex-wrap gap-4 justify-center md:justify-start">
               {featured.pdf !== "#" && (
                 <Button variant="primary" size="md" href="#visor-revista">{dict.miCuenta.continueReading}</Button>
               )}
               {featured.pdf !== "#" && (
                 <Button variant="ghost" size="md" href={`${featured.pdf}&download=1`}>{dict.miCuenta.downloadPdf}</Button>
               )}
-            </div>
-          </div>
-          <div class="flex-1 flex justify-center md:justify-end">
-            <div class="w-56 sm:w-64 md:w-72 lg:w-80 -rotate-[3deg] hover:rotate-0 transition-transform duration-500">
-              <img src={featured.cover} alt={dict.miCuenta.coverAlt.replace("{title}", featured.title)} fetchpriority="high" class="w-full rounded-xl border-2 border-triba-black shadow-[8px_8px_0px_0px_rgba(0,0,0,0.15)]" />
             </div>
           </div>
         </div>
@@ -174,16 +192,19 @@ const miCuentaMessages = {
       )}
 
       <!-- ===== COLECCIÓN (carrusel "Tus tomos") ===== -->
-      <div id="tus-tomos" class="px-5 md:px-14 lg:px-20 mt-12 md:mt-16 mb-12 md:mb-20 reveal" data-reveal>
+      <div id="tus-tomos" class="relative px-5 md:px-14 lg:px-20 py-12 md:py-16 reveal shadow-[inset_0_12px_18px_-14px_rgba(0,0,0,0.15),inset_0_-12px_18px_-14px_rgba(0,0,0,0.15)]" data-reveal>
+        <!-- sombras internas sutiles top/bottom del contenedor de sección -->
+        <div class="pointer-events-none absolute inset-x-0 top-0 h-8 bg-gradient-to-b from-black/10 to-transparent"></div>
+        <div class="pointer-events-none absolute inset-x-0 bottom-0 h-8 bg-gradient-to-t from-black/10 to-transparent"></div>
         <div class="max-w-6xl mx-auto">
           <p class="font-heading text-xs uppercase tracking-[0.25em] text-triba-brown/50 mb-8">{dict.miCuenta.tusTomos}</p>
 
-          <div class="relative" data-tomos-wrap>
+          <div class="relative px-10 md:px-14" data-tomos-wrap>
             <button
               type="button"
               data-tomos-prev
               aria-label={dict.miCuenta.prevAria}
-              class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 -ml-4 md:-ml-6 rounded-full bg-triba-white border-2 border-triba-black shadow-lg flex items-center justify-center font-sans text-xl text-triba-brown hover:bg-triba-pink transition-colors"
+              class="absolute left-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center font-sans text-2xl md:text-3xl text-triba-brown hover:text-triba-red transition-colors"
             >‹</button>
 
             <div
@@ -195,7 +216,7 @@ const miCuentaMessages = {
               type="button"
               data-tomos-next
               aria-label={dict.miCuenta.nextAria}
-              class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 -mr-4 md:-mr-6 rounded-full bg-triba-white border-2 border-triba-black shadow-lg flex items-center justify-center font-sans text-xl text-triba-brown hover:bg-triba-pink transition-colors"
+              class="absolute right-0 top-1/2 -translate-y-1/2 z-10 w-10 h-10 md:w-12 md:h-12 flex items-center justify-center font-sans text-2xl md:text-3xl text-triba-brown hover:text-triba-red transition-colors"
             >›</button>
           </div>
 
@@ -305,6 +326,7 @@ const miCuentaMessages = {
 
   var messagesEl = document.querySelector<HTMLElement>("[data-mi-cuenta-messages]");
   var messages: Record<string, string> = {
+    lang: "es",
     revistaBase: "/revista/",
     coverCardAlt: "Portada {edition} — {title}",
     slideAria: "Ir a página {n}",
@@ -316,6 +338,8 @@ const miCuentaMessages = {
     feedbackThanks: "¡Gracias por tu feedback!",
     feedbackConn: "Error de conexión. Intentalo de nuevo.",
     processingNote2: "Todavía estamos confirmando tu pago. Si se demora más de un minuto, actualizá la página.",
+    comingSoon: "EN coming soon",
+    badgeEn: "EN",
   };
   var raw = messagesEl?.getAttribute("data-mi-cuenta-messages");
   if (raw) {
@@ -350,7 +374,7 @@ const miCuentaMessages = {
   // --- Tus tomos: carrusel paginado (mobile 2x2 / desktop 2 filas de 4) ---
   var dataEl = document.querySelector<HTMLElement>("[data-tomos-data]");
   if (dataEl) {
-    var editionsList: { slug: string; title: string; cover: string; edition: string }[] = JSON.parse(dataEl.textContent || "[]");
+    var editionsList: { slug: string; title: string; cover: string; edition: string; badge: string | null; hasEn: boolean; isFallback: boolean }[] = JSON.parse(dataEl.textContent || "[]");
     var wrap = document.querySelector<HTMLElement>("[data-tomos-wrap]");
     var track = wrap && wrap.querySelector<HTMLElement>("[data-tomos-track]");
     var dotsBox = document.querySelector<HTMLElement>("[data-tomos-dots]");
@@ -373,13 +397,21 @@ const miCuentaMessages = {
         .map(function (page) {
           return (
             '<div class="flex-none w-full snap-start">' +
-            '<div class="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">' +
+            '<div class="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">' +
             page
               .map(function (ed) {
+                var pill = "";
+                if (ed.badge) {
+                  pill = '<span class="absolute top-2 right-2 z-10 inline-flex px-2 py-0.5 rounded-full bg-triba-white border border-triba-black/10 font-heading text-[10px] uppercase tracking-wider text-triba-brown">' + ed.badge + "</span>";
+                } else if (messages.lang === "en" && ed.isFallback) {
+                  pill = '<span class="absolute top-2 right-2 z-10 inline-flex px-2 py-0.5 rounded-full bg-triba-bone font-heading text-[10px] uppercase tracking-wider text-triba-brown/60">' + (messages.comingSoon || "EN coming soon") + "</span>";
+                } else if (messages.lang === "en" && ed.hasEn) {
+                  pill = '<span class="absolute top-2 right-2 z-10 inline-flex px-2 py-0.5 rounded-full bg-triba-green font-heading text-[10px] uppercase tracking-wider text-triba-brown">' + (messages.badgeEn || "EN") + "</span>";
+                }
                 return (
                   '<a href="' + messages.revistaBase + ed.slug + '#visor-revista" class="group block">' +
-                  '<div class="aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg transition-all duration-400 group-hover:rotate-0 group-hover:scale-[1.04] group-hover:shadow-2xl">' +
-                  '<img src="' + ed.cover + '" alt="' + messages.coverCardAlt.replace("{edition}", ed.edition).replace("{title}", ed.title) + '" loading="lazy" class="w-full h-full object-cover" />' +
+                  '<div class="relative aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg transition-all duration-400 group-hover:rotate-0 group-hover:scale-[1.04] group-hover:shadow-2xl">' +
+                  '<img src="' + ed.cover + '" alt="' + messages.coverCardAlt.replace("{edition}", ed.edition).replace("{title}", ed.title) + '" loading="lazy" class="w-full h-full object-cover" />' + pill +
                   "</div>" +
                   '<p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 text-center mt-2 leading-relaxed">' + ed.title + "</p>" +
                   "</a>"
