@@ -449,7 +449,7 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 | $ST-02 | Migrated caducada | Flujo automático | Nada obliga a revocar el acceso tras los 7 días si no paga (no hay job/cron; solo lo resuelve un nuevo pago o acción admin) |
 | $ST-03 | Email null en profiles | notificar edición | se filtran (no cuentan como `failed`) y se reporta `noEmail` | **hecho** |
 | $ST-04 | Newsletter sync silenciosa | FLOW-01 | éxito visible pero `sender_synced=false` (429 de Sender) y la welcome nunca llega; la usuaria cree que está suscripta al pago | **mitigado 2026-08-22** (retry 429/5xx en `sender.ts` + dashboard `newsletter_pending_sync` + banner resync) |
-| $ST-05 | Upload huérfano | FLOW-15 | archivo subido a storage sin edición que lo referencie; no hay limpieza | **hecho 2026-08-22** (cleanup del submit actual vía `removeStoragePaths`/`/api/admin/uploads/cleanup`; históricos pendientes) |
+| $ST-05 | Upload huérfano | FLOW-15 | archivo subido a storage sin edición que lo referencie; no hay limpieza | **hecho 2026-08-23** (cleanup del submit actual vía `removeStoragePaths`/`/api/admin/uploads/cleanup` + barrido histórico `scripts/cleanup-orphan-storage.mjs --real`; primer barrido 23-Ago borró 2 covers pre-i18n huérfanos) |
 | $ST-06 | PDF expiró 30min | COMP-12 | "Reintentar" remonta el `<Document>` con la MISMA URL firmada expirada → loop de error sin mensaje real | **hecho 2026-08-22** (`PDFViewer.tsx` bifurca `expired` → `Recargar página` + `lang`) |
 | $ST-07 | PDF 401 como JSON | FLOW-12 | Descargar sin sesión/rol → JSON crudo, no redirige a login | **hecho** |
 
@@ -466,7 +466,7 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 **Acoplamientos fuertes**
 - **P5**: el cierre de sesión/cancelar/gestionar del sitio público dependen del **Navbar (COMP-01)** presente (delegación global de eventos). Si se aísla la página del navbar, se rompen. (El toast ya es compartido: `src/lib/ui.ts` — P6 resuelto 2026-08-14.)
 - **P7**: el gate de acceso (isActiveSubscription) se recalcula en 5 lugares distintos (Navbar, revista, mi-cuenta, /api/pdf, AccountMenuItems) con queries repetidas por request → centralizable en middleware/locals. *(resuelto 2026-08-23: `src/middleware.ts:53` centraliza `profile+subscription+hasActiveSub` en `App.Locals`; `src/env.d.ts:4` + consumers `Navbar.astro:23`/`MyAccountPage.astro:27`/`MagazinePage.astro:22`/`api/pdf/[editionId].ts:84` prefieren locals con fallback; `isActiveSubscription` corrige `current_period_end` para migrated)*
-- **P8**: handshake de checkout con localStorage (`checkout-intent`) + 2 consumidores (login y suscribirme) + cleanup en mi-cuenta. Funciona, pero es estado global frágil con TTL implícito (24h).
+- **P8**: handshake de checkout con localStorage (`checkout-intent`) + 2 consumidores (login y suscribirme) + cleanup en mi-cuenta. Funciona, pero es estado global frágil con TTL implícito (24h). *(resuelto 2026-08-23: `getCheckoutIntent` valida `provider/currency` contra whitelist; flush limpia solo tras matchear el botón; dismiss del banner en login borra el intent. Cleanup real vive en `SubscribePage`, no en mi-cuenta — doc corregido)*
 - **P9**: dos formularios de newsletter con la misma lógica pero markup duplicado (COMP-02 y COMP-07).
 
 **Loops / sin salida**
@@ -506,7 +506,7 @@ FASE 2 (fiabilidad):
    Zona NEWSLETTER → retry Sender con cola/backoff + visibilidad en admin (P9→información compartida, $ST-04 — mitigado 2026-08-22, Fase 1)
    Zona PDF        → mensaje de expiración + link de descarga regenerada (P10 · $ST-06 — hecho 2026-08-22, Fase 1)
 FASE 3 (admin):
-    Zona EDICIONES → limpieza de uploads huérfanos + estados de submit por paso (P3 · $ST-05 — cleanup submit actual hecho 2026-08-22, históricos pendientes)
+    Zona EDICIONES → limpieza de uploads huérfanos + estados de submit por paso (P3 · $ST-05 — completo 2026-08-23: cleanup en caliente + barrido histórico)
     Zona SUSCRIPTORAS → refactor de la tabla mixta (P2 — stats al server hecho 2026-08-22) · FLOW-16 failures hecho 2026-08-22
 FASE 4 (arquitectura):
    Zona CUENTA  → desacoplar logout/portal/cancel del Navbar (P5 · P6)
@@ -525,7 +525,7 @@ Lista priorizada por urgencia (referencias al mapa). Los primeros ítems cuestan
 >
 > **Resueltas en 2026-08-22** (Fase 1 — nulo/bajo riesgo): `P2` (stats suscriptoras `totalActive/totalCanceled/totalNone` movidos al server `src/lib/admin/subscribers.ts:19`/`src/pages/admin/suscriptoras.astro:137`; ya no se calculan por página — fix `updateStats(rows)` → `data.total*`) · `FLOW-16` (notify devuelve `failures[]` `src/pages/api/admin/editions/[id]/notify.ts:83` + UI accionable `src/pages/admin/ediciones/[id].astro:43` con lista, `Reintentar fallidas` filtrado por `emails` y `Copiar emails`) · `P4` (`src/scripts/checkout-poll.ts:17` + `src/components/MyAccountPage.astro:323` + `src/i18n/ui.ts:miCuenta.processingNetworkError` — tras 3 fallos consecutivos ~9s muestra "Conexión inestable, seguimos intentando..." sin esperar 60s) · `$ST-06/P10` (`src/components/PDFViewer.tsx:37` `lang` + `errType` + `isExpiredError` con `mountTimeRef`/`Recargar página` `location.reload()`; callers `MyAccountPage.astro`/`EditionDetail.astro`/`MagazinePage.astro` pasan `lang`; `src/i18n/ui.ts:miCuenta.pdf*`) · `$ST-05/P3` (`src/lib/storage.ts:removeStoragePaths` + `src/pages/api/admin/uploads/cleanup.ts` + `src/components/admin/EditionForm.astro:323` tracking `uploadedPaths` + `cleanupUploaded()` fire-and-forget en `!res.ok` y `catch`) · `$ST-04` (`src/lib/sender.ts:request` retry 429/5xx con backoff + `src/lib/admin/index.ts:newsletter_pending_sync` + `src/pages/admin/index.astro` banner/card) · `Nivel5` (`P12` `src/components/AuthPage.astro:101` documentado, `P13` `src/lib/stripe.ts:11` documentado, `P15` `src/lib/storage.ts:62` borrado, `P14` `src/pages/api/admin/uploads/sign.ts:32` documentado).
 >
-> **Resueltas en 2026-08-23** (Fase 1 cimientos): `P7` (`src/middleware.ts:47` gate centralizado `profile+subscription+hasActiveSub` con `isActiveSubscription` incluyendo `current_period_end`; `src/env.d.ts:5` `App.Locals.subscription/hasActiveSub`; consumers `src/components/Navbar.astro:23`/`src/components/MyAccountPage.astro:27`/`src/components/MagazinePage.astro:22`/`src/pages/api/pdf/[editionId].ts:84` prefieren `Astro.locals`/`locals` con fallback; `src/lib/subscription-status.ts:50` `active` coherente).
+> **Resueltas en 2026-08-23** (Fase 1 cimientos): `P7` (`src/middleware.ts:47` gate centralizado `profile+subscription+hasActiveSub` con `isActiveSubscription` incluyendo `current_period_end`; `src/env.d.ts:5` `App.Locals.subscription/hasActiveSub`; consumers `src/components/Navbar.astro:23`/`src/components/MyAccountPage.astro:27`/`src/components/MagazinePage.astro:22`/`src/pages/api/pdf/[editionId].ts:84` prefieren `Astro.locals`/`locals` con fallback; `src/lib/subscription-status.ts:50` `active` coherente) · `P8` (`src/lib/checkout-intent.ts:24` whitelist provider/currency con drop; `src/components/SubscribePage.astro:187` clear solo tras matchear botón — sin pérdida de checkout; `src/components/AuthPage.astro:159` dismiss = opt-out explícito que borra el intent).
 
 ### 🟠 Nivel 2 — Muy importante: retención y conversión
 
@@ -544,7 +544,7 @@ Activas/canceladas/sin-sub se cuentan sobre las 20 filas de la página, no el to
 **3. `$ST-05` — Uploads huérfanos** · `FLOW-15`, `EditionForm.astro`
 Si el PUT sube a Storage y luego el POST/PATCH falla, el archivo queda huérfano para siempre.
 *Cambio:* limpiar por path si la edición no se creó / no referencia el path.
-*Esfuerzo:* medio. · Estado: **hecho 2026-08-22** (cleanup del submit actual `removeStoragePaths` + `/api/admin/uploads/cleanup`; históricos requieren script de barrido).
+*Esfuerzo:* medio. · Estado: **hecho 2026-08-23** (cleanup en caliente `removeStoragePaths` + `/api/admin/uploads/cleanup`; barrido histórico `scripts/cleanup-orphan-storage.mjs [--real]`).
 
 **4. `FLOW-16` — Notificación sin lista de fallidas accionable** · `notify.ts`
 Se reporta "N fallaron" pero no hay retry ni lista.
@@ -570,7 +570,7 @@ Queries idénticas por request y la regla `active|migrated` vive dispersa (riesg
 
 **8. `P8` — Handshake de checkout con `localStorage`** · `checkout-intent.ts`
 Estado global frágil con 2 consumidores y TTL implícito. No es urgente, pero es candidato a simplificarse al tocar pagos.
-*Esfuerzo:* medio. · Estado: pendiente.
+*Esfuerzo:* medio. · Estado: **hecho 2026-08-23** (`src/lib/checkout-intent.ts:24` whitelist provider/currency + `src/components/SubscribePage.astro:187` clear-post-match + `src/components/AuthPage.astro:159` dismiss borra intent).
 
 ### ⚪ Nivel 5 — Deuda técnica / limpieza (sin urgencia)
 

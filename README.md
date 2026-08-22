@@ -32,6 +32,7 @@ Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABAS
 
 | Script | Uso |
 |---|---|
+| `node --env-file=.env scripts/cleanup-orphan-storage.mjs [--real]` | Barrido de archivos huérfanos en Storage (dry-run default) |
 | `node --env-file=.env scripts/resync-newsletters.mjs [--all\|--email=x]` | Re-sincroniza newsletters con `sender_synced=false` a Sender |
 | `node --env-file=.env scripts/reconcile-mp-subscribers.mjs [--real]` | Activa retroactivamente pagadores MP sin acceso |
 | `node --env-file=.env scripts/recreate-migrated-billing.mjs [--dry-run]` | Recrea el cobro automático de las migradas (idempotente) |

@@ -125,7 +125,7 @@ const authMessages = {
 
 <script>
   import { supabase } from "../lib/supabase";
-  import { getCheckoutIntent } from "../lib/checkout-intent";
+  import { getCheckoutIntent, clearCheckoutIntent } from "../lib/checkout-intent";
   import { onPageCycle } from "../lib/onPageCycle";
 
   function setup() {
@@ -160,6 +160,9 @@ const authMessages = {
   const dismissBannerBtn = document.getElementById("checkout-pending-banner")?.querySelector("[data-dismiss-banner]");
   if (dismissBannerBtn) {
     dismissBannerBtn.addEventListener("click", () => {
+      // P8: dismissing the banner is an explicit opt-out — also drop the intent
+      // so /suscribirme doesn't auto-click a checkout the user dismissed.
+      clearCheckoutIntent();
       const banner = document.getElementById("checkout-pending-banner");
       if (banner) banner.classList.add("hidden");
     });

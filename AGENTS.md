@@ -54,7 +54,7 @@ Newsletter gratuito + suscripción paga, escrita por y para mujeres. Detalle de 
 - Promover: `update profiles set role='admin' where email='...'`.
 - Nueva edición `/admin/ediciones/nuevo`: portada ≤5MB, PDF ≤50MB, featured única. Validación `src/lib/admin/editions.ts`.
 - Cancelar `/admin/suscriptoras` → RPC `cancel_subscription`. Reembolsar → `POST /api/admin/subscribers/[id]/refund` + `admin_audit_log`.
-- **Upload directo (no por Vercel 4.5MB):** `EditionForm` → `POST /api/admin/uploads/sign` → `createSignedUploadUrl(path,{upsert:true})` → `PUT` directo (`Content-Type` solo) → `POST/PATCH` edición con URLs. Si `PUT` OK y `POST/PATCH` falla (400/409), cleanup fire-and-forget `POST /api/admin/uploads/cleanup {paths}` → `removeStoragePaths` (`src/lib/storage.ts`).
+- **Upload directo (no por Vercel 4.5MB):** `EditionForm` → `POST /api/admin/uploads/sign` → `createSignedUploadUrl(path,{upsert:true})` → `PUT` directo (`Content-Type` solo) → `POST/PATCH` edición con URLs. Si `PUT` OK y `POST/PATCH` falla (400/409), cleanup fire-and-forget `POST /api/admin/uploads/cleanup {paths}` → `removeStoragePaths` (`src/lib/storage.ts`). Barrido de huérfanos históricos: `node --env-file=.env scripts/cleanup-orphan-storage.mjs [--real]` (dry-run default, idempotente).
 - Notificar edición: `POST /api/admin/editions/[id]/notify` → `role=subscriber` (devuelve `{failures:[{email,error}]}` + retry filtrado `POST {emails}`).
 - Migradas: tab `status=migrated` + stats `totalMigrated`/`totalPending`/`totalRefunded`.
 - Dashboard `newsletter_pending_sync` = `sender_synced=false` → card + banner en `/admin`.
@@ -89,7 +89,7 @@ triba/
 - Admin queda ES.
 
 ## Deuda de tipos
-`npx astro check` → 0 errores · `npm run build` OK (23-Ago-2026 Fase 1 completa). Pendiente: `P8` `checkout-intent` localStorage.
+`npx astro check` → 0 errores · `npm run build` OK (23-Ago-2026 Fase 1 completa, incl. P7/P8). Sin pendientes de la lista de mejoras; ver `docs/flujo-funcional.md §6`.
 
 ⚠️ `src/lib/database.types.ts` canónico, sincronizado con `supabase/migrations/`.
 

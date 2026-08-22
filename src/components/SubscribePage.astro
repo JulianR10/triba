@@ -193,15 +193,17 @@ const newsletterMessages = {
       if (!session) return;
     }
 
-    clearCheckoutIntent();
-
     var currency = pending.currency;
     selectCurrency(currency);
 
     var btn = document.querySelector(
       'button[data-provider="' + pending.provider + '"][data-currency="' + currency + '"]'
     ) as HTMLButtonElement | null;
+    // P8: clear only once we can actually act on the intent — clearing before
+    // left the checkout lost with no recovery when the button didn't match.
     if (!btn) return;
+
+    clearCheckoutIntent();
 
     btn.scrollIntoView({ behavior: "smooth", block: "center" });
     setTimeout(function () { btn!.click(); }, 400);
