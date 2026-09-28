@@ -113,11 +113,7 @@ const ctaSubscribe = localizePath("/suscribirme", lang);
       <div class="flex flex-col md:flex-row gap-8 md:gap-12 mb-8 md:mb-20 reveal-stagger" data-reveal>
         <!-- Columna izquierda: texto -->
         <div class="flex-1 flex flex-col justify-center text-center md:text-left order-2 md:order-1">
-          {
-            dict.magazine.featuredParagraphs.map((p) => (
-              <p class="font-sans text-base text-triba-brown leading-relaxed mb-4">{p}</p>
-            ))
-          }
+          <p class="font-sans text-base text-triba-brown leading-relaxed mb-4 whitespace-pre-line">{featured.description}</p>
           <div class="flex justify-center md:justify-start">
             {hasActiveSub ? (
               <Button variant="default" id="featured-cta" href={ctaAccount} class="px-10 py-4 text-base">

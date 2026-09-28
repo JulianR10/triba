@@ -102,11 +102,6 @@ export const ui = {
       description:
         "Explorá las ediciones de Triba, nuestra revista digital mensual. Leé online, descargá PDF y descubrí artículos de cultura, arte e identidad.",
       patchTitle: "Nuestra revista",
-      featuredParagraphs: [
-        "Todos los meses publicamos una nueva edición de nuestra revista, hecha por y para mujeres. Estamos felices de compartir con ustedes la tercera edición!",
-        "Con la participación de las colaboradoras fundadoras y algunas Triba Creators que se suman este mes. \"El show debe continuar\" viene a recordarnos un poco quienes fuimos y quienes somos hoy, transitando por 15 artículos diferentes pero igual de inspiradores.",
-        "Esperamos que disfrutes tu lectura, nos vemos el mes que viene.",
-      ],
       continueReading: "Seguir leyendo",
       iWantIt: "LA QUIERO!",
       latestEdition: "Última edición",
@@ -415,11 +410,6 @@ export const ui = {
       description:
         "Explore Triba's editions, our monthly digital magazine. Read online, download the PDF and discover articles about culture, art and identity.",
       patchTitle: "Our magazine",
-      featuredParagraphs: [
-        "Every month we publish a new edition of our magazine, made by and for women. We're happy to share the third edition with you!",
-        "With the founding contributors and some Triba Creators joining this month. \"The show must go on\" reminds us a bit of who we were and who we are today, across 15 different yet equally inspiring articles.",
-        "We hope you enjoy your reading — see you next month.",
-      ],
       continueReading: "Keep reading",
       iWantIt: "I WANT IT!",
       latestEdition: "Latest edition",
