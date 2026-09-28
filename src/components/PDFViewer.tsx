@@ -41,7 +41,6 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
   const [pageNumber, setPageNumber] = useState(1);
   const [scale, setScale] = useState(1);
   const [expanded, setExpanded] = useState(false);
-  const [nativeFs, setNativeFs] = useState(false);
   const [viewportWidth, setViewportWidth] = useState(() => typeof window !== "undefined" ? window.innerWidth : 0);
   const [viewportHeight, setViewportHeight] = useState(() => typeof window !== "undefined" ? window.innerHeight : 0);
   const aspectRatioRef = useRef(0.707);
@@ -51,6 +50,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
   const [errType, setErrType] = useState<"generic" | "expired" | "timeout">("generic");
   const [retryKey, setRetryKey] = useState(0);
   const visible = useIsVisible(containerRef);
+  const [inView, setInView] = useState(false);
   const mountTimeRef = useRef<number>(Date.now());
 
   const msg = {
@@ -83,52 +83,78 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
     return () => clearTimeout(timer);
   }, [err, numPages, msg.timeout]);
 
-  useEffect(() => {
+  const resetInline = useCallback(() => {
+    setScale(1);
     setViewportWidth(window.innerWidth);
     setViewportHeight(window.innerHeight);
+    const ar = aspectRatioRef.current;
+    setPageHeight(ar > 0 ? Math.round(340 / ar) : 0);
   }, []);
 
-  function isNativeFsSupported() {
-    const doc = document as Document & { webkitFullscreenEnabled?: boolean };
-    return !!(
-      typeof document !== "undefined" &&
-      (document.fullscreenEnabled || doc.webkitFullscreenEnabled)
-    );
-  }
-
-  function currentNativeFsElement() {
-    const doc = document as Document & { webkitFullscreenElement?: Element | null };
-    return document.fullscreenElement || doc.webkitFullscreenElement || null;
-  }
-
-  function requestNativeFs(el: HTMLElement) {
-    const anyEl = el as HTMLElement & { webkitRequestFullscreen?: () => Promise<void> };
-    if (el.requestFullscreen) return el.requestFullscreen();
-    if (anyEl.webkitRequestFullscreen) return anyEl.webkitRequestFullscreen();
-    return Promise.reject(new Error("fullscreen unsupported"));
-  }
-
-  function exitNativeFs() {
-    const doc = document as Document & { webkitExitFullscreen?: () => Promise<void> };
-    if (document.exitFullscreen) return document.exitFullscreen();
-    if (doc.webkitExitFullscreen) return doc.webkitExitFullscreen();
-    return Promise.resolve();
-  }
+  const collapse = useCallback(() => {
+    resetInline();
+    setExpanded(false);
+  }, [resetInline]);
 
   useEffect(() => {
-    const syncNativeFs = () => {
-      const inFs = currentNativeFsElement() === containerRef.current;
-      setNativeFs(inFs);
-      setExpanded(inFs);
-      if (!inFs) resetInline();
-    };
-    document.addEventListener("fullscreenchange", syncNativeFs);
-    document.addEventListener("webkitfullscreenchange", syncNativeFs);
-    return () => {
-      document.removeEventListener("fullscreenchange", syncNativeFs);
-      document.removeEventListener("webkitfullscreenchange", syncNativeFs);
-    };
+    const el = containerRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") {
+      setInView(true);
+      return;
+    }
+    const obs = new IntersectionObserver(
+      ([entry]) => setInView(entry.isIntersecting),
+      { threshold: 0.35 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
   }, []);
+
+  const changePage = useCallback((offset: number) => {
+    setPageNumber((prev) => {
+      const next = prev + offset;
+      return Math.max(1, Math.min(next, numPages));
+    });
+  }, [numPages]);
+
+  const zoomIn = useCallback(() => {
+    setScale((prev) => Math.min(prev + 0.25, 3));
+  }, []);
+
+  const zoomOut = useCallback(() => {
+    setScale((prev) => Math.max(prev - 0.25, 0.5));
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      const t = e.target as HTMLElement | null;
+      if (t && (t.tagName === "INPUT" || t.tagName === "TEXTAREA" || t.tagName === "SELECT" || t.isContentEditable)) return;
+      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === "Escape") {
+        if (expanded) collapse();
+        return;
+      }
+      if (e.key === "+" || e.key === "=") {
+        if (!expanded || numPages < 1) return;
+        e.preventDefault();
+        zoomIn();
+        return;
+      }
+      if (e.key === "-" || e.key === "_") {
+        if (!expanded || numPages < 1) return;
+        e.preventDefault();
+        zoomOut();
+        return;
+      }
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      if (!expanded && !inView) return;
+      if (numPages < 1) return;
+      e.preventDefault();
+      changePage(e.key === "ArrowRight" ? 1 : -1);
+    }
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [expanded, inView, numPages, collapse, changePage, zoomIn, zoomOut]);
 
   useEffect(() => {
     if (!expanded) return;
@@ -150,35 +176,10 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
     };
   }, [expanded]);
 
-  const resetInline = () => {
-    setScale(1);
-    setViewportWidth(0);
-    setViewportHeight(0);
-    const ar = aspectRatioRef.current;
-    setPageHeight(ar > 0 ? Math.round(340 / ar) : 0);
-  };
-
-  const toggleFullscreen = useCallback(async () => {
-    if (!containerRef.current) return;
-    try {
-      if (expanded) {
-        if (nativeFs) {
-          await exitNativeFs();
-        } else {
-          setExpanded(false);
-          resetInline();
-        }
-      } else if (isNativeFsSupported()) {
-        try {
-          await requestNativeFs(containerRef.current);
-        } catch {
-          setExpanded(true);
-        }
-      } else {
-        setExpanded(true);
-      }
-    } catch {}
-  }, [expanded, nativeFs]);
+  const toggleExpanded = useCallback(() => {
+    if (expanded) collapse();
+    else setExpanded(true);
+  }, [expanded, collapse]);
 
   const handleDocumentLoadSuccess = useCallback(({ numPages: n }: { numPages: number }) => {
     setNumPages(n);
@@ -199,21 +200,6 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
     const h = Math.round(vp.height * s);
     if (h > 0) setPageHeight((prev) => Math.max(prev, h));
   }, [expanded, viewportWidth]);
-
-  function changePage(offset: number) {
-    setPageNumber((prev) => {
-      const next = prev + offset;
-      return Math.max(1, Math.min(next, numPages));
-    });
-  }
-
-  function zoomIn() {
-    setScale((prev) => Math.min(prev + 0.25, 3));
-  }
-
-  function zoomOut() {
-    setScale((prev) => Math.max(prev - 0.25, 0.5));
-  }
 
   if (!pdfUrl) {
     return (
@@ -240,15 +226,34 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
       })()
     : 340;
 
-  const fullscreenClasses = expanded
+  const overlayClasses = expanded
     ? "fixed inset-0 z-[80] bg-triba-bone flex flex-col h-[100dvh] pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]"
     : "flex flex-col items-center";
 
   const content = (
     <div
       ref={containerRef}
-      className={(fullscreenClasses + " " + className).trim()}
+      className={(overlayClasses + " " + className).trim()}
     >
+      {expanded && (
+        <button
+          type="button"
+          onClick={collapse}
+          aria-label="Cerrar vista ampliada"
+          className="absolute top-6 right-6 md:top-8 md:right-8 z-10 w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red"
+        >
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2.5"
+            className="w-4 h-4 text-triba-brown"
+          >
+            <line x1="5" y1="5" x2="19" y2="19" />
+            <line x1="19" y1="5" x2="5" y2="19" />
+          </svg>
+        </button>
+      )}
       <div
         className={
           expanded
@@ -272,6 +277,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
               )}
               {errType === "expired" ? (
                 <button
+                  type="button"
                   onClick={() => window.location.reload()}
                   className="font-sans text-sm font-semibold text-triba-white bg-triba-brown hover:bg-triba-brown/90 rounded-full px-5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-triba-brown"
                 >
@@ -279,6 +285,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
                 </button>
               ) : (
                 <button
+                  type="button"
                   onClick={() => {
                     setErr("");
                     setErrType("generic");
@@ -357,6 +364,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
           }
         >
           <button
+            type="button"
             onClick={() => changePage(-1)}
             disabled={pageNumber <= 1}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-triba-red shrink-0"
@@ -372,6 +380,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
           </span>
 
           <button
+            type="button"
             onClick={() => changePage(1)}
             disabled={pageNumber >= numPages}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-triba-red shrink-0"
@@ -387,6 +396,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
           <div className="w-px h-6 bg-triba-black/20 mx-1 shrink-0"></div>
 
           <button
+            type="button"
             onClick={zoomOut}
             disabled={scale <= 0.5}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
@@ -402,6 +412,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
           </span>
 
           <button
+            type="button"
             onClick={zoomIn}
             disabled={scale >= 3}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
@@ -417,7 +428,8 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
           )}
 
           <button
-            onClick={toggleFullscreen}
+            type="button"
+            onClick={toggleExpanded}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red shrink-0"
             aria-label={
               expanded

@@ -18,15 +18,7 @@ const magazines = editions.map((e) => ({
   id: e.id,
   number: String(e.edition_number ?? ""),
   title: e.title,
-  description: lang === "es"
-    ? e.edition_number === 1
-      ? "Felices de lanzar con ustedes nuestra primera edición de la revista y la posibilidad de hacer realidad un sueño por el que venimos trabajando hace tantos meses! El universo de Triba abre sus puertas y tiene ganas de recibirlas a todas, esperamos que disfruten de la lectura!"
-      : e.edition_number === 2
-        ? "Llegó nuestra segunda edición de la revista y con ella la ilusión de compartirles los 16 artículos que van a encontrar escritos. Por primera vez se suman algunas de ustedes como Triba Creators, escribiendo y diseñando algunas de las columnas. Creamos porque creemos viene a reforzar el desafío que iniciamos en Instagram y a recordarnos la confianza en nuestro arte y voz propias. Esperamos que disfrutes de esta edición, tanto como nosotras disfrutamos de hacerla."
-        : e.edition_number === 3
-          ? "Estamos felices de compartir con ustedes la tercera edición de nuestra revista! Con la participación de las colaboradoras fundadoras y algunas Triba Creators que se suman este mes. “El show debe continuar” viene a recordarnos un poco quienes fuimos y quienes somos hoy, transitando por 15 artículos diferentes pero igual de inspiradores. Esperamos que disfrutes tu lectura, nos vemos el mes que viene!"
-          : e.description
-    : e.description,
+  description: e.description,
   image: e.cover_url ?? "",
 }));
 
