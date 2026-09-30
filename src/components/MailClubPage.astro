@@ -1,0 +1,123 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import PatchTitle from "../components/PatchTitle.astro";
+import { t, type Locale } from "../i18n/ui";
+import { localizePath } from "../i18n/locale";
+
+const { lang = "es" } = Astro.props as { lang?: Locale };
+const dict = t(lang);
+const page = dict.mailClubPage;
+const canonical = lang === "en" ? "/en/mail-club" : "/mail-club";
+const subscribeHref = localizePath("/suscribirme", lang);
+const faqs = dict.subscribe.faqs;
+---
+
+<style>
+  details[data-faq] .faq-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  details[data-faq][open] .faq-content {
+    grid-template-rows: 1fr;
+  }
+  details[data-faq] .faq-content-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+</style>
+
+<Layout title={page.title} description={page.description} canonical={canonical} lang={lang} navLogoAlways>
+  <section class="page-shell page-gutter bg-triba-bone">
+    <div class="max-w-4xl mx-auto">
+
+      <!-- Bloque 1 · Portada -->
+      <div class="flex flex-col gap-3 mb-8 pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content={page.heroTitle} tag="h1" class="text-4xl md:text-6xl text-triba-brown" />
+        <p class="font-serif italic text-xl md:text-2xl text-triba-red mt-2">{page.heroLead}</p>
+      </div>
+
+      <div class="rounded-xl border-2 border-triba-black overflow-hidden mb-6 reveal" data-reveal>
+        <img src="https://picsum.photos/seed/triba-mailclub-hero/1280/720" alt={page.heroTitle} loading="lazy" width="1280" height="720" class="w-full aspect-[16/9] object-cover" />
+      </div>
+
+      <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mb-8 text-balance reveal" data-reveal>
+        {page.heroBody}
+      </p>
+      <div class="text-center mb-16 reveal" data-reveal>
+        <Button variant="primary" size="md" href={subscribeHref}>{page.heroButton}</Button>
+      </div>
+
+      <!-- Bloque 2 · Qué trae tu sobre -->
+      <h2 class="font-heading text-2xl md:text-4xl uppercase tracking-wide text-triba-brown mb-8 text-center reveal" data-reveal>{page.box2Title}</h2>
+      <ul class="space-y-3 font-sans text-base md:text-lg text-triba-brown mb-8 reveal-stagger" data-reveal>
+        {page.box2Items.map((item, i) => (
+          <li class="flex items-center gap-4 bg-triba-white rounded-xl border-2 border-triba-black p-3">
+            <img src={`https://picsum.photos/seed/triba-mailclub-${i + 1}/400/300`} alt={item} loading="lazy" width="400" height="300" class="w-24 h-20 md:w-32 md:h-24 object-cover rounded-lg border border-triba-black/10 shrink-0" />
+            <span class="flex justify-start gap-2">✦ {item}</span>
+          </li>
+        ))}
+      </ul>
+      <p class="font-sans text-base text-triba-brown/80 mb-16 text-balance reveal" data-reveal>{page.box2Note}</p>
+
+      <!-- Bloque 3 · Cómo funciona -->
+      <h2 class="font-heading text-2xl md:text-4xl uppercase tracking-wide text-triba-brown mb-8 text-center reveal" data-reveal>{page.box3Title}</h2>
+      <ol class="space-y-4 mb-16 reveal-stagger" data-reveal>
+        {page.box3Steps.map((step, i) => (
+          <li class="flex gap-4 items-start bg-triba-white rounded-xl border-2 border-triba-black p-5">
+            <span class="shrink-0 w-9 h-9 flex items-center justify-center rounded-full bg-triba-red text-triba-white font-heading text-base">{i + 1}</span>
+            <p class="font-sans text-base text-triba-brown leading-relaxed">{step}</p>
+          </li>
+        ))}
+      </ol>
+
+      <!-- Bloque 6 · Cierre -->
+      <div class="text-center bg-triba-pink rounded-xl border-2 border-triba-black p-8 md:p-12 mb-16 reveal" data-reveal>
+        <p class="font-sans text-base md:text-lg text-triba-brown mb-2">{page.closingTitle}</p>
+        <p class="font-serif italic text-xl md:text-2xl text-triba-brown mb-8">{page.closingBody}</p>
+        <Button variant="primary" size="md" href={subscribeHref}>{page.closingButton}</Button>
+      </div>
+
+      <!-- FAQ -->
+      <div class="reveal mb-8" data-reveal>
+        <h2 class="font-heading text-2xl md:text-3xl uppercase tracking-wide text-triba-brown mb-8 text-center">{page.faqTitle}</h2>
+        <div class="space-y-4 reveal-stagger" data-reveal>
+          {faqs.map((faq) => (
+            <details data-faq class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group transition-all duration-300 hover:shadow-md">
+              <summary class="px-5 py-4 font-heading text-sm font-medium uppercase tracking-wider text-triba-brown cursor-pointer list-none flex items-center justify-between">
+                {faq.q}
+                <span class="text-triba-red text-lg transition-transform duration-300 group-open:rotate-45 shrink-0 ml-3">+</span>
+              </summary>
+              <div class="faq-content">
+                <div class="faq-content-inner px-5 pb-4 font-sans text-base text-triba-brown leading-relaxed">
+                  {faq.a}
+                </div>
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { onPageCycle } from "../lib/onPageCycle";
+
+  function setup() {
+    var faqDetails = document.querySelectorAll<HTMLDetailsElement>("details[data-faq]");
+    faqDetails.forEach(function (detail) {
+      detail.addEventListener("toggle", function () {
+        if (detail.open) {
+          faqDetails.forEach(function (other) {
+            if (other !== detail) other.open = false;
+          });
+        }
+      });
+    });
+  }
+
+  onPageCycle(setup);
+</script>

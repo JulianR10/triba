@@ -1,0 +1,215 @@
+---
+import AdminLayout from "../../components/admin/AdminLayout.astro";
+---
+
+<AdminLayout title="Mail Club" active="mail-club">
+  <p class="font-sans text-sm text-triba-brown/70 mb-6">
+    Origen: Madrid · Corte día 15 inclusive (hora España) · Despacho día 20.
+    El lote congela las direcciones al corte; los cambios posteriores van al mes siguiente.
+  </p>
+
+  <div class="bg-triba-white rounded-xl border-2 border-triba-black p-5 mb-6">
+    <h2 class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-4">Crear / cargar lote mensual</h2>
+    <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
+      <label class="block">
+        <span class="font-sans text-xs text-triba-brown/70">Año</span>
+        <input id="mc-year" type="number" min="2026" max="2100"
+          class="mt-1 w-full sm:w-32 px-4 py-2.5 rounded-button border-2 border-triba-black/20 bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+      </label>
+      <label class="block">
+        <span class="font-sans text-xs text-triba-brown/70">Mes</span>
+        <input id="mc-month" type="number" min="1" max="12"
+          class="mt-1 w-full sm:w-28 px-4 py-2.5 rounded-button border-2 border-triba-black/20 bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+      </label>
+      <button id="mc-create" type="button" class="rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shrink-0">Crear lote</button>
+    </div>
+    <p id="mc-create-msg" class="font-sans text-sm hidden mt-3"></p>
+  </div>
+
+  <div class="bg-triba-white rounded-xl border-2 border-triba-black overflow-x-auto">
+    <table class="w-full font-sans text-sm">
+      <thead class="bg-triba-bone border-b-2 border-triba-black">
+        <tr>
+          <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Período</th>
+          <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Corte</th>
+          <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Destinatarias</th>
+          <th class="text-left px-4 py-3 font-heading text-xs uppercase tracking-wider">Estado</th>
+          <th class="text-right px-4 py-3 font-heading text-xs uppercase tracking-wider">Acciones</th>
+        </tr>
+      </thead>
+      <tbody id="mc-tbody">
+        <tr><td colspan="5" class="px-4 py-8 text-center text-triba-brown/50 font-sans text-sm">Cargando…</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div id="mc-result" class="hidden mt-6 bg-triba-cream rounded-xl border-2 border-triba-black p-5"></div>
+</AdminLayout>
+
+<script>
+  import { escapeHtml } from "../../lib/escape";
+  import { onPageCycle } from "../../lib/onPageCycle";
+
+  const STATUS_LABELS: Record<string, string> = {
+    open: "Abierto",
+    closed: "Cerrado",
+    dispatched: "Despachado",
+  };
+
+  function showResult(html: string) {
+    const box = document.getElementById("mc-result")!;
+    box.innerHTML = html;
+    box.classList.remove("hidden");
+    box.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  async function loadBatches() {
+    const tbody = document.getElementById("mc-tbody")!;
+    try {
+      const res = await fetch("/api/admin/mail-club/batches");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      const batches = data.batches || [];
+      if (batches.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-triba-brown/50 font-sans text-sm">Todavía no hay lotes. Creá el primero arriba.</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = batches.map((b: any) => {
+        const period = `${b.period_year}-${String(b.period_month).padStart(2, "0")}`;
+        const cutoff = new Date(b.cutoff_at).toLocaleString("es-AR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+        const statusClass = b.status === "dispatched"
+          ? "bg-triba-green text-triba-brown"
+          : b.status === "closed"
+            ? "bg-triba-cream text-triba-brown"
+            : "bg-triba-bone text-triba-brown/60";
+        return `<tr class="border-b border-triba-black/10 last:border-0 hover:bg-triba-bone/50">
+          <td class="px-4 py-3 font-heading text-sm">${period}</td>
+          <td class="px-4 py-3 text-triba-brown/70">${escapeHtml(cutoff)}</td>
+          <td class="px-4 py-3">${b.item_count}</td>
+          <td class="px-4 py-3"><span class="inline-block px-2 py-0.5 rounded-full ${statusClass} font-heading text-[10px] uppercase tracking-wider">${STATUS_LABELS[b.status] || b.status}</span></td>
+          <td class="px-4 py-3 text-right whitespace-nowrap">
+            <button class="mc-export font-sans text-xs text-triba-brown hover:text-triba-red hover:underline min-h-[44px] px-2" data-id="${b.id}">CSV ⬇</button>
+            <span class="text-triba-brown/20 mx-1">|</span>
+            <button class="mc-dispatch font-sans text-xs text-triba-red hover:underline min-h-[44px] px-2" data-id="${b.id}" data-period="${period}">Avisar despacho</button>
+          </td>
+        </tr>`;
+      }).join("");
+      bindRowButtons();
+    } catch {
+      tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-triba-red/70 font-sans text-sm">Error al cargar</td></tr>`;
+    }
+  }
+
+  function bindRowButtons() {
+    document.querySelectorAll<HTMLButtonElement>(".mc-export").forEach((btn) => {
+      if (btn.dataset.bound === "1") return;
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", () => {
+        window.open(`/api/admin/mail-club/batches/${btn.dataset.id}/export`, "_blank");
+      });
+    });
+    document.querySelectorAll<HTMLButtonElement>(".mc-dispatch").forEach((btn) => {
+      if (btn.dataset.bound === "1") return;
+      btn.dataset.bound = "1";
+      btn.addEventListener("click", async () => {
+        const confirmed = await (window as any).adminConfirm?.(
+          "Avisar despacho",
+          `¿Marcar el lote ${btn.dataset.period} como despachado y avisar por email a las destinatarias pendientes?`,
+        );
+        if (!confirmed) return;
+        btn.disabled = true;
+        btn.textContent = "Avisando...";
+        try {
+          const res = await fetch(`/api/admin/mail-club/batches/${btn.dataset.id}/dispatch`, { method: "POST" });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) {
+            (window as any).adminToast?.(data.error || "Error en el despacho", "error");
+            return;
+          }
+          const failed = (data.failed || []) as { email: string; error: string }[];
+          let html = `<p class="font-sans text-sm text-triba-brown mb-2">Avisos enviados: <strong>${data.sent}</strong> · Fallidos: <strong>${failed.length}</strong></p>`;
+          if (failed.length > 0) {
+            html += `<ul class="font-sans text-xs text-triba-red space-y-1 mb-3">` +
+              failed.map((f) => `<li>${escapeHtml(f.email)} — ${escapeHtml(f.error)}</li>`).join("") +
+              `</ul><button id="mc-retry" type="button" class="rounded-button bg-triba-bone text-triba-brown border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Reintentar fallidos</button>`;
+          }
+          showResult(html);
+          const retry = document.getElementById("mc-retry");
+          if (retry) {
+            retry.addEventListener("click", async () => {
+              retry.setAttribute("disabled", "1");
+              const r2 = await fetch(`/api/admin/mail-club/batches/${btn.dataset.id}/dispatch`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ emails: failed.map((f) => f.email) }),
+              });
+              const d2 = await r2.json().catch(() => ({}));
+              if (!r2.ok) {
+                (window as any).adminToast?.(d2.error || "Error reintentando", "error");
+              } else {
+                (window as any).adminToast?.(`Reintento: ${d2.sent} enviados, ${((d2.failed || []) as unknown[]).length} fallidos`, "success");
+              }
+              loadBatches();
+            });
+          }
+          loadBatches();
+        } catch {
+          (window as any).adminToast?.("Error de conexión", "error");
+        } finally {
+          btn.disabled = false;
+          btn.textContent = "Avisar despacho";
+        }
+      });
+    });
+  }
+
+  function initMailClub() {
+    const now = new Date();
+    (document.getElementById("mc-year") as HTMLInputElement).value = String(now.getFullYear());
+    (document.getElementById("mc-month") as HTMLInputElement).value = String(now.getMonth() + 1);
+
+    document.getElementById("mc-create")!.addEventListener("click", async () => {
+      const year = Number((document.getElementById("mc-year") as HTMLInputElement).value);
+      const month = Number((document.getElementById("mc-month") as HTMLInputElement).value);
+      const msg = document.getElementById("mc-create-msg")!;
+      msg.classList.add("hidden");
+      const btn = document.getElementById("mc-create") as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = "Creando...";
+      try {
+        const res = await fetch("/api/admin/mail-club/batches", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ year, month }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          msg.textContent = data.error || "Error creando el lote";
+          msg.className = "font-sans text-sm text-triba-red mt-3";
+          msg.classList.remove("hidden");
+          return;
+        }
+        const skipped = (data.skipped || []) as { email: string; reason: string }[];
+        let html = `<p class="font-sans text-sm text-triba-brown mb-2">Lote listo: <strong>${data.included}</strong> destinataria(s)${data.reused ? " (lote existente, sin duplicar)" : ""}.</p>`;
+        if (skipped.length > 0) {
+          html += `<p class="font-sans text-xs text-triba-brown/70 mb-1">Omitidas (no entran al lote):</p><ul class="font-sans text-xs text-triba-brown/70 space-y-1">` +
+            skipped.map((s) => `<li>${escapeHtml(s.email || "sin email")} — ${escapeHtml(s.reason)}</li>`).join("") + `</ul>`;
+        }
+        showResult(html);
+        (window as any).adminToast?.("Lote creado", "success");
+        loadBatches();
+      } catch {
+        msg.textContent = "Error de conexión";
+        msg.className = "font-sans text-sm text-triba-red mt-3";
+        msg.classList.remove("hidden");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Crear lote";
+      }
+    });
+
+    loadBatches();
+  }
+
+  onPageCycle(initMailClub);
+</script>

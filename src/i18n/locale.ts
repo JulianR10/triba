@@ -10,6 +10,7 @@ export const EN_ROUTES: ReadonlySet<string> = new Set([
   "/",
   "/revista",
   "/suscribirme",
+  "/mail-club",
   "/triba-creators",
   "/iniciar-sesion",
   "/mi-cuenta",

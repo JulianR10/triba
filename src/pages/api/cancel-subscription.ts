@@ -22,13 +22,17 @@ export const POST: APIRoute = async ({ request }) => {
       return error("No active subscription found", 404);
     }
 
+    if ((subscription as any).cancel_at_period_end) {
+      return ok({ message: "Tu suscripción ya se cancela al final del período." });
+    }
+
     const provider = getPaymentProvider(subscription.provider as "stripe" | "mercadopago");
     const providerWarnings: string[] = [];
 
     // For courtesy 'migrated' subs there is no gateway to cancel: skip cleanly.
-    if (provider && subscription.provider_subscription_id) {
+    if (provider && subscription.provider_subscription_id && subscription.provider !== "migrated") {
       try {
-        await provider.cancelSubscription(subscription.provider_subscription_id);
+        await provider.scheduleCancel(subscription.provider_subscription_id);
       } catch (err: any) {
         providerWarnings.push(err.message || "Provider cancel failed");
       }
@@ -43,7 +47,7 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     return ok({
-      message: "Suscripción cancelada correctamente",
+      message: "Listo: tu suscripción se cancela al final del período ya pagado. Conservás el acceso hasta esa fecha.",
       providerWarnings: providerWarnings.length > 0 ? providerWarnings : undefined,
     });
   } catch (err: any) {

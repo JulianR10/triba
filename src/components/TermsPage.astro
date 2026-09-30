@@ -6,6 +6,7 @@ import { t, type Locale } from "../i18n/ui";
 interface Section {
   h: string;
   body: string[];
+  id?: string;
 }
 
 const { lang = "es" } = Astro.props as { lang?: Locale };
@@ -24,8 +25,8 @@ const es: Section[] = [
     body: [
       "<p>Triba es una revista digital mensual escrita por y para mujeres. Ofrecemos:</p>",
       `<ul class="list-disc pl-5 space-y-1 mt-2">
-        <li>Newsletter gratuito mensual con contenido seleccionado.</li>
         <li>Suscripción paga con acceso a la revista completa, archivo histórico y descarga PDF.</li>
+        <li>Suscripción al Mail Club con todo lo digital más un sobre físico mensual.</li>
       </ul>`,
     ],
   },
@@ -75,6 +76,25 @@ const es: Section[] = [
       `<p>Para cualquier consulta sobre estos términos: <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a></p>`,
     ],
   },
+  {
+    h: "9. Condiciones del Mail Club",
+    id: "mail-club",
+    body: [
+      `<p class="text-triba-brown/60 text-sm">Texto en revisión por asesoría legal antes de la publicación.</p>`,
+      `<ol class="list-decimal pl-5 space-y-1 mt-2">
+        <li><strong>Qué incluye.</strong> Suscripción mensual con todo lo de la Suscripción Triba digital más un sobre físico enviado por correo postal cada mes. El contenido del sobre cambia en cada edición.</li>
+        <li><strong>Precio y cobro.</strong> €10,50/mes (envíos a Europa), U$S 12,50/mes (resto del mundo) o $16.000/mes (Argentina, vía Mercado Pago). El primer cobro se hace al suscribirte y luego se renueva automáticamente cada mes. El precio en pesos argentinos puede actualizarse; te avisaremos con al menos 30 días de anticipación.</li>
+        <li><strong>Zona y moneda.</strong> Cada plan corresponde al país de la dirección de envío.</li>
+        <li><strong>Fecha de corte.</strong> Las suscripciones activas y con el pago al día al día 15 de cada mes reciben el sobre de ese mes. Las que se sumen después del 15 reciben su primer sobre en el envío siguiente. Despachamos el día 20 de cada mes.</li>
+        <li><strong>Envíos.</strong> Por correo ordinario y sin número de seguimiento. Plazos aproximados desde el despacho: España 3–7 días; resto de Europa 1–2 semanas; Argentina y resto del mundo 3–6 semanas. Los plazos dependen del servicio postal de cada país.</li>
+        <li><strong>Si no te llega.</strong> Si pasaron 6 semanas desde el aviso de despacho y no recibiste tu sobre, escribinos a <a href="mailto:universotriba@gmail.com" class="text-triba-red hover:underline">universotriba@gmail.com</a> y te enviamos uno nuevo sin costo. Solo podemos reponer sobres reclamados dentro de los 2 meses desde el despacho.</li>
+        <li><strong>Dirección.</strong> Sos responsable de que la dirección sea correcta y de actualizarla desde tu perfil antes del día 15. No podemos reponer sobres enviados a una dirección incorrecta que figuraba en tu perfil.</li>
+        <li><strong>Cambios de plan y cancelación.</strong> Podés volver al plan digital o cancelar en cualquier momento desde tu cuenta. El cambio se aplica al final del período ya pagado. Si pasaste al Mail Club desde el plan digital, pagás la diferencia del mes en curso y el precio completo desde tu siguiente renovación.</li>
+        <li><strong>Derecho de desistimiento.</strong> Si estás en la Unión Europea, tenés 14 días naturales desde que recibís tu primer sobre para desistir de la suscripción sin dar explicaciones, escribiéndonos a <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a>. Te devolveremos el importe pagado en un plazo máximo de 14 días.</li>
+        <li><strong>Aduanas.</strong> Los envíos fuera de la Unión Europea pueden estar sujetos a controles o cargos de aduana del país de destino, que corren por cuenta de quien recibe.</li>
+      </ol>`,
+    ],
+  },
 ];
 
 const en: Section[] = [
@@ -89,8 +109,8 @@ const en: Section[] = [
     body: [
       "<p>Triba is a monthly digital magazine written by and for women. We offer:</p>",
       `<ul class="list-disc pl-5 space-y-1 mt-2">
-        <li>A free monthly newsletter with selected content.</li>
         <li>A paid subscription with access to the full magazine, the historical archive and PDF download.</li>
+        <li>A Mail Club subscription with everything digital plus a monthly physical envelope.</li>
       </ul>`,
     ],
   },
@@ -140,6 +160,25 @@ const en: Section[] = [
       `<p>For any question about these terms: <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a></p>`,
     ],
   },
+  {
+    h: "9. Mail Club terms",
+    id: "mail-club",
+    body: [
+      `<p class="text-triba-brown/60 text-sm">Text under legal review before publication.</p>`,
+      `<ol class="list-decimal pl-5 space-y-1 mt-2">
+        <li><strong>What's included.</strong> Monthly subscription with everything from the digital Triba subscription plus a physical envelope sent by post each month. The envelope contents change with every edition.</li>
+        <li><strong>Price and billing.</strong> €10.50/month (shipments to Europe), US$12.50/month (rest of the world) or $16,000/month (Argentina, via Mercado Pago). The first charge happens when you subscribe and then renews automatically each month. The Argentine peso price may be updated; we'll notify you at least 30 days in advance.</li>
+        <li><strong>Zone and currency.</strong> Each plan matches the country of the shipping address.</li>
+        <li><strong>Cutoff date.</strong> Subscriptions active and paid up on the 15th of each month receive that month's envelope. Those joining after the 15th get their first envelope in the following dispatch. We dispatch on the 20th of each month.</li>
+        <li><strong>Shipping.</strong> By ordinary mail with no tracking number. Approximate times from dispatch: Spain 3–7 days; rest of Europe 1–2 weeks; Argentina and rest of the world 3–6 weeks. Times depend on each country's postal service.</li>
+        <li><strong>If it doesn't arrive.</strong> If 6 weeks have passed since the dispatch notice and you didn't get your envelope, write to <a href="mailto:universotriba@gmail.com" class="text-triba-red hover:underline">universotriba@gmail.com</a> and we'll send a new one at no cost. We can only replace envelopes claimed within 2 months of dispatch.</li>
+        <li><strong>Address.</strong> You're responsible for keeping your address correct and updating it from your profile before the 15th. We can't replace envelopes sent to a wrong address listed in your profile.</li>
+        <li><strong>Plan changes and cancellation.</strong> You can switch back to the digital plan or cancel anytime from your account. The change applies at the end of the already-paid period. If you upgraded to the Mail Club from the digital plan, you pay the difference for the current month and the full price from your next renewal.</li>
+        <li><strong>Right of withdrawal.</strong> If you're in the European Union, you have 14 calendar days from receiving your first envelope to withdraw from the subscription without explanation, by writing to <a href="mailto:comunidadtriba@gmail.com" class="text-triba-red hover:underline">comunidadtriba@gmail.com</a>. We'll refund the amount paid within 14 days.</li>
+        <li><strong>Customs.</strong> Shipments outside the European Union may be subject to customs checks or charges in the destination country, payable by the recipient.</li>
+      </ol>`,
+    ],
+  },
 ];
 
 const content = lang === "en" ? en : es;
@@ -157,7 +196,7 @@ const description = dict.terms.description;
 
       <div class="space-y-6 font-sans text-base text-triba-brown leading-relaxed reveal-stagger" data-reveal>
         {content.map((s) => (
-          <section>
+          <section id={s.id}>
             <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-3">{s.h}</h2>
             {s.body.map((html) => (
               <div set:html={html} class="space-y-2" />

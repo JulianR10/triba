@@ -25,6 +25,7 @@ const es: Section[] = [
     body: [
       `<ul class="list-disc pl-5 space-y-1">
         <li><strong>Datos de cuenta:</strong> nombre y correo electrónico al registrarte.</li>
+        <li><strong>Dirección postal del Mail Club:</strong> si te suscribís al Mail Club, también guardamos tu dirección postal (nombre de la destinataria, país, provincia, ciudad, código postal y dirección) y el idioma en que querés recibir la carta.</li>
         <li><strong>Datos de pago:</strong> no almacenamos números de tarjeta ni datos financieros. Los pagos son procesados por Stripe y Mercado Pago según sus propias políticas de privacidad.</li>
         <li><strong>Datos de navegación:</strong> información anónima sobre tu interacción con el sitio (páginas visitadas, tiempo de sesión) para mejorar la experiencia.</li>
         <li><strong>Comunicaciones:</strong> mensajes que nos envías a través del formulario de contacto, feedback o postulación como creadora.</li>
@@ -36,7 +37,7 @@ const es: Section[] = [
     body: [
       `<ul class="list-disc pl-5 space-y-1">
         <li>Gestionar tu suscripción y acceso a la revista.</li>
-        <li>Enviarte el newsletter gratuito si te suscribiste a él.</li>
+        <li>Preparar y enviar tus sobres del Mail Club y gestionar reposiciones, únicamente con tu dirección postal.</li>
         <li>Procesar pagos a través de los proveedores de pago que elijas.</li>
         <li>Responder a tus consultas, feedback y postulaciones.</li>
         <li>Mejorar nuestro sitio web y servicios.</li>
@@ -49,7 +50,7 @@ const es: Section[] = [
       "<p>El tratamiento de tus datos se basa en:</p>",
       `<ul class="list-disc pl-5 space-y-1">
         <li><strong>Ejecución de un contrato:</strong> gestión de la suscripción y acceso a la revista.</li>
-        <li><strong>Consentimiento:</strong> newsletter, comunicaciones y postulaciones.</li>
+        <li><strong>Consentimiento:</strong> comunicaciones y postulaciones.</li>
         <li><strong>Interés legítimo:</strong> mejora del sitio y análisis de uso.</li>
       </ul>`,
     ],
@@ -67,7 +68,8 @@ const es: Section[] = [
       `<ul class="list-disc pl-5 space-y-1">
         <li><strong>Supabase:</strong> autenticación y base de datos.</li>
         <li><strong>Stripe, Mercado Pago:</strong> procesamiento de pagos (solo los datos necesarios para la transacción).</li>
-        <li><strong>Google (Gmail):</strong> envío de correos transaccionales y newsletter.</li>
+        <li><strong>Servicio postal:</strong> tu nombre y dirección se imprimen en el sobre y los recibe el correo encargado de la entrega. No los compartimos con nadie más.</li>
+        <li><strong>Google (Gmail):</strong> envío de correos transaccionales.</li>
       </ul>`,
     ],
   },
@@ -94,7 +96,7 @@ const es: Section[] = [
   {
     h: "9. Conservación de datos",
     body: [
-      "<p>Conservamos tus datos mientras mantengas una cuenta activa. Al cancelar tu suscripción o solicitar la eliminación de tu cuenta, tus datos se eliminan en un plazo máximo de 30 días, salvo obligación legal de retenerlos por más tiempo.</p>",
+      "<p>Conservamos tus datos mientras mantengas una cuenta activa. Al cancelar tu suscripción o solicitar la eliminación de tu cuenta, tus datos se eliminan en un plazo máximo de 30 días, salvo obligación legal de retenerlos por más tiempo. Los datos de cada envío del Mail Club se conservan hasta 60 días después del despacho para gestionar reposiciones.</p>",
     ],
   },
   {
@@ -119,6 +121,7 @@ const en: Section[] = [
     body: [
       `<ul class="list-disc pl-5 space-y-1">
         <li><strong>Account data:</strong> name and email address when you register.</li>
+        <li><strong>Mail Club postal address:</strong> if you join the Mail Club, we also store your postal address (recipient name, country, province, city, postal code and address) and the language you'd like your letter in.</li>
         <li><strong>Payment data:</strong> we don't store card numbers or financial data. Payments are processed by Stripe and Mercado Pago under their own privacy policies.</li>
         <li><strong>Browsing data:</strong> anonymous information about your interaction with the site (pages visited, session time) to improve the experience.</li>
         <li><strong>Communications:</strong> messages you send us through the contact form, feedback or creator applications.</li>
@@ -130,7 +133,7 @@ const en: Section[] = [
     body: [
       `<ul class="list-disc pl-5 space-y-1">
         <li>Manage your subscription and access to the magazine.</li>
-        <li>Send you the free newsletter if you subscribed to it.</li>
+        <li>Prepare and send your Mail Club envelopes and handle replacements, using only your postal address.</li>
         <li>Process payments through the payment providers you choose.</li>
         <li>Answer your questions, feedback and applications.</li>
         <li>Improve our website and services.</li>
@@ -143,7 +146,7 @@ const en: Section[] = [
       "<p>The processing of your data is based on:</p>",
       `<ul class="list-disc pl-5 space-y-1">
         <li><strong>Performance of a contract:</strong> managing the subscription and access to the magazine.</li>
-        <li><strong>Consent:</strong> newsletter, communications and applications.</li>
+        <li><strong>Consent:</strong> communications and applications.</li>
         <li><strong>Legitimate interest:</strong> site improvement and usage analysis.</li>
       </ul>`,
     ],
@@ -161,7 +164,8 @@ const en: Section[] = [
       `<ul class="list-disc pl-5 space-y-1">
         <li><strong>Supabase:</strong> authentication and database.</li>
         <li><strong>Stripe, Mercado Pago:</strong> payment processing (only the data needed for the transaction).</li>
-        <li><strong>Google (Gmail):</strong> sending transactional emails and the newsletter.</li>
+        <li><strong>Postal service:</strong> your name and address are printed on the envelope and received by the carrier making the delivery. We don't share them with anyone else.</li>
+        <li><strong>Google (Gmail):</strong> sending transactional emails.</li>
       </ul>`,
     ],
   },
@@ -188,7 +192,7 @@ const en: Section[] = [
   {
     h: "9. Data retention",
     body: [
-      "<p>We keep your data while you have an active account. When you cancel your subscription or request account deletion, your data is deleted within a maximum of 30 days, unless we're legally required to keep it longer.</p>",
+      "<p>We keep your data while you have an active account. When you cancel your subscription or request account deletion, your data is deleted within a maximum of 30 days, unless we're legally required to keep it longer. Each Mail Club dispatch data is kept for up to 60 days after dispatch to handle replacements.</p>",
     ],
   },
   {

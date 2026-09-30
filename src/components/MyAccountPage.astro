@@ -7,10 +7,13 @@ import { t, type Locale } from "../i18n/ui";
 import { localizePath } from "../i18n/locale";
 
 import { createSupabaseServerClient } from "../lib/supabase-server";
+import { supabaseAdmin } from "../lib/supabase-admin";
 import { getEditions, getFeaturedEdition } from "../lib/editions";
 import { getSignedPdfUrl } from "../lib/storage";
 import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
 import { getCheckoutOutcome } from "../lib/checkout-status";
+import { getPlanType, MAIL_CLUB_TERMS_VERSION } from "../lib/mail-club";
+import { COUNTRIES } from "../lib/countries";
 import type { Profile, Subscription } from "../lib/types";
 
 const { lang = "es" } = Astro.props as { lang?: Locale };
@@ -53,6 +56,55 @@ const hasActiveSub =
 const subscriptionInfo = subscriptionStatusInfo(subscription?.status, lang);
 
 const isAdmin = profile?.role === "admin";
+
+// Upgrade voluntario: solo suscriptoras digitales activas con proveedor
+// real (no 'migrated'). Las Mail Club no ven esta sección.
+const showUpgrade =
+  hasActiveSub &&
+  getPlanType(subscription) === "digital" &&
+  (subscription?.provider === "stripe" || subscription?.provider === "mercadopago");
+const upgradeCurrency = subscription?.plan_currency ?? "USD";
+const UPGRADE_DIFF_LABEL: Record<string, string> = { EUR: "€3,50", USD: "U$S 5,50", ARS: "$9.000" };
+const UPGRADE_FULL_LABEL: Record<string, string> = { EUR: "€10,50", USD: "U$S 12,50", ARS: "$16.000" };
+const upgradeDiffLabel = UPGRADE_DIFF_LABEL[upgradeCurrency] ?? UPGRADE_DIFF_LABEL.USD;
+const upgradeFullLabel = UPGRADE_FULL_LABEL[upgradeCurrency] ?? UPGRADE_FULL_LABEL.USD;
+const upgradeTermsHref = localizePath("/terminos", lang) + "#mail-club";
+const upgradeCountries = [...COUNTRIES].sort((a, b) =>
+  (lang === "en" ? a.en : a.es).localeCompare(lang === "en" ? b.en : b.es, lang === "en" ? "en" : "es"),
+);
+const upgradeMessages = {
+  processing: dict.miCuenta.upgradeProcessing,
+  error: dict.miCuenta.upgradeError,
+  networkError: dict.miCuenta.upgradeNetworkError,
+};
+const showDowngrade = hasActiveSub && getPlanType(subscription) === "mail_club";
+
+let savedAddress: Record<string, string> | null = null;
+if (showDowngrade && user) {
+  const { data: addr } = await supabaseAdmin
+    .from("mailing_addresses")
+    .select("recipient_name, country_iso, region, city, postal_code, street_address, address_extra")
+    .eq("user_id", user.id)
+    .maybeSingle();
+  if (addr) {
+    savedAddress = {
+      recipient_name: (addr as any).recipient_name ?? "",
+      country_iso: (addr as any).country_iso ?? "",
+      region: (addr as any).region ?? "",
+      city: (addr as any).city ?? "",
+      postal_code: (addr as any).postal_code ?? "",
+      street_address: (addr as any).street_address ?? "",
+      address_extra: (addr as any).address_extra ?? "",
+    };
+  }
+}
+const downgradeMessages = {
+  confirm: dict.miCuenta.downgradeConfirm,
+  processing: dict.miCuenta.downgradeProcessing,
+  success: dict.miCuenta.downgradeSuccess,
+  error: dict.miCuenta.downgradeError,
+  networkError: dict.miCuenta.downgradeNetworkError,
+};
 
 const allEditions = await getEditions(lang);
 const featuredEdition = await getFeaturedEdition(lang);
@@ -200,6 +252,152 @@ const miCuentaMessages = {
             <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">{dict.miCuenta.adminSession}</p>
             <p class="font-sans text-base text-triba-brown mb-4 text-balance" set:html={dict.miCuenta.adminLoggedIn}></p>
             <Button variant="primary" href="/admin">{dict.miCuenta.goToAdmin}</Button>
+          </div>
+        </div>
+      )}
+
+      <!-- ===== UPGRADE MAIL CLUB (solo plan digital activo) ===== -->
+      {showUpgrade && (
+        <div class="mx-5 md:mx-14 lg:mx-20 mb-8 reveal" data-reveal>
+          <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 md:p-8 max-w-2xl mx-auto">
+            <div class="inline-block bg-triba-green text-triba-brown font-heading text-xs uppercase tracking-wider px-5 py-1.5 rounded-full border border-triba-black mb-4">{dict.mailClub.tag}</div>
+            <h2 class="font-heading text-2xl md:text-3xl text-triba-brown mb-4">{dict.miCuenta.upgradeLead}</h2>
+            <p class="font-sans text-base text-triba-brown/80 leading-relaxed mb-2">
+              {dict.miCuenta.upgradeBody.replace("{diff}", upgradeDiffLabel).replace("{full}", upgradeFullLabel)}
+            </p>
+            <p class="font-sans text-sm text-triba-brown/60 mb-6">{dict.miCuenta.upgradeCutoffNote}</p>
+            <form class="space-y-3 text-left" id="upgrade-form" data-messages={JSON.stringify(upgradeMessages)} data-terms-version={MAIL_CLUB_TERMS_VERSION}>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.recipient}</span>
+                <input name="recipient_name" required maxlength="120" autocomplete="name"
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+              </label>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.country}</span>
+                <select name="country_iso" required
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors">
+                  <option value="">{dict.mailClub.countryPlaceholder}</option>
+                  {upgradeCountries.map((c) => (
+                    <option value={c.iso}>{lang === "en" ? c.en : c.es}</option>
+                  ))}
+                </select>
+              </label>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="block">
+                  <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.region}</span>
+                  <input name="region" maxlength="120" autocomplete="address-level1"
+                    class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+                </label>
+                <label class="block">
+                  <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.city}</span>
+                  <input name="city" required maxlength="120" autocomplete="address-level2"
+                    class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+                </label>
+              </div>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.postal}</span>
+                <input name="postal_code" maxlength="30" autocomplete="postal-code"
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+              </label>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.street}</span>
+                <input name="street_address" required maxlength="240" autocomplete="street-address"
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+              </label>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.extra}</span>
+                <input name="address_extra" maxlength="240"
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+              </label>
+              <label class="flex items-start gap-2 pt-1">
+                <input type="checkbox" name="terms_accepted" required class="mt-1 accent-[#E91A39]" />
+                <span class="font-sans text-xs text-triba-brown/80">
+                  {dict.mailClub.terms}
+                  {" "}<a href={upgradeTermsHref} class="text-triba-red hover:underline">{dict.mailClub.termsLink}</a>
+                </span>
+              </label>
+              <p id="upgrade-msg" class="hidden font-sans text-xs text-triba-red text-center"></p>
+              <div class="text-center pt-2">
+                <Button variant="primary" size="md" type="submit">{dict.miCuenta.upgradeSubmit}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <!-- ===== DIRECCIÓN DE ENVÍO (solo plan Mail Club activo) ===== -->
+      {showDowngrade && (
+        <div class="mx-5 md:mx-14 lg:mx-20 mb-8 reveal" data-reveal>
+          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 max-w-2xl mx-auto">
+            <h2 class="font-heading text-xl md:text-2xl text-triba-brown mb-2">{dict.miCuenta.addressTitle}</h2>
+            <p class="font-sans text-sm text-triba-brown/60 mb-5">{dict.miCuenta.addressBody}</p>
+            <form class="space-y-3 text-left" id="address-form" data-messages={JSON.stringify({ saving: dict.miCuenta.addressSaving, saved: dict.miCuenta.addressSaved, error: dict.miCuenta.addressError, networkError: dict.miCuenta.addressNetworkError })}>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.recipient}</span>
+                <input name="recipient_name" required maxlength="120" autocomplete="name" value={savedAddress?.recipient_name ?? ""}
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+              </label>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.country}</span>
+                <select name="country_iso" required
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors">
+                  <option value="">{dict.mailClub.countryPlaceholder}</option>
+                  {upgradeCountries.map((c) => (
+                    <option value={c.iso} selected={savedAddress?.country_iso === c.iso}>{lang === "en" ? c.en : c.es}</option>
+                  ))}
+                </select>
+              </label>
+              <div class="grid grid-cols-2 gap-3">
+                <label class="block">
+                  <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.region}</span>
+                  <input name="region" maxlength="120" autocomplete="address-level1" value={savedAddress?.region ?? ""}
+                    class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+                </label>
+                <label class="block">
+                  <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.city}</span>
+                  <input name="city" required maxlength="120" autocomplete="address-level2" value={savedAddress?.city ?? ""}
+                    class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+                </label>
+              </div>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.postal}</span>
+                <input name="postal_code" maxlength="30" autocomplete="postal-code" value={savedAddress?.postal_code ?? ""}
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+              </label>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.street}</span>
+                <input name="street_address" required maxlength="240" autocomplete="street-address" value={savedAddress?.street_address ?? ""}
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+              </label>
+              <label class="block">
+                <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.extra}</span>
+                <input name="address_extra" maxlength="240" value={savedAddress?.address_extra ?? ""}
+                  class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
+              </label>
+              <p id="address-msg" class="hidden font-sans text-xs text-center"></p>
+              <div class="text-center pt-2">
+                <Button variant="ghost" size="md" type="submit">{dict.miCuenta.addressSave}</Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      <!-- ===== DOWNGRADE A DIGITAL (solo plan Mail Club activo) ===== -->
+      {showDowngrade && (
+        <div class="mx-5 md:mx-14 lg:mx-20 mb-8 reveal" data-reveal>
+          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 max-w-2xl mx-auto text-center">
+            <h2 class="font-heading text-xl md:text-2xl text-triba-brown mb-3">{dict.miCuenta.downgradeTitle}</h2>
+            <p class="font-sans text-sm text-triba-brown/70 leading-relaxed mb-5">{dict.miCuenta.downgradeBody}</p>
+            <p id="downgrade-msg" class="hidden font-sans text-xs text-triba-red text-center mb-3"></p>
+            <button
+              type="button"
+              id="downgrade-btn"
+              data-messages={JSON.stringify(downgradeMessages)}
+              class="rounded-button bg-triba-white text-triba-brown border-2 border-triba-black px-8 py-3 font-heading text-sm uppercase tracking-wider hover:scale-[1.02] transition-all"
+            >
+              {dict.miCuenta.downgradeSubmit}
+            </button>
           </div>
         </div>
       )}
@@ -576,6 +774,181 @@ const miCuentaMessages = {
       }
     });
   }
+
+  // --- Upgrade a Mail Club (solo plan digital activo) ---
+  setupUpgradeForm();
+
+  function setupUpgradeForm() {
+    var form = document.getElementById("upgrade-form") as HTMLFormElement | null;
+    if (!form) return;
+    var messages = { processing: "Procesando...", error: "Error", networkError: "Error" };
+    try { Object.assign(messages, JSON.parse(form.dataset.messages || "{}")); } catch { /* keep defaults */ }
+    var termsVersion = form.dataset.termsVersion || "v1";
+    var msgEl = document.getElementById("upgrade-msg");
+    var submitBtn = form.querySelector("button[type=submit]") as HTMLButtonElement | null;
+    var originalBtnText = submitBtn ? submitBtn.textContent : "";
+
+    function showMsg(text: string) {
+      if (!msgEl) return;
+      msgEl.textContent = text;
+      msgEl.classList.remove("hidden");
+    }
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      if (msgEl) msgEl.classList.add("hidden");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = messages.processing;
+      }
+      try {
+        if (!supabase) throw new Error(messages.error);
+        var { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error(messages.error);
+
+        var fd = new FormData(form!);
+        var payload = {
+          recipient_name: String(fd.get("recipient_name") || ""),
+          country_iso: String(fd.get("country_iso") || ""),
+          region: String(fd.get("region") || ""),
+          city: String(fd.get("city") || ""),
+          postal_code: String(fd.get("postal_code") || ""),
+          street_address: String(fd.get("street_address") || ""),
+          address_extra: String(fd.get("address_extra") || ""),
+          terms_accepted: fd.get("terms_accepted") === "on",
+          terms_version: termsVersion,
+        };
+
+        var res = await fetch("/api/upgrade-checkout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + session.access_token,
+          },
+          body: JSON.stringify(payload),
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(data.error || messages.error);
+        if (data.url) {
+          window.location.href = data.url;
+          return;
+        }
+        throw new Error(data.error || messages.error);
+      } catch (err: any) {
+        showMsg(err && err.message ? err.message : messages.networkError);
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalBtnText;
+        }
+      }
+    });
+  }
+
+  // --- Dirección de envío (solo plan Mail Club activo) ---
+  (function setupAddressForm() {
+    var form = document.getElementById("address-form") as HTMLFormElement | null;
+    if (!form) return;
+    var messages = { saving: "Guardando...", saved: "OK", error: "Error", networkError: "Error" };
+    try { Object.assign(messages, JSON.parse(form.dataset.messages || "{}")); } catch { /* keep defaults */ }
+    var msgEl = document.getElementById("address-msg");
+    var submitBtn = form.querySelector("button[type=submit]") as HTMLButtonElement | null;
+    var originalText = submitBtn ? submitBtn.textContent : "";
+
+    form.addEventListener("submit", async function (e) {
+      e.preventDefault();
+      if (msgEl) msgEl.classList.add("hidden");
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = messages.saving;
+      }
+      try {
+        if (!supabase) throw new Error(messages.error);
+        var { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error(messages.error);
+        var fd = new FormData(form!);
+        var res = await fetch("/api/address", {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + session.access_token,
+          },
+          body: JSON.stringify({
+            recipient_name: String(fd.get("recipient_name") || ""),
+            country_iso: String(fd.get("country_iso") || ""),
+            region: String(fd.get("region") || ""),
+            city: String(fd.get("city") || ""),
+            postal_code: String(fd.get("postal_code") || ""),
+            street_address: String(fd.get("street_address") || ""),
+            address_extra: String(fd.get("address_extra") || ""),
+          }),
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(data.error || messages.error);
+        if (msgEl) {
+          msgEl.textContent = messages.saved;
+          msgEl.className = "font-sans text-xs text-center text-triba-brown";
+          msgEl.classList.remove("hidden");
+        }
+      } catch (err: any) {
+        if (msgEl) {
+          msgEl.textContent = err && err.message ? err.message : messages.networkError;
+          msgEl.className = "font-sans text-xs text-triba-red text-center";
+          msgEl.classList.remove("hidden");
+        }
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText || "";
+        }
+      }
+    });
+  })();
+
+  // --- Downgrade a digital (solo plan Mail Club activo) ---
+  (function setupDowngrade() {
+    var btn = document.getElementById("downgrade-btn") as HTMLButtonElement | null;
+    if (!btn) return;
+    var messages = { confirm: "?", processing: "...", success: "OK", error: "Error", networkError: "Error" };
+    try { Object.assign(messages, JSON.parse(btn.dataset.messages || "{}")); } catch { /* keep defaults */ }
+    var msgEl = document.getElementById("downgrade-msg");
+    var originalText = btn.textContent;
+
+    btn.addEventListener("click", async function () {
+      if (!window.confirm(messages.confirm)) return;
+      if (msgEl) msgEl.classList.add("hidden");
+      btn!.disabled = true;
+      btn!.textContent = messages.processing;
+      try {
+        if (!supabase) throw new Error(messages.error);
+        var { data: { session } } = await supabase.auth.getSession();
+        if (!session) throw new Error(messages.error);
+        var res = await fetch("/api/downgrade", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: "Bearer " + session.access_token,
+          },
+        });
+        var data = await res.json().catch(function () { return {}; });
+        if (!res.ok) throw new Error(data.error || messages.error);
+        if (msgEl) {
+          msgEl.textContent = data.message || messages.success;
+          msgEl.className = "font-sans text-xs text-center mb-3 text-triba-brown";
+          msgEl.classList.remove("hidden");
+        }
+        btn!.textContent = originalText || "";
+        window.setTimeout(function () { window.location.reload(); }, 2000);
+      } catch (err: any) {
+        if (msgEl) {
+          msgEl.textContent = err && err.message ? err.message : messages.networkError;
+          msgEl.className = "font-sans text-xs text-triba-red text-center mb-3";
+          msgEl.classList.remove("hidden");
+        }
+        btn!.disabled = false;
+        btn!.textContent = originalText || "";
+      }
+    });
+  })();
 
   // Banner dismiss
   document.querySelectorAll("[data-dismiss-banner]").forEach((btn) => {

@@ -439,7 +439,7 @@ const enHref = switchPath(currentPath, "en");
       });
       var data = await res.json();
       if (data.ok) {
-        showToast("Suscripción cancelada", "success");
+        showToast(data.message || "Suscripción cancelada", "success");
         if (data.providerWarnings && data.providerWarnings.length > 0) {
           var warnMsg = "Cancelada en Triba, pero hubo un problema con el proveedor de pago: " + data.providerWarnings.join(". ");
           setTimeout(function () { alert(warnMsg); }, 500);

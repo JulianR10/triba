@@ -7,6 +7,8 @@ import { logger } from "../../../lib/logger";
 import { syncPaidSubscriber } from "../../../lib/sender";
 import { sendWelcomeEmail } from "../../../lib/email";
 import { getPreferredLocale } from "../../../lib/locale-pref";
+import { sendMailClubActivation } from "../../../lib/mail-club-activation";
+import { applyUpgrade } from "../../../lib/upgrade-apply";
 
 const isSignatureVerificationEnabled = import.meta.env.VERIFY_MP_SIGNATURES !== "false";
 const MP_API_BASE = "https://api.mercadopago.com";
@@ -14,16 +16,22 @@ const MP_API_BASE = "https://api.mercadopago.com";
 interface MpPreapproval {
   id?: string;
   status?: string;
+  reason?: string;
   external_reference?: string;
   payer_email?: string;
   next_payment_date?: string;
   auto_recurring?: { currency_id?: string };
 }
 
+function planFromPreapproval(preapproval: MpPreapproval): "digital" | "mail_club" {
+  return preapproval.reason?.includes("Mail Club") ? "mail_club" : "digital";
+}
+
 interface MpPayment {
   id?: string;
   status?: string;
   preapproval_id?: string;
+  currency_id?: string;
   payer?: { email?: string };
 }
 
@@ -117,12 +125,16 @@ async function activateSubscription({
   userId,
   email,
   providerSubscriptionId,
+  confirmedPayment,
 }: {
   preapproval: MpPreapproval;
   userId: string;
   email?: string;
   providerSubscriptionId: string;
+  // true solo cuando viene de un subscription_authorized_payment aprobado.
+  confirmedPayment: boolean;
 }): Promise<void> {
+  const plan = planFromPreapproval(preapproval);
   if (!isActivePreapproval(preapproval.status)) return;
 
   const now = new Date().toISOString();
@@ -133,10 +145,33 @@ async function activateSubscription({
 
   const { data: existingSub } = await supabaseAdmin
     .from("subscriptions")
-    .select("id")
+    .select("id, status")
     .eq("provider", "mercadopago")
     .eq("provider_subscription_id", providerSubscriptionId)
     .maybeSingle();
+
+  // Mail Club sin pago aprobado todavía: registrar pendiente sin dar acceso
+  // ni bienvenida. La activación real llega con el primer pago aprobado.
+  if (plan === "mail_club" && !confirmedPayment) {
+    if ((existingSub as any)?.id) return;
+    const { error: pendingError } = await supabaseAdmin.from("subscriptions").upsert(
+      {
+        user_id: userId,
+        provider: "mercadopago",
+        provider_subscription_id: providerSubscriptionId,
+        status: "incomplete",
+        plan_currency: currency,
+        plan_type: plan,
+        current_period_start: now,
+        current_period_end: periodEnd,
+      },
+      { onConflict: "provider, provider_subscription_id" },
+    );
+    if (pendingError) {
+      logger.error({ err: pendingError, userId, providerSubscriptionId }, "[MP webhook] mail club pending upsert failed");
+    }
+    return;
+  }
 
   const { data: sub } = await supabaseAdmin
     .from("subscriptions")
@@ -147,6 +182,7 @@ async function activateSubscription({
         provider_subscription_id: providerSubscriptionId,
         status: "active",
         plan_currency: currency,
+        plan_type: plan,
         current_period_start: now,
         current_period_end: periodEnd,
       },
@@ -191,17 +227,31 @@ async function activateSubscription({
     .eq("provider", "migrated");
 
   // Only notify on the first activation; MP can resend events (retries up to 96h).
-  if (existingSub?.id) return;
+  // Digital keeps its original rule (notify only brand-new rows). A mail_club
+  // row in 'incomplete' means this approved payment is the first
+  // confirmation, so it still counts as first activation.
+  const isFirstActivation =
+    !(existingSub as any)?.id ||
+    (plan === "mail_club" && (existingSub as any)?.status === "incomplete");
+  if (!isFirstActivation) return;
 
   if (email) {
     syncPaidSubscriber(email).catch((err) =>
       logger.error({ err, email }, "Sender sync error (mercadopago)"),
     );
-    getPreferredLocale(userId).then((locale) =>
-      sendWelcomeEmail(email, false, locale),
-    ).catch((err) =>
-      logger.error({ err, email }, "Welcome email error (mercadopago)"),
-    );
+    if (plan === "mail_club") {
+      try {
+        await sendMailClubActivation(userId, email);
+      } catch (err) {
+        logger.error({ err, email }, "Mail Club welcome email error (mercadopago)");
+      }
+    } else {
+      getPreferredLocale(userId).then((locale) =>
+        sendWelcomeEmail(email, false, locale),
+      ).catch((err) =>
+        logger.error({ err, email }, "Welcome email error (mercadopago)"),
+      );
+    }
   }
 }
 
@@ -226,6 +276,7 @@ async function handlePreApprovalEvent(preapprovalId: string): Promise<void> {
     userId,
     email: email || undefined,
     providerSubscriptionId: preapprovalId,
+    confirmedPayment: false,
   });
 }
 
@@ -238,21 +289,34 @@ async function handleAuthorizedPaymentEvent(paymentId: string): Promise<void> {
 
   const { data: existing } = await supabaseAdmin
     .from("subscriptions")
-    .select("id")
+    .select("id, status")
     .eq("provider_subscription_id", preapprovalId)
     .eq("provider", "mercadopago")
     .maybeSingle();
 
-  // Renewal of an already-linked subscription: just extend the period.
-  if (existing?.id) {
+  // Renewal of an already-ACTIVE subscription: just extend the period.
+  // An 'incomplete' Mail Club row means the first payment just got approved,
+  // so it falls through to full activation (founder + welcome included).
+  const existingId = (existing as any)?.id as string | undefined;
+  if (existingId && (existing as any)?.status === "active") {
+    const { data: schedRow } = await supabaseAdmin
+      .from("subscriptions")
+      .select("scheduled_plan_type")
+      .eq("id", existingId)
+      .maybeSingle();
+    const downgradeDue = (schedRow as any)?.scheduled_plan_type === "digital";
     await supabaseAdmin
       .from("subscriptions")
       .update({
         current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         status: "active",
+        // El nuevo cobro ya vino con el importe digital: se completa acá.
+        ...(downgradeDue
+          ? { plan_type: "digital", scheduled_plan_type: null, scheduled_plan_at: null }
+          : {}),
         updated_at: new Date().toISOString(),
       })
-      .eq("id", existing.id);
+      .eq("id", existingId);
     return;
   }
 
@@ -282,7 +346,57 @@ async function handleAuthorizedPaymentEvent(paymentId: string): Promise<void> {
     userId,
     email: email || undefined,
     providerSubscriptionId: preapprovalId,
+    confirmedPayment: true,
   });
+}
+
+// Upgrade digital -> Mail Club (MP): pago único de ARS 9.000 cobrado por
+// Checkout Pro. Al aprobarse, actualiza el importe recurrente de la
+// preaprobación de 7.000 a 16.000 ARS. Idempotente por upgrade_id.
+async function handleUpgradePaymentEvent(paymentId: string): Promise<void> {
+  const payment = await mpGet<MpPayment & { external_reference?: string; transaction_amount?: number }>(
+    `/v1/payments/${paymentId}`,
+  );
+  if (!payment || payment.status !== "approved") return;
+
+  const ref = payment.external_reference || "";
+  if (!ref.startsWith("mailclub-upgrade:")) return;
+  const upgradeId = ref.slice("mailclub-upgrade:".length);
+  if (!upgradeId) return;
+
+  const { data: row } = await supabaseAdmin
+    .from("mail_club_upgrades")
+    .select("*")
+    .eq("id", upgradeId)
+    .maybeSingle();
+  if (!row || (row as any).status !== "pending") return;
+
+  const markFailed = async (message: string) => {
+    await supabaseAdmin
+      .from("mail_club_upgrades")
+      .update({ status: "failed", error: message.slice(0, 500), updated_at: new Date().toISOString() })
+      .eq("id", upgradeId);
+  };
+
+  try {
+    const expected = (row as any).amount_cents as number;
+    const got = Number((payment as any).transaction_amount);
+    if (Number.isFinite(got) && got !== expected) {
+      throw new Error(`Upgrade amount mismatch: got ${got}, expected ${expected}`);
+    }
+    if (payment.currency_id && payment.currency_id !== "ARS") {
+      throw new Error(`Upgrade currency mismatch: got ${payment.currency_id}`);
+    }
+
+    await supabaseAdmin
+      .from("mail_club_upgrades")
+      .update({ status: "payment_confirmed", updated_at: new Date().toISOString() })
+      .eq("id", upgradeId);
+    await applyUpgrade(upgradeId);
+  } catch (err: any) {
+    logger.error({ err, upgradeId }, "mail club upgrade apply error (mercadopago)");
+    await markFailed(err.message || "apply error");
+  }
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -316,6 +430,13 @@ export const POST: APIRoute = async ({ request }) => {
       // payment.status === "approved", so pending charges are a no-op
       // and only approved ones (first charge and renewals) take effect.
       await handleAuthorizedPaymentEvent(dataId);
+    }
+
+    if (type === "payment" && dataId) {
+      // One-time Mail Club upgrade payments (Checkout Pro). Regular
+      // subscription charges carry no upgrade external_reference and are
+      // ignored here.
+      await handleUpgradePaymentEvent(dataId);
     }
 
     return ok({ received: true });

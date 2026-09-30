@@ -133,6 +133,19 @@ export const POST: APIRoute = async ({ params, locals }) => {
     const { error: rpcErr } = await supabaseAdmin.rpc("cancel_subscription", { p_user_id: profile.id });
     if (rpcErr) return error(`Reembolso procesado, pero falló la actualización en la BD local: ${rpcErr.message}`, 500);
 
+    // Reembolso = revocación inmediata (se devolvió el dinero): a diferencia
+    // de la cancelación diferida, acá el acceso se corta en el acto.
+    const now = new Date().toISOString();
+    await supabaseAdmin
+      .from("subscriptions")
+      .update({ status: "canceled", cancel_at_period_end: false, updated_at: now })
+      .eq("user_id", profile.id)
+      .eq("status", "active");
+    await supabaseAdmin
+      .from("profiles")
+      .update({ role: "free", subscription_id: null, updated_at: now })
+      .eq("id", profile.id);
+
     await logAdminAction(admin.user.id, admin.profile.email, "subscriber.refunded", "subscriber", profile.id, {
       refunded_email: profile.email,
       provider: sub.provider,

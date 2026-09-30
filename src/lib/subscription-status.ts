@@ -3,7 +3,12 @@ export function isActiveSubscription(
   currentPeriodEnd?: string | null,
 ): boolean {
   if (!status) return false;
-  if (status === "active") return true;
+  if (status === "active") {
+    // Con cancelación diferida, una sub 'active' con período vencido ya no
+    // da acceso. Sin fecha conocida se considera activa (backward compat).
+    if (!currentPeriodEnd) return true;
+    return new Date(currentPeriodEnd).getTime() > Date.now();
+  }
   if (status === "migrated") {
     if (currentPeriodEnd) {
       const periodEnd = new Date(currentPeriodEnd);

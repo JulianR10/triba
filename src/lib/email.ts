@@ -113,6 +113,147 @@ export async function sendWelcomeEmail(
   }
 }
 
+export interface MailClubWelcomeData {
+  recipientName: string;
+  addressLines: string[];
+  shipmentMonth: string;
+  founderNumber: number | null;
+}
+
+function mailClubWelcomeHtml(data: MailClubWelcomeData, locale: Locale = "es") {
+  const en = locale === "en";
+  const htmlLang = en ? "en" : "es";
+  const address = data.addressLines.map((l) => `<br />${l}`).join("");
+  return `<!DOCTYPE html>
+<html lang="${htmlLang}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body style="margin:0;padding:0;background-color:#FFF8EE;font-family:Montserrat,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:40px 20px;">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;border:2px solid #35220A;overflow:hidden;">
+            <tr>
+              <td align="center" style="padding:40px 40px 20px;">
+                <img src="${SITE_URL}/logo-triba.svg" alt="Triba" width="120" style="display:block;margin-bottom:24px;" />
+                <h1 style="font-family:Times New Roman,Georgia,serif;font-size:28px;color:#35220A;margin:0 0 8px;font-style:italic;">
+                  ${en ? "Welcome to the Triba Mail Club! ✉️" : "¡Bienvenida al Mail Club de Triba! ✉️"}
+                </h1>
+                <p style="font-family:Montserrat,Arial,sans-serif;font-size:15px;color:#35220A;line-height:1.6;margin:0 0 20px;">
+                  ${en
+                    ? `Hi, ${data.recipientName}! You're part of the Triba Mail Club. Your envelope will go out with the <strong>${data.shipmentMonth}</strong> dispatch and we'll let you know when it's on its way.`
+                    : `¡Hola, ${data.recipientName}! Ya sos parte del Mail Club de Triba. Tu sobre va a salir en el envío de <strong>${data.shipmentMonth}</strong> y te vamos a avisar cuando esté en camino.`}
+                </p>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:0 40px;">
+                <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                  <tr>
+                    <td style="padding:16px 20px;background-color:#FFF8EE;border-radius:8px;border:1px solid #35220A;">
+                      <p style="font-family:Montserrat,Arial,sans-serif;font-size:13px;color:#35220A;line-height:1.6;margin:0;">
+                        <strong>${en ? "We'll send it to:" : "Lo vamos a mandar a:"}</strong>${address}
+                      </p>
+                    </td>
+                  </tr>
+                </table>
+              </td>
+            </tr>
+            ${data.founderNumber ? `
+            <tr>
+              <td align="center" style="padding:20px 40px 0;">
+                <p style="font-family:Montserrat,Arial,sans-serif;font-size:14px;color:#E91A39;margin:0;">
+                  ${en
+                    ? `You are founding member #${data.founderNumber}.`
+                    : `Sos la socia fundadora #${data.founderNumber}.`}
+                </p>
+              </td>
+            </tr>` : ""}
+            <tr>
+              <td align="center" style="padding:20px 40px 40px;">
+                <p style="font-family:Montserrat,Arial,sans-serif;font-size:11px;color:#35220A;line-height:1.5;margin:0;">
+                  ${en
+                    ? `If something looks wrong, fix your address from your profile before the 15th.`
+                    : `Si ves algo mal, podés corregir tu dirección desde tu perfil antes del 15.`}
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+export async function sendMailClubWelcomeEmail(
+  to: string,
+  data: MailClubWelcomeData,
+  locale: Locale = "es",
+): Promise<void> {
+  try {
+    await sendEmail(to, locale === "en" ? "Welcome to the Triba Mail Club ✉️" : "Bienvenida al Mail Club ✉️", mailClubWelcomeHtml(data, locale));
+  } catch (err) {
+    logger.error({ err, to }, "Sender mail club welcome email error");
+    throw err;
+  }
+}
+
+export interface MailClubDispatchData {
+  recipientName: string;
+  shipmentMonth: string;
+}
+
+function mailClubDispatchHtml(data: MailClubDispatchData, locale: Locale = "es") {
+  const en = locale === "en";
+  const htmlLang = en ? "en" : "es";
+  return `<!DOCTYPE html>
+<html lang="${htmlLang}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  </head>
+  <body style="margin:0;padding:0;background-color:#FFF8EE;font-family:Montserrat,Arial,sans-serif;">
+    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+      <tr>
+        <td align="center" style="padding:40px 20px;">
+          <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background-color:#ffffff;border-radius:16px;border:2px solid #35220A;overflow:hidden;">
+            <tr>
+              <td align="center" style="padding:40px 40px 40px;">
+                <img src="${SITE_URL}/logo-triba.svg" alt="Triba" width="120" style="display:block;margin-bottom:24px;" />
+                <h1 style="font-family:Times New Roman,Georgia,serif;font-size:28px;color:#35220A;margin:0 0 8px;font-style:italic;">
+                  ${en ? "Your envelope is on its way! ✉️" : "¡Tu sobre está en camino! ✉️"}
+                </h1>
+                <p style="font-family:Montserrat,Arial,sans-serif;font-size:15px;color:#35220A;line-height:1.6;margin:0;">
+                  ${en
+                    ? `Hi, ${data.recipientName}! Your <strong>${data.shipmentMonth}</strong> envelope just shipped by ordinary mail, with no tracking number.`
+                    : `¡Hola, ${data.recipientName}! Tu sobre de <strong>${data.shipmentMonth}</strong> ya salió por correo ordinario, sin número de seguimiento.`}
+                </p>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>`;
+}
+
+export async function sendDispatchNoticeEmail(
+  to: string,
+  data: MailClubDispatchData,
+  locale: Locale = "es",
+): Promise<void> {
+  try {
+    await sendEmail(to, locale === "en" ? "Your Triba envelope is on its way ✉️" : "Tu sobre de Triba está en camino ✉️", mailClubDispatchHtml(data, locale));
+  } catch (err) {
+    logger.error({ err, to }, "Sender dispatch notice email error");
+    throw err;
+  }
+}
+
 function newEditionHtml(edition: { title: string; edition_number: number | null; cover_url: string; description: string; id: number }, locale: Locale = "es") {
   const en = locale === "en";
   const htmlLang = en ? "en" : "es";

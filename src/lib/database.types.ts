@@ -41,11 +41,15 @@ export interface Database {
           provider_subscription_id: string;
           status: "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated";
           plan_currency: "EUR" | "USD" | "ARS";
+          plan_type: "digital" | "mail_club";
           current_period_start: string | null;
           current_period_end: string | null;
           created_at: string;
           updated_at: string;
           canceled_at: string | null;
+          cancel_at_period_end: boolean;
+          scheduled_plan_type: "digital" | "mail_club" | null;
+          scheduled_plan_at: string | null;
         };
         Insert: {
           id?: string;
@@ -54,11 +58,15 @@ export interface Database {
           provider_subscription_id: string;
           status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated";
           plan_currency: "EUR" | "USD" | "ARS";
+          plan_type?: "digital" | "mail_club";
           current_period_start?: string | null;
           current_period_end?: string | null;
           created_at?: string;
           updated_at?: string;
           canceled_at?: string | null;
+          cancel_at_period_end?: boolean;
+          scheduled_plan_type?: "digital" | "mail_club" | null;
+          scheduled_plan_at?: string | null;
         };
         Update: {
           id?: string;
@@ -67,11 +75,15 @@ export interface Database {
           provider_subscription_id?: string;
           status?: "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated";
           plan_currency?: "EUR" | "USD" | "ARS";
+          plan_type?: "digital" | "mail_club";
           current_period_start?: string | null;
           current_period_end?: string | null;
           created_at?: string;
           updated_at?: string;
           canceled_at?: string | null;
+          cancel_at_period_end?: boolean;
+          scheduled_plan_type?: "digital" | "mail_club" | null;
+          scheduled_plan_at?: string | null;
         };
         Relationships: [];
       };
@@ -344,6 +356,216 @@ export interface Database {
           mp_preapproval_id?: string | null;
           mp_plan_currency?: string | null;
           migrated_at?: string;
+        };
+        Relationships: [];
+      };
+      mailing_addresses: {
+        Row: {
+          id: string;
+          user_id: string;
+          recipient_name: string;
+          country_iso: string;
+          region: string;
+          city: string;
+          postal_code: string;
+          street_address: string;
+          address_extra: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          recipient_name: string;
+          country_iso: string;
+          region?: string;
+          city?: string;
+          postal_code?: string;
+          street_address?: string;
+          address_extra?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          recipient_name?: string;
+          country_iso?: string;
+          region?: string;
+          city?: string;
+          postal_code?: string;
+          street_address?: string;
+          address_extra?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      mail_club_consents: {
+        Row: {
+          id: string;
+          user_id: string;
+          terms_version: string;
+          accepted_at: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          terms_version: string;
+          accepted_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          terms_version?: string;
+          accepted_at?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      mail_club_upgrades: {
+        Row: {
+          id: string;
+          user_id: string;
+          from_plan: string;
+          to_plan: string;
+          plan_currency: "EUR" | "USD" | "ARS";
+          amount_cents: number;
+          provider: "stripe" | "mercadopago";
+          provider_payment_ref: string | null;
+          status: "pending" | "payment_confirmed" | "recurrence_updated" | "failed";
+          error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          from_plan?: string;
+          to_plan?: string;
+          plan_currency: "EUR" | "USD" | "ARS";
+          amount_cents: number;
+          provider: "stripe" | "mercadopago";
+          provider_payment_ref?: string | null;
+          status?: "pending" | "payment_confirmed" | "recurrence_updated" | "failed";
+          error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          from_plan?: string;
+          to_plan?: string;
+          plan_currency?: "EUR" | "USD" | "ARS";
+          amount_cents?: number;
+          provider?: "stripe" | "mercadopago";
+          provider_payment_ref?: string | null;
+          status?: "pending" | "payment_confirmed" | "recurrence_updated" | "failed";
+          error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      mail_club_founders: {
+        Row: {
+          user_id: string;
+          founder_number: number;
+          first_confirmed_at: string;
+          created_at: string;
+        };
+        Insert: {
+          user_id: string;
+          founder_number: number;
+          first_confirmed_at?: string;
+          created_at?: string;
+        };
+        Update: {
+          user_id?: string;
+          founder_number?: number;
+          first_confirmed_at?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      mail_club_batches: {
+        Row: {
+          id: string;
+          period_year: number;
+          period_month: number;
+          cutoff_at: string;
+          dispatched_at: string | null;
+          status: "open" | "closed" | "dispatched";
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          period_year: number;
+          period_month: number;
+          cutoff_at: string;
+          dispatched_at?: string | null;
+          status?: "open" | "closed" | "dispatched";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          period_year?: number;
+          period_month?: number;
+          cutoff_at?: string;
+          dispatched_at?: string | null;
+          status?: "open" | "closed" | "dispatched";
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      mail_club_batch_items: {
+        Row: {
+          id: string;
+          batch_id: string;
+          user_id: string;
+          subscription_id: string | null;
+          address_snapshot: Json;
+          email: string;
+          zone: string;
+          plan_currency: "EUR" | "USD" | "ARS";
+          founder_number: number | null;
+          status: "included" | "dispatched" | "failed" | "refunded";
+          notice_sent: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          batch_id: string;
+          user_id: string;
+          subscription_id?: string | null;
+          address_snapshot: Json;
+          email?: string;
+          zone?: string;
+          plan_currency?: "EUR" | "USD" | "ARS";
+          founder_number?: number | null;
+          status?: "included" | "dispatched" | "failed" | "refunded";
+          notice_sent?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          batch_id?: string;
+          user_id?: string;
+          subscription_id?: string | null;
+          address_snapshot?: Json;
+          email?: string;
+          zone?: string;
+          plan_currency?: "EUR" | "USD" | "ARS";
+          founder_number?: number | null;
+          status?: "included" | "dispatched" | "failed" | "refunded";
+          notice_sent?: boolean;
+          created_at?: string;
         };
         Relationships: [];
       };
