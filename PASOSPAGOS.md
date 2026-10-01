@@ -12,6 +12,7 @@ Hecho:
 - Stripe Test mode configurado y verificado por API: clave `sk_test_…`, webhook secret, 4 Price IDs (digital EUR/USD 7, Mail Club EUR 10,50 / USD 12,50).
 - Alta Mail Club EUR probada (Italia, tarjeta de prueba) → suscripción activa en staging. Alta USD probada → activa en staging.
 - `MyAccountPage` tolera lista de ediciones vacía; aviso de éxito post-compra convertido en tarjeta flotante centrada y cerrable (X, fondo, Escape) para todos los pagos.
+- Aviso de éxito diferenciado por flujo (verificado en Preview con usuarios de prueba): digital conserva el texto actual; alta Mail Club confirma la suscripción postal activa; upgrade confirma el pase de digital a Mail Club con acceso digital conservado. Retorno explícito `flow=mail_club_upgrade` para Stripe y ruta `/api/checkout-return/mail-club-upgrade` para Mercado Pago (303).
 - Grilla de Suscribirme con altura mínima en desktop (el footer ya no se monta sobre el formulario).
 
 Pendiente:
