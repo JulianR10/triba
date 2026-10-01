@@ -128,6 +128,9 @@ class StripePaymentProvider implements PaymentProvider {
       phases: [
         {
           items: [{ price: currentPriceId, quantity: 1 }],
+          // Stripe exige anclar las fases con un start_date explícito al
+          // reemplazarlas; sin esto responde 400 en el update.
+          start_date: "now",
           end_date: periodEndSec,
           proration_behavior: "none",
         },
