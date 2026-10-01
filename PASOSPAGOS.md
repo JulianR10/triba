@@ -10,6 +10,8 @@ Guía para probar Mail Club sin usar credenciales live en Preview ni tocar la ba
 - Migraciones `001`–`024` aplicadas al Supabase de pruebas.
 - Variables de Preview para la rama `mail-club` apuntan al Supabase de pruebas; Auth permite el dominio Preview.
 - Preview redeplegado y comprobado. Una cuenta temporal de Auth se creó y eliminó durante la prueba.
+- Staging sembrado con la edición #5 (solo metadatos ES + portada pública, sin PDF).
+- `MyAccountPage` tolera lista de ediciones vacía (hero/visor solo con `featured`).
 
 ## 1. Conseguir acceso de forma segura
 
