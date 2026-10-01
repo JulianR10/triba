@@ -138,7 +138,7 @@ const editionsPayload = editions.map((e) => ({
 const featured = editions.find((e) => e.featured) || editions[0];
 const featuredEditionRaw = featuredEdition ?? allEditions[0];
 const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
-  ? await getSignedPdfUrl(featuredEditionRaw.pdf_url).catch(() => null) ?? featured.pdf
+  ? await getSignedPdfUrl(featuredEditionRaw.pdf_url).catch(() => null) ?? featured?.pdf
   : undefined;
 
 const checkoutOutcome = getCheckoutOutcome(Astro.url.searchParams);
@@ -205,7 +205,8 @@ const miCuentaMessages = {
         hasActiveSub && (
           <>
 
-      <!-- ===== HERO ===== -->
+      <!-- ===== HERO (solo si hay ediciones cargadas) ===== -->
+      {featured && (
       <div class="relative overflow-hidden rounded-none md:rounded-[32px] bg-gradient-to-br from-triba-pink via-triba-pink/60 to-triba-cream px-5 md:px-14 lg:px-20 py-10 md:py-16 lg:py-20 reveal" data-reveal>
         <div class="grid grid-cols-1 md:grid-cols-2 md:gap-12 md:items-center">
           <p class="font-heading text-sm md:text-base uppercase tracking-[0.2em] text-triba-brown/60 mb-4 md:col-start-1 md:row-start-1">{dict.miCuenta.monthlyEdition}</p>
@@ -244,6 +245,7 @@ const miCuentaMessages = {
           </div>
         </div>
       </div>
+      )}
 
       <!-- Admin banner -->
       {isAdmin && (
@@ -437,7 +439,7 @@ const miCuentaMessages = {
       <!-- ===== VISOR ===== -->
       <div class="bg-triba-cream w-full px-5 md:px-14 lg:px-20 xl:px-32 2xl:px-48 py-12 md:py-20">
         <div class="max-w-6xl mx-auto">
-          {featured.pdf !== "#" && (
+          {featured && featured.pdf !== "#" && (
           <div id="visor-revista" class="scroll-anchor reveal" data-reveal>
             <PatchTitle content={featured.title} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
