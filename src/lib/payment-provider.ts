@@ -123,14 +123,16 @@ class StripePaymentProvider implements PaymentProvider {
     const schedule = await stripe.subscriptionSchedules.create({
       from_subscription: providerSubscriptionId,
     });
+    // Al reemplazar las fases, Stripe exige anclar con el start_date vigente
+    // de la fase actual (pasar "now" u omitirlo responde 400).
+    const currentPhaseStart = (schedule as unknown as { current_phase?: { start_date?: number } })
+      .current_phase?.start_date;
     await stripe.subscriptionSchedules.update(schedule.id, {
       end_behavior: "release",
       phases: [
         {
           items: [{ price: currentPriceId, quantity: 1 }],
-          // Stripe exige anclar las fases con un start_date explícito al
-          // reemplazarlas; sin esto responde 400 en el update.
-          start_date: "now",
+          ...(currentPhaseStart ? { start_date: currentPhaseStart } : {}),
           end_date: periodEndSec,
           proration_behavior: "none",
         },
