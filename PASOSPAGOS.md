@@ -2,16 +2,24 @@
 
 Guía para probar Mail Club sin usar credenciales live en Preview ni tocar la base de producción.
 
-## Estado ya preparado
+## Estado actual (01-oct-2026)
 
-- Rama Vercel: `mail-club`.
-- Preview estable: <https://triba-git-mail-club-julianrecarte.vercel.app>.
-- Supabase de pruebas: `Triba-mail-club` (`ktgnaudcobcayrxhucsn`), separado de producción.
-- Migraciones `001`–`024` aplicadas al Supabase de pruebas.
-- Variables de Preview para la rama `mail-club` apuntan al Supabase de pruebas; Auth permite el dominio Preview.
-- Preview redeplegado y comprobado. Una cuenta temporal de Auth se creó y eliminó durante la prueba.
-- Staging sembrado con la edición #5 (solo metadatos ES + portada pública, sin PDF).
-- `MyAccountPage` tolera lista de ediciones vacía (hero/visor solo con `featured`).
+Hecho:
+
+- Rama Vercel: `mail-club`; Preview: <https://triba-git-mail-club-julianrecarte.vercel.app>.
+- Supabase de pruebas: `Triba-mail-club` (`ktgnaudcobcayrxhucsn`), con migraciones `001`–`024` y edición #5 sembrada (metadatos ES + portada pública, sin PDF).
+- Variables de Preview para la rama `mail-club` apuntan al Supabase de pruebas; Auth permite el dominio Preview; protección Vercel desactivada para Preview.
+- Stripe Test mode configurado y verificado por API: clave `sk_test_…`, webhook secret, 4 Price IDs (digital EUR/USD 7, Mail Club EUR 10,50 / USD 12,50).
+- Alta Mail Club EUR probada (Italia, tarjeta de prueba) → suscripción activa en staging. Alta USD probada → activa en staging.
+- `MyAccountPage` tolera lista de ediciones vacía; aviso de éxito post-compra convertido en tarjeta flotante centrada y cerrable (X, fondo, Escape) para todos los pagos.
+- Grilla de Suscribirme con altura mínima en desktop (el footer ya no se monta sobre el formulario).
+
+Pendiente:
+
+- Mercado Pago: faltan `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` **de prueba** en Preview (siguen los valores live). **No probar ARS todavía.**
+- Upgrades digital → Mail Club en EUR y USD, más casos: pago rechazado/pendiente, webhook repetido, cancelación y vuelta a digital al fin del período.
+- Limpieza de Stripe Test mode al terminar (cancelar suscripciones de prueba desde Stripe, no desde la base).
+- Preparación de producción (§8) y día del lanzamiento (§9).
 
 ## 1. Conseguir acceso de forma segura
 
@@ -92,20 +100,24 @@ En Vercel → proyecto `triba` → **Settings → Deployment Protection**,
 desactivar la protección para el entorno **Preview**. No tocar Production.
 Sin este paso, ninguna prueba de pago puede funcionar.
 
-## 7. Redeplegar y probar
+## 7. Probar (matriz)
 
 Después de guardar las variables, redeplegar el Preview para que Vercel las aplique. Confirmar que el deployment pertenece a la rama `mail-club` y usar cuentas de prueba.
 
-Matriz mínima:
+Hecho: alta nueva Mail Club EUR (Stripe) y USD (Stripe) → activas en staging.
 
-- Alta nueva Mail Club: Europa/EUR → Stripe; resto del mundo/USD → Stripe; Argentina/ARS → Mercado Pago.
-- Upgrade digital → Mail Club en EUR, USD y ARS; usar suscripciones digitales creadas en los respectivos modos de prueba.
+Falta:
+
+- Upgrade digital → Mail Club en EUR y USD (con suscripciones digitales creadas en modo de prueba): comprobar cargo diferencial exacto y cambio de tarifa recurrente solo tras pago confirmado.
+- Upgrade ARS cuando esté MP de prueba.
 - Pago aprobado, rechazado, pendiente y webhook repetido; comprobar que no se dupliquen cargos, suscripciones, fundadoras ni emails.
 - Cancelación o vuelta a digital al final del período pagado.
 - Confirmar que la bienvenida llega a una casilla controlada. Los emails transaccionales pueden enviarse de verdad si Preview utiliza Sender live.
 - No registrar despachos físicos ni preparar envíos reales desde cuentas de prueba.
+- Las cuentas que ya tienen Mail Club activo no sirven para probar un checkout nuevo: usar cuentas de prueba nuevas o cancelar la suscripción test en Stripe.
+- Al terminar: cancelar las suscripciones de prueba desde Stripe Test mode (los webhooks actualizan Supabase). No borrar filas directamente de la base.
 
-## 7. Preparación de producción, después de aprobar las pruebas
+## 8. Preparación de producción, después de aprobar las pruebas
 
 Todo esto se puede dejar cargado **antes** del día de la presentación; el
 código nuevo solo empieza a usarlo cuando `mail-club` se integre en `main`
@@ -126,19 +138,22 @@ y se despliegue a Production. No requiere deploy previo.
   la base de producción y una ventana sin escrituras.
 - Hacer un go/no-go de pagos, webhooks, costos postales, textos legales y fotos antes de publicar Mail Club.
 
-## Día del lanzamiento (orden)
+## 9. Día del lanzamiento (orden)
 
 1. Exportar y verificar la lista del newsletter (`scripts/export-newsletters.mjs`).
 2. Confirmar variables Production + migraciones aplicadas + webhooks live.
 3. Integrar `mail-club` en `main` y desplegar. Verificar checkout live mínimo.
 4. Recién después, retirar newsletter y borrar solo contactos gratuitos.
 
-## Variables pendientes de prueba
+## 10. Estado de variables (01-oct-2026)
 
-Configurado en Preview rama `mail-club`: los cuatro Price IDs de prueba
-(`STRIPE_PRICE_EUR`, `STRIPE_PRICE_USD`, `STRIPE_PRICE_MAIL_CLUB_EUR`,
-`STRIPE_PRICE_MAIL_CLUB_USD`) y `STRIPE_WEBHOOK_SECRET` de prueba.
+Preview rama `mail-club`: Stripe completo en modo prueba (`sk_test_…`,
+webhook secret y los 4 Price IDs). Supabase de pruebas. `SITE` del Preview.
 
-Falta reemplazar en Preview: `STRIPE_SECRET_KEY` (sigue el valor live;
-cargar el `sk_test_…`), `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` (cargar los
-valores de prueba). No redeplegar para pruebas de pago hasta completar esto.
+Pendiente en Preview: `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` de prueba
+(todavía con valores live → no probar ARS). Todo lo demás de pago en
+Preview ya es de prueba.
+
+Production (intacto): credenciales live y precios digitales vigentes.
+Faltan `STRIPE_PRICE_MAIL_CLUB_EUR` y `STRIPE_PRICE_MAIL_CLUB_USD` live
+(ver §8).
