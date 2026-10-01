@@ -107,13 +107,31 @@ Matriz mínima:
 
 ## 7. Preparación de producción, después de aprobar las pruebas
 
+Todo esto se puede dejar cargado **antes** del día de la presentación; el
+código nuevo solo empieza a usarlo cuando `mail-club` se integre en `main`
+y se despliegue a Production. No requiere deploy previo.
+
 - En Stripe **Live mode**, crear los precios mensuales Mail Club EUR 10,50 y USD 12,50 y guardar sus nuevos Price IDs live.
 - En Vercel **Production**, agregar `STRIPE_PRICE_MAIL_CLUB_EUR` y `STRIPE_PRICE_MAIL_CLUB_USD` con esos IDs live.
 - Conservar las credenciales y precios digitales actuales de Production (`STRIPE_SECRET_KEY`, `STRIPE_PRICE_EUR`, `STRIPE_PRICE_USD`). Nunca poner valores de prueba en Production.
 - Revisar el webhook Stripe live existente en `https://www.universotriba.com/api/webhook/stripe` y habilitar los eventos indicados en §3. Si se crea un endpoint live distinto o se rota su signing secret, actualizar el `STRIPE_WEBHOOK_SECRET` de Production con el secreto que corresponda.
 - Revisar el webhook live de Mercado Pago en `https://www.universotriba.com/api/webhook/mercadopago` y habilitar los tipos indicados en §4. Si se crea una configuración distinta o rota el secreto de firma, actualizar `MP_WEBHOOK_SECRET` de Production.
 - Mantener en Production el Access Token live de Mercado Pago. No se necesita una variable nueva de precio para ARS.
+- Supabase Production: su historial registra migraciones hasta la `016`,
+  pero el esquema ya trae cambios posteriores (ediciones bilingües,
+  `preferred_locale`) sin `subscriptions.plan_type` ni tablas Mail Club.
+  No hacer `db push` a ciegas. Orden: reconciliar el historial 017–020
+  contra el esquema live (marcar como aplicadas las ya presentes,
+  sin re-ejecutarlas) y después aplicar 021–024. Requiere la contraseña de
+  la base de producción y una ventana sin escrituras.
 - Hacer un go/no-go de pagos, webhooks, costos postales, textos legales y fotos antes de publicar Mail Club.
+
+## Día del lanzamiento (orden)
+
+1. Exportar y verificar la lista del newsletter (`scripts/export-newsletters.mjs`).
+2. Confirmar variables Production + migraciones aplicadas + webhooks live.
+3. Integrar `mail-club` en `main` y desplegar. Verificar checkout live mínimo.
+4. Recién después, retirar newsletter y borrar solo contactos gratuitos.
 
 ## Variables pendientes de prueba
 
