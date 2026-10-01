@@ -142,6 +142,23 @@ const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
   : undefined;
 
 const checkoutOutcome = getCheckoutOutcome(Astro.url.searchParams);
+const checkoutFlow = Astro.url.searchParams.get("flow");
+const awaitingMailClubUpgrade =
+  checkoutOutcome === "success" &&
+  checkoutFlow === "mail_club_upgrade" &&
+  hasActiveSub &&
+  getPlanType(subscription) !== "mail_club";
+const checkoutSuccessKind =
+  checkoutOutcome !== "success" || !hasActiveSub
+    ? null
+    : checkoutFlow === "mail_club_upgrade"
+      ? getPlanType(subscription) === "mail_club" ? "mail_club_upgrade" : null
+      : getPlanType(subscription) === "mail_club" ? "mail_club" : "digital";
+const checkoutSuccessCopy = checkoutSuccessKind === "mail_club_upgrade"
+  ? { title: dict.miCuenta.mailClubUpgradeSuccessTitle, body: dict.miCuenta.mailClubUpgradeSuccessBody }
+  : checkoutSuccessKind === "mail_club"
+    ? { title: dict.miCuenta.mailClubSuccessTitle, body: dict.miCuenta.mailClubSuccessBody }
+    : { title: dict.miCuenta.checkoutSuccessTitle, body: dict.miCuenta.checkoutSuccessBody };
 
 const displayName = user?.user_metadata?.full_name || user?.email?.split("@")[0] || (lang === "en" ? "reader" : "lectora");
 
@@ -150,6 +167,7 @@ const subscribeHref = localizePath("/suscribirme", lang);
 const comingSoonLabel = (dict.magazine as { comingSoon?: string }).comingSoon ?? "EN coming soon";
 const miCuentaMessages = {
   lang,
+  awaitingMailClubUpgrade: awaitingMailClubUpgrade ? "1" : "0",
   revistaBase: lang === "en" ? "/en/revista/" : "/revista/",
   coverCardAlt: dict.miCuenta.coverCardAlt,
   slideAria: dict.miCuenta.slideAria,
@@ -171,13 +189,13 @@ const miCuentaMessages = {
   <section class="pt-0 md:pt-[max(1rem,var(--nav-height,64px))]" data-mi-cuenta-messages={JSON.stringify(miCuentaMessages)}>
     <div class="max-w-6xl mx-auto">
 
-      {checkoutOutcome === "success" && (
-        <div data-banner="checkout-success" class="fixed inset-0 z-[70] flex items-center justify-center p-5" role="dialog" aria-modal="true" aria-label={dict.miCuenta.checkoutSuccessTitle}>
+      {checkoutSuccessKind && (
+        <div data-banner="checkout-success" class="fixed inset-0 z-[70] flex items-center justify-center p-5" role="dialog" aria-modal="true" aria-label={checkoutSuccessCopy.title}>
           <div class="absolute inset-0 bg-triba-black/40" data-dismiss-banner></div>
           <div class="relative bg-triba-white border-2 border-triba-black rounded-2xl px-6 py-8 md:p-10 max-w-md w-full text-center shadow-2xl">
             <button type="button" data-dismiss-banner class="absolute top-3 right-4 text-triba-brown hover:text-triba-red text-2xl leading-none" aria-label={dict.miCuenta.dismiss}>×</button>
-            <p class="font-heading text-lg uppercase tracking-wider text-triba-brown mb-3">{dict.miCuenta.checkoutSuccessTitle}</p>
-            <p class="font-sans text-base text-triba-brown leading-relaxed">{dict.miCuenta.checkoutSuccessBody}</p>
+            <p class="font-heading text-lg uppercase tracking-wider text-triba-brown mb-3">{checkoutSuccessCopy.title}</p>
+            <p class="font-sans text-base text-triba-brown leading-relaxed">{checkoutSuccessCopy.body}</p>
           </div>
         </div>
       )}
@@ -192,11 +210,11 @@ const miCuentaMessages = {
         </div>
       )}
 
-      {checkoutOutcome === "pending" && (
+      {(checkoutOutcome === "pending" || awaitingMailClubUpgrade) && (
         <div data-banner="checkout-pending" class="mx-5 md:mx-10 lg:mx-20 xl:mx-32 2xl:mx-48 mb-8 p-4 bg-triba-pink/30 border-2 border-triba-pink rounded-xl flex items-start justify-between gap-3 reveal" data-reveal>
           <div>
             <p class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-1">{dict.miCuenta.checkoutPendingTitle}</p>
-            <p class="font-sans text-base text-triba-brown">{dict.miCuenta.checkoutPendingBody}</p>
+            <p data-processing-note class="font-sans text-base text-triba-brown">{dict.miCuenta.checkoutPendingBody}</p>
           </div>
           <button type="button" data-dismiss-banner class="shrink-0 text-triba-brown hover:text-triba-red text-xl leading-none" aria-label={dict.miCuenta.dismiss}>×</button>
         </div>
@@ -569,9 +587,12 @@ const miCuentaMessages = {
     history.replaceState(null, "", window.location.pathname);
   }
 
+  var awaitingMailClubUpgrade = messages.awaitingMailClubUpgrade === "1";
+  var isMailClubUpgradeReturn =
+    new URLSearchParams(window.location.search).get("flow") === "mail_club_upgrade";
   if (
     isAwaitingActivation(checkoutOutcome) &&
-    document.querySelector("[data-processing-note]")
+    (document.querySelector("[data-processing-note]") || awaitingMailClubUpgrade)
   ) {
     startCheckoutPoll(async function () {
       if (!supabase) return undefined;
@@ -583,7 +604,7 @@ const miCuentaMessages = {
     }, function () {
       var note = document.querySelector("[data-processing-note]");
       if (note) note.textContent = messages.processingNetworkError;
-    });
+    }, isMailClubUpgradeReturn ? "mail_club" : undefined);
   }
 
   // --- Tus tomos: carrusel paginado (mobile 2x2 / desktop 2 filas de 4) ---

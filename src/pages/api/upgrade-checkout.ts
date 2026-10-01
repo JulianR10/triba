@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ request }) => {
         ],
         customer_email: user.email || "",
         client_reference_id: user.id,
-        success_url: `${origin}/mi-cuenta?checkout=success`,
+        success_url: `${origin}/mi-cuenta?checkout=success&flow=mail_club_upgrade`,
         cancel_url: `${origin}/mi-cuenta?checkout=canceled`,
         metadata: { user_id: user.id, upgrade_id: upgradeId, plan: "mail_club_upgrade" },
       });
@@ -137,7 +137,7 @@ export const POST: APIRoute = async ({ request }) => {
         ],
         payer: { email: user.email || "" },
         back_urls: {
-          success: `${origin}/mi-cuenta?checkout=success`,
+          success: `${origin}/api/checkout-return/mail-club-upgrade`,
           failure: `${origin}/mi-cuenta?checkout=canceled`,
           pending: `${origin}/mi-cuenta?checkout=pending`,
         },

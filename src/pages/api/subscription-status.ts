@@ -24,7 +24,7 @@ export const GET: APIRoute = async ({ request }) => {
   if (profile.subscription_id) {
     const { data: sub } = await supabaseAdmin
       .from("subscriptions")
-      .select("status, provider, plan_currency, current_period_end, current_period_start")
+      .select("status, provider, plan_type, plan_currency, current_period_end, current_period_start")
       .eq("id", profile.subscription_id)
       .single();
     subscription = sub;

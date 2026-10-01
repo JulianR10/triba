@@ -61,13 +61,17 @@ class StripePaymentProvider implements PaymentProvider {
         : STRIPE_PRICE_IDS[params.currency];
     if (!priceId) throw new Error(`No Stripe price ID for ${plan} ${params.currency}`);
 
+    const successUrl = new URL(`${params.origin}/mi-cuenta`);
+    successUrl.searchParams.set("checkout", "success");
+    if (plan === "mail_club") successUrl.searchParams.set("flow", "mail_club");
+
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       payment_method_types: ["card"],
       line_items: [{ price: priceId, quantity: 1 }],
       customer_email: params.userEmail,
       client_reference_id: params.userId,
-      success_url: `${params.origin}/mi-cuenta?checkout=success`,
+      success_url: successUrl.toString(),
       cancel_url: `${params.origin}/suscribirme?checkout=canceled`,
       metadata: {
         user_id: params.userId,
