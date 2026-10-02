@@ -231,3 +231,20 @@ Comparativo PDF vs. implementación. Estado: `pendiente` / `en progreso` / `hech
 - FAQ seguimiento con `universotriba@gmail.com` (ES/EN), igual que términos.
 - CSV etiquetas: `csv.ts` neutraliza fórmulas + BOM para Excel; cubre "Excel o CSV" del
   PDF §5. Validar con la dueña que el CSV le sirve para imprimir etiquetas.
+
+## 9. Secuencia de salida a producción (acordada 02-oct-2026)
+
+Push a la rama ≠ deploy. `main` deploya a prod; `mail-club` solo genera Preview.
+Mergear a `main` solo con estos pasos seguidos; después prod queda congelado hasta el
+próximo push a `main` y se puede seguir trabajando en local/rama sin tocar prod.
+
+1. Exportar newsletter desde prod (`scripts/export-newsletters.mjs`) y verificar
+   archivo/conteo. Recién después se retiran altas y se borran gratuitos.
+2. Aplicar migraciones `021–024` en Supabase prod (historial `017–020` ya reconciliado,
+   `db push --dry-run` limpio). Sin esto el deploy rompe (500s). Ventana sin escrituras.
+3. Verificar vars Production (Price IDs live ya cargados) + webhooks live Stripe/MP con
+   eventos nuevos + `SITE_URL` + secretos.
+4. Merge `mail-club` → `main` + deploy + prueba live mínima (alta + upgrade, conciliar o
+   reembolsar) + regenerar token MP de prueba expuesto.
+5. Recién después: retirar newsletter y borrar solo contactos gratuitos.
+6. Post-merge: P4/P5 (formato héroe, plazo 3–7) y CSV de etiquetas a confirmar con la dueña.
