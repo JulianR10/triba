@@ -185,7 +185,7 @@ export const ui = {
         },
         {
           q: "¿Tiene número de seguimiento?",
-          a: "No. Enviamos por correo ordinario para que el club sea accesible. Si pasaron 6 semanas desde el envío y no te llegó, escribinos y te mandamos otro.",
+          a: "No. Enviamos por correo ordinario para que el club sea accesible. Si pasaron 6 semanas desde el envío y no te llegó, escribinos a universotriba@gmail.com y te mandamos otro.",
         },
         {
           q: "Ya estoy suscripta, ¿cómo me paso al Mail Club?",
@@ -618,7 +618,7 @@ export const ui = {
         },
         {
           q: "Does it have a tracking number?",
-          a: "No. We ship by ordinary mail to keep the club accessible. If 6 weeks have passed since dispatch and it hasn't arrived, write to us and we'll send another one.",
+          a: "No. We ship by ordinary mail to keep the club accessible. If 6 weeks have passed since dispatch and it hasn't arrived, write to universotriba@gmail.com and we'll send another one.",
         },
         {
           q: "I'm already subscribed, how do I switch to the Mail Club?",

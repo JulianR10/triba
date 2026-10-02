@@ -1,7 +1,10 @@
 # Triba Mail Club — bases y plan de trabajo
 
-**Estado:** bases funcionales acordadas; planificación registrada; implementación Mail Club pendiente.  
-**Rama de trabajo:** `mail-club` (`C:\Users\julia\Desktop\Proyectos web\triba-mail-club`).  
+**Estado (cierre del día):** implementación Mail Club completa en la rama y publicada para Preview; pendiente validación externa (pagos, correo, legal, fotos) y lanzamiento.  
+**Última verificación local:** `astro check` 0 errores · `npm test` 15/15 · `npm run build` OK.  
+**Rama de trabajo:** `mail-club` (`C:\Users\julia\Desktop\Proyectos web\triba-mail-club`), publicada en `origin/mail-club` (commit `da3d6d0`).  
+**Preview Vercel (rama):** `https://triba-gqpgwguo2-julianrecarte.vercel.app` — producción (`www.universotriba.com`) intacta.  
+**Regla:** `main` = sitio live; `mail-club` = trabajo aparte. Sin merge a `main` hasta el lanzamiento.  
 **Especificación de origen:** `Triba Mail Club – Pedido para la web.pdf` (27-sep-2026), complementada por las decisiones de producto registradas aquí.
 
 Este documento resume las decisiones vigentes y el orden recomendado para el upgrade. Si las notas preliminares `docs/mail-club-base-funcional.md` o `docs/verificacion-flujos-de-pago.md` difieren de lo que se confirma aquí, prevalecen las decisiones más recientes de este documento.
@@ -27,6 +30,7 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 - [x] Retiro del newsletter en la rama: Home sin sección ni botón gratis (segundo CTA lleva a Mail Club), legales sin oferta gratuita, `POST /api/newsletter` en 410, componentes muertos eliminados. Datos y export pendientes al lanzamiento: `scripts/export-newsletters.mjs` (solo lectura, CSV + conteos Supabase/Sender).
 - [x] Estabilización (check + build en 0): elegibilidad de lote exige vencimiento conocido, gate corta acceso vencido, cancel admin frena recurrencia, reembolso revoca en el acto, upgrades con apply compartido + reintento admin, dirección editable en Mi Cuenta (`PUT /api/address`), moneda validada en upgrade MP.
 - [x] Hardening 2 (migración `024` + tests): un pending por usuaria (409 si hay upgrade en curso), consentimientos sin reescritura, lote despachado inmutable, elegibilidad al corte (inicio ≤ corte ≤ fin), aviso separado del despacho físico, export newsletter en unión Supabase/Sender con protección del grupo pago, `csv.ts` puro y 15 tests vitest (`npm test`).
+- [x] Publicación para Preview: commit `da3d6d0` pusheado a `origin/mail-club`. Vercel genera Preview aparte; `main` y producción intactos. Pendiente configurar en Vercel las variables del entorno **Preview** (claves de prueba, `SITE` con la URL `.vercel.app` del Preview y webhooks de prueba) antes de probar pagos.
 
 ### Pendiente (gates de lanzamiento)
 
@@ -37,6 +41,14 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 - [ ] Cobros reales EUR/USD/ARS en sandbox y producción con webhooks, conciliados o reembolsados.
 - [ ] Medir el sobre, confirmar tarifas/cobertura/trámites postales y margen por zona.
 - [ ] Recibir las fotos definitivas (hoy lorem con seeds fijos) y aprobar los textos legales.
+
+### Para mañana (en orden)
+
+1. Configurar variables del entorno **Preview** en Vercel (claves de prueba + `SITE` del Preview + webhooks de prueba) y correr `prelaunch-check` contra ese entorno.
+2. Probar en el Preview: alta y upgrade por moneda, rechazo/pendiente/SCA, webhooks repetidos, cancelación y downgrade al fin del período, lote + CSV + despacho.
+3. Completar `docs/postal-costing.md` con el sobre medido y la cotización de Correos.
+4. Exportar y verificar la lista del newsletter (sin borrar todavía).
+5. Cobros reales EUR/USD/ARS, fotos definitivas y aprobación legal → go/no-go y merge a `main`.
 
 > El retiro total del newsletter queda condicionado a la exportación verificada. Los formularios y datos actuales no se han eliminado todavía; los emails transaccionales continúan.
 
@@ -179,3 +191,43 @@ Las decisiones más recientes del usuario resuelven estos puntos; también queda
 - Idioma: Mail Club ES y EN se lanza desde el principio.
 - Estimación España: publicar 3–7 días (unificar el 2–7 días que aparecía en una sección del PDF). Mantener el resto de plazos acordados para Europa y el resto del mundo.
 - Retención postal: 60 días para coincidir con el plazo de reposición.
+
+## 8. Plan: 6 puntos del PDF (02-oct-2026)
+
+Comparativo PDF vs. implementación. Estado: `pendiente` / `en progreso` / `hecho`.
+
+### P1. Actualización trimestral ARS en MP (PDF §7) · Estado: en progreso
+- Script `scripts/update-mp-mailclub-price.mjs`: dry-run por defecto, `--real` aplica.
+  Afecta SOLO `subscriptions` `provider=mercadopago, plan_type=mail_club, status=active`;
+  compara `transaction_amount` en MP y actualiza lo distinto vía
+  `PreApproval.update({auto_recurring:{transaction_amount, currency_id:ARS}})`.
+  Idempotente (salta si ya coincide), resultado por suscripción, nunca recrea preaprobaciones.
+- Protocolo (aviso 30 días, ya comprometido en términos): 1) correr sin flags → lista
+  emails afectados (`--list-emails` CSV); 2) avisar por email propio; 3) esperar ≥30 días;
+  4) `node --env-file=.env scripts/update-mp-mailclub-price.mjs --amount <ARS> --real`.
+- MP no acepta programar el cambio: el nuevo importe rige desde la próxima renovación.
+
+### P2. ¿MP avisa a la suscriptora del cambio de monto? (pregunta PDF §2) · Estado: hecho (diseño)
+- Verificado en código/SDK: `preApproval.update` solo dispara IPN al webhook propio;
+  MP **no** notifica ni pide confirmación a la pagadora. Por eso el aviso previo corre por
+  email propio (P1) y los términos ya lo exigen (30 días).
+- Resta validar en el dashboard de MP el día del lanzamiento que el débito sale con el
+  nuevo importe (ver PASOSPAGOS §9).
+
+### P3. Privacidad menciona idioma de la carta (PDF §13 vs §6) · Estado: hecho
+- El selector ES/EN de la carta es post-lanzamiento (§6), así que la mención en
+  `PrivacyPage.astro` (ES/EN) se quitó hasta que exista el campo. Cuando se implemente el
+  selector, restaurar la mención + columna en CSV/admin.
+
+### P4. Formato tarjeta: PDF §8 pedía "al lado, mismo formato" · Estado: pendiente (dueña)
+- Implementado Mail Club héroe + digital secundario (decisión hallmark, tokens intactos).
+  Confirmar con la propietaria que vale el layout héroe antes del lanzamiento.
+
+### P5. Plazo España 2–7 (§9) vs 3–7 (§10/§12) · Estado: hecho (código en 3–7)
+- Inconsistencia interna del PDF; el código unifica en **3–7 días** (página, FAQ, términos
+  ES/EN). Confirmar con la propietaria que vale 3–7.
+
+### P6. Menores · Estado: hecho
+- FAQ seguimiento con `universotriba@gmail.com` (ES/EN), igual que términos.
+- CSV etiquetas: `csv.ts` neutraliza fórmulas + BOM para Excel; cubre "Excel o CSV" del
+  PDF §5. Validar con la dueña que el CSV le sirve para imprimir etiquetas.

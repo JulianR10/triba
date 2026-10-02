@@ -87,7 +87,7 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
 
       <div class="grid grid-cols-1 md:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-10 md:gap-8 items-start">
         <!-- Plan secundario: Suscripción Triba digital -->
-        <div class="order-2">
+        <div class="order-2 md:sticky md:top-28 self-start">
           <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 flex flex-col h-full">
             <h3 class="font-heading text-lg font-bold text-triba-brown mb-4 uppercase tracking-wider">{dict.subscribe.subTitle}</h3>
             <ul class="space-y-3 font-sans text-base text-triba-brown mb-6 text-left">
@@ -129,8 +129,8 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
         </div>
 
         <!-- Plan héroe: Triba Mail Club -->
-        <div class="order-1 h-full flex flex-col justify-center">
-          <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-10 mb-8">
+        <div class="order-1">
+          <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-10">
             <div class="inline-block bg-triba-green text-triba-brown font-heading text-sm uppercase tracking-wider px-6 py-2 rounded-full border border-triba-black mb-6">{dict.mailClub.tag}</div>
             <h3 class="font-heading text-2xl md:text-3xl font-bold text-triba-brown mb-6 uppercase tracking-wider">{dict.mailClub.title}</h3>
             <ul class="space-y-2 font-sans text-base text-triba-brown text-left mb-4">
@@ -143,11 +143,13 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
             <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">{dict.mailClub.cutoffNote}</p>
 
             <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8">
-              <p id="mailclub-price" class="font-heading text-5xl md:text-6xl font-bold text-triba-red mb-1">—</p>
-              <p class="font-sans text-sm text-triba-brown/60 mb-1"><span id="mailclub-provider"></span></p>
-              <p id="mailclub-zone-note" class="font-sans text-xs text-triba-brown/60 mb-6"></p>
+              <div id="mailclub-price-wrap" class="hidden">
+                <p id="mailclub-price" class="font-heading text-5xl md:text-6xl font-bold text-triba-red mb-1">—</p>
+                <p class="font-sans text-sm text-triba-brown/60 mb-1"><span id="mailclub-provider"></span></p>
+                <p id="mailclub-zone-note" class="font-sans text-xs text-triba-brown/60 mb-6"></p>
+              </div>
 
-              <div id="mailclub-login-box" class="hidden text-center space-y-4 py-2">
+              <div id="mailclub-login-box" class="text-center space-y-4 py-2">
                 <p class="font-sans text-sm text-triba-brown/80">{dict.mailClub.loginTitle}</p>
                 <Button variant="primary" size="md" href={mailClubLoginHref}>{dict.mailClub.loginButton}</Button>
               </div>
@@ -214,33 +216,33 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
               <a href={localizePath("/mail-club", lang)} class="inline-block mt-2 font-sans text-xs text-triba-red hover:underline">{dict.mailClub.howItWorks}</a>
             </div>
           </div>
+        </div>
+      </div>
 
-          <div class="text-center">
+      <div class="text-center mt-12 md:mt-16 max-w-2xl mx-auto">
             <p class="font-serif italic text-base md:text-lg text-triba-brown/70 max-w-lg mx-auto text-balance">
               {dict.subscribe.socialProof}
             </p>
             <p class="font-heading text-xs uppercase tracking-wider text-triba-red mt-2">{dict.subscribe.team}</p>
           </div>
 
-          <!-- FAQ -->
-          <div class="mt-12">
-            <h2 class="font-heading text-2xl md:text-3xl uppercase tracking-wide text-triba-brown mb-8">{dict.subscribe.faqTitle}</h2>
-            <div class="space-y-4">
-              {faqs.map((faq) => (
-                <details data-faq class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group transition-shadow duration-300 hover:shadow-md">
-                  <summary class="px-5 py-4 font-heading text-sm font-medium uppercase tracking-wider text-triba-brown cursor-pointer list-none flex items-center justify-between">
-                    {faq.q}
-                    <span class="text-triba-red text-lg transition-transform duration-300 group-open:rotate-45 shrink-0 ml-3">+</span>
-                  </summary>
-                  <div class="faq-content">
-                    <div class="faq-content-inner px-5 pb-4 font-sans text-base text-triba-brown leading-relaxed">
-                      {faq.a}
-                    </div>
-                  </div>
-                </details>
-              ))}
-            </div>
-          </div>
+      <!-- FAQ -->
+      <div class="mt-12 max-w-3xl mx-auto">
+        <h2 class="font-heading text-2xl md:text-3xl uppercase tracking-wide text-triba-brown mb-8 text-center">{dict.subscribe.faqTitle}</h2>
+        <div class="space-y-4">
+          {faqs.map((faq) => (
+            <details data-faq class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group transition-shadow duration-300 hover:shadow-md">
+              <summary class="px-5 py-4 font-heading text-sm font-medium uppercase tracking-wider text-triba-brown cursor-pointer list-none flex items-center justify-between">
+                {faq.q}
+                <span class="text-triba-red text-lg transition-transform duration-300 group-open:rotate-45 shrink-0 ml-3">+</span>
+              </summary>
+              <div class="faq-content">
+                <div class="faq-content-inner px-5 pb-4 font-sans text-base text-triba-brown leading-relaxed">
+                  {faq.a}
+                </div>
+              </div>
+            </details>
+          ))}
         </div>
       </div>
 
@@ -342,13 +344,16 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
     // Sesión primero: sin cuenta no se muestra el formulario (la dirección
     // no se guarda en localStorage y no se pierde lo cargado).
     var loginBox = document.getElementById("mailclub-login-box");
+    var priceWrap = document.getElementById("mailclub-price-wrap");
     function revealForSession(hasSession: boolean) {
       if (hasSession) {
         form!.classList.remove("hidden");
         if (loginBox) loginBox.classList.add("hidden");
+        if (priceWrap) priceWrap.classList.remove("hidden");
       } else {
         form!.classList.add("hidden");
         if (loginBox) loginBox.classList.remove("hidden");
+        if (priceWrap) priceWrap.classList.add("hidden");
       }
     }
     if (supabase) {
