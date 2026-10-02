@@ -20,12 +20,15 @@ Hecho (además de lo anterior):
 - `MyAccountPage` tolera lista de ediciones vacía; aviso de éxito post-compra convertido en tarjeta flotante centrada y cerrable (X, fondo, Escape) para todos los pagos.
 - Aviso de éxito diferenciado por flujo (verificado en Preview con usuarios de prueba): digital conserva el texto actual; alta Mail Club confirma la suscripción postal activa; upgrade confirma el pase de digital a Mail Club con acceso digital conservado. Retorno explícito `flow=mail_club_upgrade` para Stripe y ruta `/api/checkout-return/mail-club-upgrade` para Mercado Pago (303).
 - Grilla de Suscribirme con altura mínima en desktop (el footer ya no se monta sobre el formulario).
+- Rediseño UI (hallmark, tokens de marca intactos): `/mail-club` Manifesto, Suscribirme con Mail Club héroe y digital secundario, Mi Cuenta pasada quirúrgica (hero sólido, reveals mínimos), emails de bienvenida (carta) y despacho (sello) sin cambiar textos ni envíos.
+- Mercado Pago: webhook de prueba configurado en el dashboard (URL Preview) y variables de prueba con alcance Preview/`mail-club` verificadas por nombre. OJO: el Access Token de prueba se expuso en el chat → regenerarlo y actualizar la variable.
+- Supabase Production: historial reconciliado (`017–020` marcadas aplicadas sin reejecutar) y `db push --dry-run` limpio (solo aplicaría `021–024`). Sin cambios aplicados todavía.
 
 Pendiente:
 
-- Mercado Pago: faltan `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` **de prueba** en Preview (siguen los valores live). **No probar ARS todavía.**
-- Webhook repetido explícito (la idempotencia está cubierta por diseño: upsert por conflicto, guardas de estado y cargo único verificado; falta un reenvío manual desde el dashboard).
+- Mercado Pago ARS: probar en sandbox (bloqueado por cuenta compradora) o validar en live el día del lanzamiento. Confirmar regeneración del token de prueba expuesto.
 - Preparación de producción (§8) y día del lanzamiento (§9).
+- Puertas no técnicas: costeo postal medido, export del newsletter, fotos definitivas, aprobación legal.
 
 ## 1. Conseguir acceso de forma segura
 
