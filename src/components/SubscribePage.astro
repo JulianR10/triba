@@ -212,8 +212,7 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
                   { code: "ARS", price: dict.mailClub.arsPrice, pay: dict.mailClub.mpLabel, note: dict.mailClub.arsNote },
                 ].map((row) => (
                   <div data-mc-plan={row.code} class={row.code === "EUR" ? "" : "hidden"}>
-                    <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1 whitespace-nowrap">{row.price}</p>
-                    <p class="font-sans text-base text-triba-brown/60">{dict.subscribe.period}</p>
+                    <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1 whitespace-nowrap">{row.price} <span class="font-sans text-lg md:text-xl font-normal text-triba-brown/60">{dict.subscribe.period}</span></p>
                     <p class="font-sans text-xs text-triba-brown/60 mt-1">{row.pay} · {row.note}</p>
                   </div>
                 ))}
@@ -338,11 +337,11 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
 
     tabs.forEach(function (t) {
       t.classList.remove("bg-triba-red", "text-triba-white");
-      t.classList.add("bg-triba-white", "text-triba-brown");
+      t.classList.add("bg-triba-white", "text-triba-brown", "hover:bg-triba-cream");
     });
     var activeTab = document.querySelector('[data-currency="' + currency + '"]');
     if (activeTab) {
-      activeTab.classList.remove("bg-triba-white", "text-triba-brown");
+      activeTab.classList.remove("bg-triba-white", "text-triba-brown", "hover:bg-triba-cream");
       activeTab.classList.add("bg-triba-red", "text-triba-white");
     }
     planEls.forEach(function (p) {
@@ -392,14 +391,16 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
     });
 
     // Pestañas de precio Mail Club (solo visuales, espejo de la digital).
+    // La activa va en rojo SIN hover: si conserva hover:bg-triba-cream, al
+    // pasar el mouse queda fondo crema con texto blanco (ilegible).
     document.querySelectorAll("[data-mc-currency]").forEach(function (btn) {
       btn.addEventListener("click", function () {
         var code = (btn as HTMLElement).dataset.mcCurrency;
         document.querySelectorAll("[data-mc-currency]").forEach(function (t) {
           t.classList.remove("bg-triba-red", "text-triba-white");
-          t.classList.add("bg-triba-white", "text-triba-brown");
+          t.classList.add("bg-triba-white", "text-triba-brown", "hover:bg-triba-cream");
         });
-        btn.classList.remove("bg-triba-white", "text-triba-brown");
+        btn.classList.remove("bg-triba-white", "text-triba-brown", "hover:bg-triba-cream");
         btn.classList.add("bg-triba-red", "text-triba-white");
         document.querySelectorAll("[data-mc-plan]").forEach(function (p) {
           (p as HTMLElement).classList.toggle("hidden", (p as HTMLElement).dataset.mcPlan !== code);
