@@ -190,10 +190,33 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
             <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">{dict.mailClub.cutoffNote}</p>
 
             <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8">
-              <div class="space-y-3 mb-6 text-center">
-                <p class="font-heading text-xl md:text-2xl font-bold text-triba-red whitespace-nowrap">{dict.mailClub.eurPrice} <span class="font-sans text-xs font-normal text-triba-brown/60">{dict.subscribe.period} · {dict.mailClub.cardLabel} · {dict.mailClub.eurNote}</span></p>
-                <p class="font-heading text-xl md:text-2xl font-bold text-triba-red whitespace-nowrap">{dict.mailClub.usdPrice} <span class="font-sans text-xs font-normal text-triba-brown/60">{dict.subscribe.period} · {dict.mailClub.cardLabel} · {dict.mailClub.usdNote}</span></p>
-                <p class="font-heading text-xl md:text-2xl font-bold text-triba-red whitespace-nowrap">{dict.mailClub.arsPrice} <span class="font-sans text-xs font-normal text-triba-brown/60">{dict.subscribe.period} · {dict.mailClub.mpLabel} · {dict.mailClub.arsNote}</span></p>
+              <div class="flex border-2 border-triba-black rounded-full overflow-hidden mb-6 w-full max-w-xs mx-auto" id="mailclub-segments">
+                {[
+                  { code: "EUR", price: dict.mailClub.eurPrice, pay: dict.mailClub.cardLabel, note: dict.mailClub.eurNote },
+                  { code: "USD", price: dict.mailClub.usdPrice, pay: dict.mailClub.cardLabel, note: dict.mailClub.usdNote },
+                  { code: "ARS", price: dict.mailClub.arsPrice, pay: dict.mailClub.mpLabel, note: dict.mailClub.arsNote },
+                ].map((row, i) => (
+                  <button
+                    type="button"
+                    data-mc-currency={row.code}
+                    class={"flex-1 py-4 font-heading text-sm uppercase tracking-wider transition-all " + (i < 2 ? "border-r-2 border-triba-black " : "") + (row.code === "EUR" ? "bg-triba-red text-triba-white" : "bg-triba-white text-triba-brown hover:bg-triba-cream")}
+                  >
+                    {row.code}
+                  </button>
+                ))}
+              </div>
+              <div class="mb-6 text-center">
+                {[
+                  { code: "EUR", price: dict.mailClub.eurPrice, pay: dict.mailClub.cardLabel, note: dict.mailClub.eurNote },
+                  { code: "USD", price: dict.mailClub.usdPrice, pay: dict.mailClub.cardLabel, note: dict.mailClub.usdNote },
+                  { code: "ARS", price: dict.mailClub.arsPrice, pay: dict.mailClub.mpLabel, note: dict.mailClub.arsNote },
+                ].map((row) => (
+                  <div data-mc-plan={row.code} class={row.code === "EUR" ? "" : "hidden"}>
+                    <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1 whitespace-nowrap">{row.price}</p>
+                    <p class="font-sans text-base text-triba-brown/60">{dict.subscribe.period}</p>
+                    <p class="font-sans text-xs text-triba-brown/60 mt-1">{row.pay} · {row.note}</p>
+                  </div>
+                ))}
               </div>
               <div id="mailclub-price-wrap" class="hidden">
                 <p id="mailclub-price" class="font-heading text-5xl md:text-6xl font-bold text-triba-red mb-1 whitespace-nowrap">—</p>
@@ -365,6 +388,22 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
     tabs.forEach(function (btn) {
       btn.addEventListener("click", function () {
         selectCurrency(btn.dataset.currency!);
+      });
+    });
+
+    // Pestañas de precio Mail Club (solo visuales, espejo de la digital).
+    document.querySelectorAll("[data-mc-currency]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var code = (btn as HTMLElement).dataset.mcCurrency;
+        document.querySelectorAll("[data-mc-currency]").forEach(function (t) {
+          t.classList.remove("bg-triba-red", "text-triba-white");
+          t.classList.add("bg-triba-white", "text-triba-brown");
+        });
+        btn.classList.remove("bg-triba-white", "text-triba-brown");
+        btn.classList.add("bg-triba-red", "text-triba-white");
+        document.querySelectorAll("[data-mc-plan]").forEach(function (p) {
+          (p as HTMLElement).classList.toggle("hidden", (p as HTMLElement).dataset.mcPlan !== code);
+        });
       });
     });
 
