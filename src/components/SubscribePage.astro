@@ -61,6 +61,46 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
     min-height: 0;
     overflow: hidden;
   }
+
+  /* ===== Mail Club espectacular (misma estructura, más presencia) =====
+     Fondo rosa + sombra dura + brillo barriendo la tarjeta + sticker Nuevo
+     con wiggle. Todo decorativo y con respeto a reduced-motion. */
+  .mailclub-card {
+    position: relative;
+    overflow: hidden;
+  }
+  .mailclub-card::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 40%;
+    left: -60%;
+    background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.5), transparent);
+    transform: skewX(-20deg);
+    pointer-events: none;
+    animation: mailclub-card-shine 3.2s ease-in-out infinite;
+  }
+  .mailclub-sticker-card {
+    animation: mailclub-sticker-wiggle 3.2s ease-in-out infinite;
+  }
+  @keyframes mailclub-card-shine {
+    0%, 55% { left: -60%; }
+    90%, 100% { left: 130%; }
+  }
+  @keyframes mailclub-sticker-wiggle {
+    0%, 100% { transform: rotate(3deg); }
+    50% { transform: rotate(-3deg) scale(1.05); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mailclub-card::after,
+    .mailclub-sticker-card {
+      animation: none;
+    }
+    .mailclub-card::after {
+      display: none;
+    }
+  }
 </style>
 
 <Layout title={dict.subscribe.title} description={dict.subscribe.description} canonical={canonical} lang={lang} navLogoAlways>
@@ -130,8 +170,8 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
 
         <!-- Triba Mail Club -->
         <div>
-          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 flex flex-col h-full">
-            <div class="inline-block bg-triba-green text-triba-brown font-heading text-sm uppercase tracking-wider px-6 py-2 rounded-full border border-triba-black mb-6">{dict.mailClub.tag}</div>
+          <div class="mailclub-card bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-8 flex flex-col h-full shadow-[6px_6px_0_#35220A]">
+            <div class="mailclub-sticker-card inline-block self-start bg-triba-green text-triba-brown font-heading text-sm uppercase tracking-wider px-6 py-2 rounded-full border-2 border-triba-black shadow-[2px_2px_0_#35220A] mb-6">✦ {dict.mailClub.tag}</div>
             <h3 class="font-heading text-2xl md:text-3xl font-bold text-triba-brown mb-6 uppercase tracking-wider">{dict.mailClub.title}</h3>
             <ul class="space-y-2 font-sans text-base text-triba-brown text-left mb-4">
               {
