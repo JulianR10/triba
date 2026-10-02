@@ -36,8 +36,15 @@ const faqs = dict.subscribe.faqs;
     <div class="max-w-6xl mx-auto">
 
       <!-- Declaración -->
-      <div class="max-w-3xl mb-20 md:mb-28 pt-8 md:pt-12 reveal-text" data-reveal>
+      <div class="max-w-3xl pt-8 md:pt-12 reveal-text" data-reveal>
         <PatchTitle content={page.heroTitle} tag="h1" centered={false} class="text-5xl md:text-7xl text-triba-brown" />
+      </div>
+
+      <div class="flex justify-center my-10 md:my-14">
+        <img src="/mailClub.webp" alt={page.heroTitle} fetchpriority="high" width="1054" height="985" class="w-full max-w-3xl rounded-xl border-2 border-triba-black object-cover" />
+      </div>
+
+      <div class="max-w-3xl mb-20 md:mb-28">
         <p class="font-serif italic text-xl md:text-2xl text-triba-red mt-6">{page.heroLead}</p>
         <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mt-6 text-balance">
           {page.heroBody}
@@ -47,20 +54,6 @@ const faqs = dict.subscribe.faqs;
         </div>
       </div>
 
-      <div class="rounded-xl border-2 border-triba-black overflow-hidden mb-20 md:mb-28 bg-triba-cream">
-        <img src="https://picsum.photos/seed/triba-mailclub-hero/1280/720" alt={page.heroTitle} fetchpriority="high" width="1280" height="720" class="w-full aspect-[16/9] object-cover" />
-      </div>
-
-      <!-- Qué trae tu sobre · lista póster alternada -->
-      <h2 class="font-heading text-3xl md:text-5xl uppercase tracking-wide text-triba-brown mb-12 md:mb-16 max-w-3xl">{page.box2Title}</h2>
-      <ul class="mb-10 md:mb-14">
-        {page.box2Items.map((item, i) => (
-          <li class={`flex items-center gap-5 md:gap-10 mb-10 md:mb-14 ${i % 2 === 1 ? "md:flex-row-reverse md:text-right" : ""}`}>
-            <img src={`https://picsum.photos/seed/triba-mailclub-${i + 1}/400/300`} alt={item} loading="lazy" width="400" height="300" class={`object-cover rounded-lg border-2 border-triba-black shrink-0 bg-triba-cream ${i % 2 === 1 ? "w-36 h-28 md:w-52 md:h-40 rotate-2" : "w-28 h-24 md:w-40 md:h-32 -rotate-2"}`} />
-            <p class="font-heading text-lg md:text-2xl uppercase tracking-wide text-triba-brown leading-snug"><span class="text-triba-red">✦</span> {item}</p>
-          </li>
-        ))}
-      </ul>
       <p class="font-sans text-base text-triba-brown/80 mb-20 md:mb-28 text-balance max-w-2xl">{page.box2Note}</p>
 
       <!-- Cómo funciona · declaraciones numeradas -->
