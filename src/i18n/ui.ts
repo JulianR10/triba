@@ -21,7 +21,7 @@ export const ui = {
     footer: {
       privacy: "Privacidad",
       terms: "Términos y condiciones",
-      madeBy: "Hecho por",
+      madeBy: "Desarrollado por",
     },
     layout: {
       defaultTitle: "Comunidad Triba — Revista digital hecha por y para mujeres",
@@ -329,7 +329,7 @@ export const ui = {
     footer: {
       privacy: "Privacy",
       terms: "Terms & Conditions",
-      madeBy: "Made by",
+      madeBy: "Developed by",
     },
     layout: {
       defaultTitle: "Comunidad Triba — Digital magazine by and for women",
