@@ -11,6 +11,10 @@ Hecho:
 - Variables de Preview para la rama `mail-club` apuntan al Supabase de pruebas; Auth permite el dominio Preview; protección Vercel desactivada para Preview.
 - Stripe Test mode configurado y verificado por API: clave `sk_test_…`, webhook secret, 4 Price IDs (digital EUR/USD 7, Mail Club EUR 10,50 / USD 12,50).
 - Alta Mail Club EUR probada (Italia, tarjeta de prueba) → suscripción activa en staging. Alta USD probada → activa en staging.
+- Upgrade digital → Mail Club EUR y USD verificados de punta a punta en Preview: alta digital con tarjeta de prueba, pago único de la diferencia (€3,50 / U$S 5,50, un solo cargo), cambio de tarifa recurrente a Mail Club (EUR 10,50 / USD 12,50), fundadoras #2 y #3 asignadas sin duplicados, bienvenida por email.
+- Tarjeta rechazada (`4000000000000002`): Stripe la rechaza, no se crea suscripción y el perfil queda `free`.
+- Downgrade a digital al fin del período verificado vía app: flags `scheduled_plan_type=digital` + schedule Stripe con fase Mail Club vigente y fase digital posterior (`end_behavior=release`). Requirió fix: anclar la fase actual con su `start_date` vigente (commits `18c0ad1`/`eccb46f`).
+- Limpieza: suscripciones e2e canceladas desde Stripe (webhooks conciliaron las bajas en staging) y filas de prueba eliminadas. Restan solo 2 usuarios `e2e-*@example.com` inertes (sin suscripciones ni perfil) + sus consentimientos y números de fundadora, que son inmutables por diseño y no se reutilizan.
 - `MyAccountPage` tolera lista de ediciones vacía; aviso de éxito post-compra convertido en tarjeta flotante centrada y cerrable (X, fondo, Escape) para todos los pagos.
 - Aviso de éxito diferenciado por flujo (verificado en Preview con usuarios de prueba): digital conserva el texto actual; alta Mail Club confirma la suscripción postal activa; upgrade confirma el pase de digital a Mail Club con acceso digital conservado. Retorno explícito `flow=mail_club_upgrade` para Stripe y ruta `/api/checkout-return/mail-club-upgrade` para Mercado Pago (303).
 - Grilla de Suscribirme con altura mínima en desktop (el footer ya no se monta sobre el formulario).
@@ -18,8 +22,7 @@ Hecho:
 Pendiente:
 
 - Mercado Pago: faltan `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` **de prueba** en Preview (siguen los valores live). **No probar ARS todavía.**
-- Upgrades digital → Mail Club en EUR y USD, más casos: pago rechazado/pendiente, webhook repetido, cancelación y vuelta a digital al fin del período.
-- Limpieza de Stripe Test mode al terminar (cancelar suscripciones de prueba desde Stripe, no desde la base).
+- Webhook repetido explícito (la idempotencia está cubierta por diseño: upsert por conflicto, guardas de estado y cargo único verificado; falta un reenvío manual desde el dashboard).
 - Preparación de producción (§8) y día del lanzamiento (§9).
 
 ## 1. Conseguir acceso de forma segura
@@ -105,13 +108,13 @@ Sin este paso, ninguna prueba de pago puede funcionar.
 
 Después de guardar las variables, redeplegar el Preview para que Vercel las aplique. Confirmar que el deployment pertenece a la rama `mail-club` y usar cuentas de prueba.
 
-Hecho: alta nueva Mail Club EUR (Stripe) y USD (Stripe) → activas en staging.
+Hecho: alta nueva Mail Club EUR (Stripe) y USD (Stripe) → activas en staging. Upgrade digital → Mail Club EUR/USD, tarjeta rechazada y downgrade al fin del período → verificados (ver Estado actual).
 
 Falta:
 
-- Upgrade digital → Mail Club en EUR y USD (con suscripciones digitales creadas en modo de prueba): comprobar cargo diferencial exacto y cambio de tarifa recurrente solo tras pago confirmado.
 - Upgrade ARS cuando esté MP de prueba.
-- Pago aprobado, rechazado, pendiente y webhook repetido; comprobar que no se dupliquen cargos, suscripciones, fundadoras ni emails.
+- Webhook repetido explícito (reenviar un evento desde el dashboard y comprobar que no duplica nada).
+- Pago pendiente / 3D Secure (tarjeta `4000000000003220` u otra con autenticación).
 - Cancelación o vuelta a digital al final del período pagado.
 - Confirmar que la bienvenida llega a una casilla controlada. Los emails transaccionales pueden enviarse de verdad si Preview utiliza Sender live.
 - No registrar despachos físicos ni preparar envíos reales desde cuentas de prueba.
