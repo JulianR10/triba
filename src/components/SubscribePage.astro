@@ -88,19 +88,19 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
       <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-stretch">
         <!-- Suscripción Triba digital -->
         <div>
-          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 flex flex-col h-full">
+          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 flex flex-col h-full text-center">
             <h3 class="font-heading text-lg font-bold text-triba-brown mb-4 uppercase tracking-wider">{dict.subscribe.subTitle}</h3>
-            <ul class="space-y-3 font-sans text-base text-triba-brown mb-6 text-left">
+            <ul class="space-y-3 font-sans text-base text-triba-brown mb-6">
               {
                 dict.subscribe.bullets.map((b) => (
-                  <li class="flex justify-start gap-2">✦ {b}</li>
+                  <li class="flex justify-center gap-2">✦ {b}</li>
                 ))
               }
             </ul>
             <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">{dict.subscribe.accessNote}</p>
 
             <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 md:p-8 mt-auto">
-              <div class="flex border-2 border-triba-black rounded-full overflow-hidden mb-6 w-full max-w-xs" id="currency-segments">
+              <div class="flex border-2 border-triba-black rounded-full overflow-hidden mb-6 w-full max-w-xs mx-auto" id="currency-segments">
                 {plans.map((p, i) => (
                   <button
                     data-currency={p.moneda}
@@ -113,7 +113,7 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
 
               {plans.map((p) => (
                 <div data-plan={p.moneda} class={p.moneda === "EUR" ? "" : "hidden"}>
-                  <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1">{p.simbolo}{p.precio}</p>
+                  <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1 whitespace-nowrap">{p.simbolo}{p.precio}</p>
                   <p class="font-sans text-base text-triba-brown/60 mb-8">{dict.subscribe.period}</p>
 
                   <div class="space-y-3 mb-6">
@@ -143,22 +143,25 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
             <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">{dict.mailClub.cutoffNote}</p>
 
             <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8">
-              <div class="space-y-4 mb-6">
+              <div class="space-y-6 mb-6">
                 <div>
-                  <p class="font-heading text-2xl md:text-3xl font-bold text-triba-red">{dict.mailClub.eurPrice}<span class="font-sans text-sm font-normal text-triba-brown/60"> {dict.subscribe.period}</span></p>
-                  <p class="font-sans text-xs text-triba-brown/60">{dict.mailClub.cardLabel} · {dict.mailClub.eurNote}</p>
+                  <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1 whitespace-nowrap">{dict.mailClub.eurPrice}</p>
+                  <p class="font-sans text-base text-triba-brown/60">{dict.subscribe.period}</p>
+                  <p class="font-sans text-xs text-triba-brown/60 mt-1">{dict.mailClub.cardLabel} · {dict.mailClub.eurNote}</p>
                 </div>
                 <div>
-                  <p class="font-heading text-2xl md:text-3xl font-bold text-triba-red">{dict.mailClub.usdPrice}<span class="font-sans text-sm font-normal text-triba-brown/60"> {dict.subscribe.period}</span></p>
-                  <p class="font-sans text-xs text-triba-brown/60">{dict.mailClub.cardLabel} · {dict.mailClub.usdNote}</p>
+                  <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1 whitespace-nowrap">{dict.mailClub.usdPrice}</p>
+                  <p class="font-sans text-base text-triba-brown/60">{dict.subscribe.period}</p>
+                  <p class="font-sans text-xs text-triba-brown/60 mt-1">{dict.mailClub.cardLabel} · {dict.mailClub.usdNote}</p>
                 </div>
                 <div>
-                  <p class="font-heading text-2xl md:text-3xl font-bold text-triba-red">{dict.mailClub.arsPrice}<span class="font-sans text-sm font-normal text-triba-brown/60"> {dict.subscribe.period}</span></p>
-                  <p class="font-sans text-xs text-triba-brown/60">{dict.mailClub.mpLabel} · {dict.mailClub.arsNote}</p>
+                  <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1 whitespace-nowrap">{dict.mailClub.arsPrice}</p>
+                  <p class="font-sans text-base text-triba-brown/60">{dict.subscribe.period}</p>
+                  <p class="font-sans text-xs text-triba-brown/60 mt-1">{dict.mailClub.mpLabel} · {dict.mailClub.arsNote}</p>
                 </div>
               </div>
               <div id="mailclub-price-wrap" class="hidden">
-                <p id="mailclub-price" class="font-heading text-5xl md:text-6xl font-bold text-triba-red mb-1">—</p>
+                <p id="mailclub-price" class="font-heading text-5xl md:text-6xl font-bold text-triba-red mb-1 whitespace-nowrap">—</p>
                 <p class="font-sans text-sm text-triba-brown/60 mb-1"><span id="mailclub-provider"></span></p>
                 <p id="mailclub-zone-note" class="font-sans text-xs text-triba-brown/60 mb-6"></p>
               </div>
