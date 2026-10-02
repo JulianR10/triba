@@ -1,1 +1,16 @@
-[{"date":"2026-10-02","macrostructure":"Manifesto","theme":"triba-brand (locked tokens)","enrichment":"none (typography only)","brief":"Triba /mail-club redesign, editorial tone, copy/routes/brand preserved"}]
+[
+ {
+  "date": "2026-10-02",
+  "macrostructure": "Split Studio (variant: hero-plan + secondary-plan diptych)",
+  "theme": "triba-brand (locked tokens)",
+  "enrichment": "none (typography only)",
+  "brief": "Triba /suscribirme restyle: Mail Club hero, digital secondary, logic/copy/routes preserved"
+ },
+ {
+  "date": "2026-10-02",
+  "macrostructure": "Manifesto",
+  "theme": "triba-brand (locked tokens)",
+  "enrichment": "none (typography only)",
+  "brief": "Triba /mail-club redesign, editorial tone, copy/routes/brand preserved"
+ }
+]
