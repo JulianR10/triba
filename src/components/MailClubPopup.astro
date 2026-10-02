@@ -9,7 +9,8 @@ const copy = dict.popup;
 ---
 
 <style>
-  #mailclub-popup-card {
+  #mailclub-popup-card,
+  #mailclub-popup [data-popup-backdrop] {
     transition:
       opacity 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94),
       transform 0.45s cubic-bezier(0.25, 0.46, 0.45, 0.94);
@@ -18,12 +19,19 @@ const copy = dict.popup;
     opacity: 0;
     transform: translateY(16px) scale(0.97);
   }
+  #mailclub-popup[data-open="0"] [data-popup-backdrop] {
+    opacity: 0;
+  }
   #mailclub-popup[data-open="1"] #mailclub-popup-card {
     opacity: 1;
     transform: none;
   }
+  #mailclub-popup[data-open="1"] [data-popup-backdrop] {
+    opacity: 1;
+  }
   @media (prefers-reduced-motion: reduce) {
-    #mailclub-popup-card {
+    #mailclub-popup-card,
+    #mailclub-popup [data-popup-backdrop] {
       transition: none;
     }
   }
@@ -97,9 +105,23 @@ const copy = dict.popup;
       }
     }
 
+    // Bloquea el scroll sin provocar el salto horizontal: compensa el
+    // grosor de la scrollbar (desaparece al fijar overflow: hidden).
+    function lockScroll(locked: boolean) {
+      var doc = document.documentElement;
+      if (locked) {
+        var scrollbarWidth = window.innerWidth - doc.clientWidth;
+        if (scrollbarWidth > 0) doc.style.paddingRight = scrollbarWidth + "px";
+        doc.style.overflow = "hidden";
+      } else {
+        doc.style.overflow = "";
+        doc.style.paddingRight = "";
+      }
+    }
+
     function close() {
       root!.dataset.open = "0";
-      document.documentElement.style.overflow = "";
+      lockScroll(false);
       markSeen();
       // Esconde el overlay cuando termina la salida: sin esto el fondo
       // queda montado y la web se ve opaca.
@@ -119,7 +141,7 @@ const copy = dict.popup;
       requestAnimationFrame(function () {
         root!.dataset.open = "1";
       });
-      document.documentElement.style.overflow = "hidden";
+      lockScroll(true);
       var firstClose = root!.querySelector("[data-popup-close]") as HTMLElement | null;
       if (firstClose) firstClose.focus({ preventScroll: true });
     }
