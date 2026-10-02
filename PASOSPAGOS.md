@@ -13,6 +13,7 @@ Hecho:
 - Alta Mail Club EUR probada (Italia, tarjeta de prueba) → suscripción activa en staging. Alta USD probada → activa en staging.
 - Upgrade digital → Mail Club EUR y USD verificados de punta a punta en Preview: alta digital con tarjeta de prueba, pago único de la diferencia (€3,50 / U$S 5,50, un solo cargo), cambio de tarifa recurrente a Mail Club (EUR 10,50 / USD 12,50), fundadoras #2 y #3 asignadas sin duplicados, bienvenida por email.
 - Tarjeta rechazada (`4000000000000002`): Stripe la rechaza, no se crea suscripción y el perfil queda `free`.
+- 3D Secure (`4000000000003220`, alta Mail Club EUR): challenge mock completado en iframe, retorno con `flow=mail_club`, activación por la vía asincrónica (`checkout.session.completed` pendiente + `invoice.paid`), fundadora #4 asignada sin duplicados. Suscripción de prueba cancelada y filas eliminadas después.
 - Downgrade a digital al fin del período verificado vía app: flags `scheduled_plan_type=digital` + schedule Stripe con fase Mail Club vigente y fase digital posterior (`end_behavior=release`). Requirió fix: anclar la fase actual con su `start_date` vigente (commits `18c0ad1`/`eccb46f`).
 - Limpieza: suscripciones e2e canceladas desde Stripe (webhooks conciliaron las bajas en staging) y filas de prueba eliminadas. Restan solo 2 usuarios `e2e-*@example.com` inertes (sin suscripciones ni perfil) + sus consentimientos y números de fundadora, que son inmutables por diseño y no se reutilizan.
 - `MyAccountPage` tolera lista de ediciones vacía; aviso de éxito post-compra convertido en tarjeta flotante centrada y cerrable (X, fondo, Escape) para todos los pagos.
@@ -114,7 +115,6 @@ Falta:
 
 - Upgrade ARS cuando esté MP de prueba.
 - Webhook repetido explícito (reenviar un evento desde el dashboard y comprobar que no duplica nada).
-- Pago pendiente / 3D Secure (tarjeta `4000000000003220` u otra con autenticación).
 - Cancelación o vuelta a digital al final del período pagado.
 - Confirmar que la bienvenida llega a una casilla controlada. Los emails transaccionales pueden enviarse de verdad si Preview utiliza Sender live.
 - No registrar despachos físicos ni preparar envíos reales desde cuentas de prueba.
