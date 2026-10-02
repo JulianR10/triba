@@ -224,8 +224,7 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
               </div>
 
               <div id="mailclub-login-box" class="text-center space-y-4 py-2">
-                <p class="font-sans text-sm text-triba-brown/80">{dict.mailClub.loginTitle}</p>
-                <Button variant="primary" size="md" href={mailClubLoginHref}>{dict.mailClub.loginButton}</Button>
+                <Button variant="primary" size="md" fullWidth href={mailClubLoginHref}>{dict.subscribe.subscribeButton}</Button>
               </div>
               <form class="space-y-3 text-left hidden" id="mailclub-form"
                 data-messages={JSON.stringify(mailClubMessages)}
@@ -283,7 +282,7 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
                   </span>
                 </label>
                 <p id="mailclub-msg" class="hidden font-sans text-xs text-triba-red text-center"></p>
-                <Button variant="default" size="md" type="submit">{dict.subscribe.subscribeButton}</Button>
+                <Button variant="default" size="md" fullWidth type="submit">{dict.subscribe.subscribeButton}</Button>
               </form>
 
               <p class="font-sans text-[11px] text-triba-brown/50 mt-4 text-center">{dict.subscribe.accountFirst}</p>

@@ -240,8 +240,6 @@ export const ui = {
       needLogin: "Iniciá sesión para suscribirte al Mail Club.",
       error: "No pudimos procesar tu suscripción. Intentá de nuevo.",
       networkError: "Error de conexión. Intentá de nuevo.",
-      loginTitle: "Primero creá tu cuenta gratis para continuar con el Mail Club.",
-      loginButton: "Iniciar sesión / Crear cuenta",
     },
     mailClubPage: {
       title: "Mail Club",
@@ -678,8 +676,6 @@ export const ui = {
       needLogin: "Sign in to join the Mail Club.",
       error: "We couldn't process your subscription. Try again.",
       networkError: "Connection error. Try again.",
-      loginTitle: "First create your free account to continue with the Mail Club.",
-      loginButton: "Sign in / Create account",
     },
     mailClubPage: {
       title: "Mail Club",
