@@ -69,6 +69,10 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
     position: relative;
     overflow: hidden;
   }
+  .mailclub-card > * {
+    position: relative;
+    z-index: 1;
+  }
   .mailclub-card::after {
     content: "";
     position: absolute;
@@ -79,14 +83,17 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
     background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.5), transparent);
     transform: skewX(-20deg);
     pointer-events: none;
-    animation: mailclub-card-shine 3.2s ease-in-out infinite;
+    z-index: 0;
+  }
+  .mailclub-card.shine-on::after {
+    animation: mailclub-card-shine 1.6s ease-in-out 1;
   }
   .mailclub-sticker-card {
     animation: mailclub-sticker-wiggle 3.2s ease-in-out infinite;
   }
   @keyframes mailclub-card-shine {
-    0%, 55% { left: -60%; }
-    90%, 100% { left: 130%; }
+    from { left: -60%; }
+    to { left: 130%; }
   }
   @keyframes mailclub-sticker-wiggle {
     0%, 100% { transform: rotate(3deg); }
@@ -125,10 +132,10 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
         <PatchTitle content={dict.subscribe.patchTitle} tag="h1" class="text-5xl md:text-7xl text-triba-brown" />
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-stretch">
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 items-start">
         <!-- Suscripción Triba digital -->
         <div>
-          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 flex flex-col h-full text-center">
+          <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 flex flex-col text-center">
             <h3 class="font-heading text-lg font-bold text-triba-brown mb-4 uppercase tracking-wider">{dict.subscribe.subTitle}</h3>
             <ul class="space-y-3 font-sans text-base text-triba-brown mb-6">
               {
@@ -390,6 +397,22 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
     });
 
     setupMailClubForm();
+
+    // Brillo de la tarjeta Mail Club: una sola pasada al entrar en vista.
+    var shineCard = document.querySelector(".mailclub-card");
+    if (shineCard && "IntersectionObserver" in window) {
+      var shineObserver = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          if (entry.isIntersecting) {
+            shineCard!.classList.add("shine-on");
+            shineObserver.disconnect();
+          }
+        });
+      }, { threshold: 0.3 });
+      shineObserver.observe(shineCard);
+    } else if (shineCard) {
+      shineCard.classList.add("shine-on");
+    }
 
     flushPendingCheckout();
   }
