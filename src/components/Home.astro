@@ -4,6 +4,7 @@ import Button from "../components/Button.astro";
 import MagazineCard from "../components/MagazineCard.astro";
 import MagazineSlider from "../components/MagazineSlider.astro";
 import PatchTitle from "../components/PatchTitle.astro";
+import MailClubPopup from "../components/MailClubPopup.astro";
 import { t, type Locale } from "../i18n/ui";
 import { localizePath } from "../i18n/locale";
 
@@ -134,6 +135,90 @@ const scatter = [
       padding-top: 1rem !important;
     }
   }
+
+  /* ===== Mail Club novelty effect (hero CTA) =====
+     Beat on the wrapper (never on the <a> itself, so hover scale +
+     magnetic JS transforms keep working), expanding ring, shine sweep
+     clipped inside the button, and a rotated "Nuevo/New" sticker. */
+  .mailclub-wrap {
+    position: relative;
+    display: inline-block;
+    animation: mailclub-beat 2.6s ease-in-out infinite;
+  }
+  .mailclub-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -2px;
+    border: 2px solid #E91A39;
+    border-radius: 12px;
+    opacity: 0;
+    pointer-events: none;
+    animation: mailclub-ring 2.6s ease-out infinite;
+  }
+  .mailclub-wrap > a {
+    position: relative;
+    overflow: hidden;
+  }
+  .mailclub-wrap > a::after {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 45%;
+    left: -70%;
+    background: linear-gradient(105deg, transparent, rgba(255, 255, 255, 0.55), transparent);
+    transform: skewX(-20deg);
+    pointer-events: none;
+    animation: mailclub-shine 2.6s ease-in-out infinite;
+  }
+  .mailclub-sticker {
+    position: absolute;
+    top: -0.9rem;
+    right: -0.6rem;
+    background: #BCE85E;
+    color: #35220A;
+    border: 2px solid #35220A;
+    border-radius: 999px;
+    font-family: "Bootzy TM", Helvetica, Arial, sans-serif;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    padding: 0.2rem 0.65rem;
+    white-space: nowrap;
+    box-shadow: 2px 2px 0 #35220A;
+    animation: mailclub-wiggle 2.6s ease-in-out infinite;
+  }
+  @keyframes mailclub-beat {
+    0%, 100% { transform: scale(1); }
+    8% { transform: scale(1.045); }
+    16% { transform: scale(1); }
+    24% { transform: scale(1.03); }
+    34% { transform: scale(1); }
+  }
+  @keyframes mailclub-ring {
+    0% { transform: scale(1); opacity: 0.7; }
+    55%, 100% { transform: scale(1.12); opacity: 0; }
+  }
+  @keyframes mailclub-shine {
+    0%, 55% { left: -70%; }
+    90%, 100% { left: 130%; }
+  }
+  @keyframes mailclub-wiggle {
+    0%, 100% { transform: rotate(8deg); }
+    50% { transform: rotate(-4deg) scale(1.06); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .mailclub-wrap,
+    .mailclub-wrap::before,
+    .mailclub-wrap > a::after,
+    .mailclub-sticker {
+      animation: none;
+    }
+    .mailclub-wrap::before,
+    .mailclub-wrap > a::after {
+      display: none;
+    }
+  }
 </style>
 
   <div class="relative isolate">
@@ -162,8 +247,11 @@ const scatter = [
     </div>
 
     <div class="flex flex-col sm:flex-row gap-4 items-center justify-center my-16">
-      <Button variant="default" href={localizePath("/suscribirme", lang)} class="px-10 py-4 text-base" font="sans">{dict.home.subscribe}</Button>
-      <Button variant="default" href={localizePath("/mail-club", lang)} class="px-10 py-4 text-base" font="sans">{dict.mailClub.title}</Button>
+      <span class="mailclub-wrap">
+        <Button variant="mailclub" href={localizePath("/mail-club", lang)} class="px-10 py-4 text-base" font="sans">{dict.mailClub.title}</Button>
+        <span class="mailclub-sticker" aria-hidden="true">✦ {dict.mailClub.tag}</span>
+      </span>
+      <Button variant="default" href={localizePath("/suscribirme", lang)} class="px-10 py-4 text-base" font="sans">{dict.home.digitalMagazine}</Button>
     </div>
 
     <div class="md:hidden mb-8 flex justify-center">
@@ -294,6 +382,7 @@ const scatter = [
     </div>
   </section>
   </div>
+  <MailClubPopup lang={lang} />
 </Layout>
 
 <script>

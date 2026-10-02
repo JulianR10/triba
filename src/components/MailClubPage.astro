@@ -40,8 +40,31 @@ const faqs = dict.subscribe.faqs;
         <PatchTitle content={page.heroTitle} tag="h1" class="text-5xl md:text-7xl text-triba-brown" />
       </div>
 
-      <div class="flex justify-center my-10 md:my-14">
-        <img src="/mailClub.webp" alt={page.heroTitle} fetchpriority="high" width="1054" height="985" class="w-full max-w-3xl rounded-xl border-2 border-triba-black object-cover" />
+      <div class="grid md:grid-cols-[1.8fr_1fr] gap-6 md:gap-10 items-center my-10 md:my-14 max-w-6xl" data-reveal>
+        <figure class="relative">
+          <img src="/mailClub.webp" alt={page.heroTitle} fetchpriority="high" width="1054" height="985" class="w-full h-auto rounded-xl" />
+          {[
+            { x: 42, y: 80 },
+            { x: 47, y: 22 },
+            { x: 78, y: 30 },
+            { x: 85, y: 72 },
+            { x: 20, y: 60 },
+            { x: 55, y: 48 },
+          ].map((dot, i) => (
+            <span aria-hidden="true" style={`left:${dot.x}%;top:${dot.y}%`} class="absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 md:w-8 md:h-8 rounded-full bg-triba-cream text-triba-red border-2 border-triba-black font-heading text-sm md:text-base flex items-center justify-center shadow-[2px_2px_0_#35220A]">{i + 1}</span>
+          ))}
+        </figure>
+        <div>
+          <h2 class="font-heading text-2xl md:text-3xl uppercase tracking-wide text-triba-brown mb-6">{page.box2Title}</h2>
+          <ol class="space-y-4">
+            {page.box2Items.map((item, i) => (
+              <li class="flex gap-3 items-start">
+                <span aria-hidden="true" class="shrink-0 w-7 h-7 md:w-8 md:h-8 rounded-full bg-triba-red text-triba-white border-2 border-triba-black font-heading text-sm md:text-base flex items-center justify-center">{i + 1}</span>
+                <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed pt-0.5">{item}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
       </div>
 
       <div class="max-w-3xl mx-auto text-center mb-20 md:mb-28">
@@ -65,11 +88,20 @@ const faqs = dict.subscribe.faqs;
         ))}
       </ol>
 
-      <!-- Cierre -->
-      <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-8 md:p-12 mb-20 md:mb-28 max-w-4xl">
-        <p class="font-sans text-base md:text-lg text-triba-brown mb-3">{page.closingTitle}</p>
-        <p class="font-serif italic text-2xl md:text-4xl text-triba-brown mb-10">{page.closingBody}</p>
-        <Button variant="primary" size="md" href={subscribeHref} class="px-10 py-4 text-base">{page.closingButton}</Button>
+      <!-- Cierre banda verde full-bleed, tarjeta sin fondo -->
+      <div class="ml-[calc(50%-50vw)] mr-[calc(50%-50vw)] bg-triba-green/60 border-y-2 border-triba-black mb-20 md:mb-28">
+        <div class="py-12 md:py-16 pl-[max(var(--page-gutter),calc((100vw-72rem)/2))] pr-[var(--page-gutter)]">
+          <div class="max-w-4xl mr-auto ml-0 text-left">
+          <div class="relative rounded-xl border-2 border-triba-black bg-triba-bone">
+            <img src="/cartaSinFondo.webp" alt="" aria-hidden="true" loading="lazy" class="absolute -top-20 md:-top-28 -right-6 md:-right-10 w-[13.2rem] md:w-[19.2rem] rotate-6 drop-shadow-[4px_4px_0_rgba(53,34,10,0.25)]" />
+            <div class="p-8 md:p-12 pt-24 md:pt-16">
+              <p class="font-sans text-base md:text-lg text-triba-brown mb-3">{page.closingTitle}</p>
+              <p class="font-serif italic text-2xl md:text-4xl text-triba-brown mb-10">{page.closingBody}</p>
+              <Button variant="primary" size="md" href={subscribeHref} class="px-10 py-4 text-base">{page.closingButton}</Button>
+            </div>
+          </div>
+          </div>
+        </div>
       </div>
 
       <!-- FAQ -->

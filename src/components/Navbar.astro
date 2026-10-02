@@ -1,6 +1,7 @@
 ---
 import { createSupabaseServerClient } from "../lib/supabase-server";
 import AccountMenuItems from "./AccountMenuItems.astro";
+import MailClubWaveLink from "./MailClubWaveLink.astro";
 import { t, type Locale } from "../i18n/ui";
 import { localizePath, switchPath } from "../i18n/locale";
 
@@ -61,6 +62,7 @@ const periodEndLabel = formatPeriodEnd(accountSub?.current_period_end);
 
 const publicLinks = [
   { href: "/", label: dict.nav.home },
+  { href: "/mail-club", label: dict.nav.mailClub },
   { href: "/revista", label: dict.nav.magazine },
   { href: "/suscribirme", label: dict.nav.subscribe },
   { href: "/triba-creators", label: dict.nav.creators },
@@ -68,12 +70,20 @@ const publicLinks = [
 
 const authLinks = [
   { href: "/", label: dict.nav.home },
+  { href: "/mail-club", label: dict.nav.mailClub },
   { href: "/revista", label: dict.nav.magazine },
   { href: "/triba-creators", label: dict.nav.creators },
 ];
 
 const localized = publicLinks.map((link) => ({ ...link, href: localizePath(link.href, lang) }));
 const localizedAuth = authLinks.map((link) => ({ ...link, href: localizePath(link.href, lang) }));
+
+const desktopLinkClass =
+  "whitespace-nowrap shrink-0 font-heading text-[13px] lg:text-sm font-medium uppercase tracking-wide text-triba-red transition-colors hover:text-triba-brown focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded";
+const mobileLinkClass =
+  "font-heading text-lg font-medium uppercase tracking-wide text-triba-red py-3 border-b border-triba-black/10 transition-colors hover:text-triba-brown focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-inset";
+
+const isMailClubLink = (href: string) => href.includes("mail-club");
 
 const esHref = switchPath(currentPath, "es");
 const enHref = switchPath(currentPath, "en");
@@ -119,38 +129,39 @@ const enHref = switchPath(currentPath, "en");
     pointer-events: auto;
   }
 
-  
 </style>
 
-<nav id="navbar" data-logo-always={showLogoAlways ? "1" : "0"} class="hidden md:flex fixed top-0 left-0 right-0 z-40 items-center px-5 py-4 md:px-10 lg:px-20 bg-triba-bone/80 backdrop-blur-sm">
-  <div class="grid grid-cols-3 items-center w-full max-w-6xl mx-auto">
+<nav id="navbar" data-logo-always={showLogoAlways ? "1" : "0"} class="hidden md:flex fixed top-0 left-0 right-0 z-40 items-center px-4 lg:px-8 bg-triba-bone/80 backdrop-blur-sm py-4">
+  <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 w-full max-w-[1400px] mx-auto">
     <div class="flex items-center">
       <span></span>
     </div>
 
-    <div class="flex items-center justify-center gap-8">
+    <div class="flex items-center justify-center gap-4 lg:gap-7 xl:gap-8 whitespace-nowrap">
       {
         isLoggedIn
-          ? localizedAuth.map((link) => (
-              <a
-                href={link.href}
-                class="font-heading text-sm font-medium uppercase tracking-wide text-triba-red transition-colors hover:text-triba-brown focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded"
-              >
-                {link.label}
-              </a>
-            ))
-          : localized.map((link) => (
-              <a
-                href={link.href}
-                class="font-heading text-sm font-medium uppercase tracking-wide text-triba-red transition-colors hover:text-triba-brown focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded"
-              >
-                {link.label}
-              </a>
-            ))
+          ? localizedAuth.map((link) =>
+              isMailClubLink(link.href) ? (
+                <MailClubWaveLink href={link.href} label={link.label} linkClass={desktopLinkClass} />
+              ) : (
+                <a href={link.href} class={desktopLinkClass}>
+                  {link.label}
+                </a>
+              )
+            )
+          : localized.map((link) =>
+              isMailClubLink(link.href) ? (
+                <MailClubWaveLink href={link.href} label={link.label} linkClass={desktopLinkClass} />
+              ) : (
+                <a href={link.href} class={desktopLinkClass}>
+                  {link.label}
+                </a>
+              )
+            )
       }
     </div>
 
-    <div class="flex justify-end items-center gap-4">
+    <div class="flex justify-end items-center gap-3 lg:gap-4 shrink-0 whitespace-nowrap">
       <div class="flex items-center border-2 border-triba-black rounded-full overflow-hidden font-heading text-xs uppercase tracking-wider" role="group" aria-label="Language">
         <a
           href={esHref}
@@ -168,7 +179,7 @@ const enHref = switchPath(currentPath, "en");
       {
         isLoggedIn
           ? <div class="relative">
-              <button id="mi-cuenta-btn" class="rounded-button bg-triba-red px-6 py-2.5 font-heading text-sm font-medium uppercase text-triba-white border-2 border-triba-black transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2">
+              <button id="mi-cuenta-btn" class="rounded-button bg-triba-red px-4 lg:px-6 py-2.5 font-heading text-sm font-medium uppercase text-triba-white border-2 border-triba-black transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2">
                 {dict.nav.myAccount}
                 <svg class="w-3 h-3 fill-current" viewBox="0 0 10 6"><path d="M0 0l5 6 5-6z"/></svg>
               </button>
@@ -178,7 +189,7 @@ const enHref = switchPath(currentPath, "en");
                 </div>
               </div>
             </div>
-          : <a href={localizePath("/iniciar-sesion", lang)} class="rounded-button bg-triba-red px-6 py-2.5 font-heading text-sm font-medium uppercase text-triba-white border-2 border-triba-black transition-all hover:scale-[1.02] active:scale-[0.98]">{dict.nav.signIn}</a>
+          : <a href={localizePath("/iniciar-sesion", lang)} class="rounded-button bg-triba-red px-4 lg:px-6 py-2.5 font-heading text-sm font-medium uppercase text-triba-white border-2 border-triba-black transition-all hover:scale-[1.02] active:scale-[0.98]">{dict.nav.signIn}</a>
       }
     </div>
   </div>
@@ -199,14 +210,15 @@ const enHref = switchPath(currentPath, "en");
 
   <div class="flex-1 flex flex-col gap-1 px-6 pt-6">
     {
-      (isLoggedIn ? localizedAuth : localized.filter((l) => l.href !== "/")).map((link) => (
-        <a
-          href={link.href}
-          class="font-heading text-lg font-medium uppercase tracking-wide text-triba-red py-3 border-b border-triba-black/10 transition-colors hover:text-triba-brown focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-inset"
-        >
-          {link.label}
-        </a>
-      ))
+      (isLoggedIn ? localizedAuth : localized.filter((l) => l.href !== "/")).map((link) =>
+        isMailClubLink(link.href) ? (
+          <MailClubWaveLink href={link.href} label={link.label} linkClass={mobileLinkClass} />
+        ) : (
+          <a href={link.href} class={mobileLinkClass}>
+            {link.label}
+          </a>
+        )
+      )
     }
 
     <div class="flex items-center gap-2 pt-4 pb-2" role="group" aria-label="Language">

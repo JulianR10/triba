@@ -1,0 +1,61 @@
+---
+// Link de Mail Club con ola letra por letra: cada letra se ilumina y crece
+// por turnos, con retardo escalonado. En reposo ondea; al hover se comporta
+// como el resto del nav (marrón sólido, sin animación).
+const { href, label, linkClass = "" } = Astro.props as {
+  href: string;
+  label: string;
+  linkClass?: string;
+};
+
+const STAGGER = 0.25; // segundos entre cada letra
+const letters = Array.from(label);
+---
+<a href={href} class={"nav-mailclub-wave " + linkClass}>
+  {letters.map((ch, i) =>
+    ch === " " ? (
+      <span class="nav-mc-space">{'\u00A0'}</span>
+    ) : (
+      <span class="nav-mc-letter" style={`animation-delay: ${(i * STAGGER).toFixed(2)}s`}>
+        {ch}
+      </span>
+    )
+  )}
+</a>
+
+<style>
+  .nav-mc-letter,
+  .nav-mc-space {
+    display: inline-block;
+  }
+  .nav-mc-letter {
+    color: #E91A39;
+    animation: nav-mc-wave 5.5s ease-in-out infinite;
+  }
+  @keyframes nav-mc-wave {
+    0%, 100% {
+      color: #E91A39;
+      transform: scale(1);
+      text-shadow: none;
+    }
+    5% {
+      color: #ff8fb1;
+      transform: scale(1.1);
+      text-shadow: 0 0 14px rgba(255, 143, 177, 0.6);
+    }
+    12% {
+      color: #E91A39;
+      transform: scale(1);
+      text-shadow: none;
+    }
+  }
+  .nav-mailclub-wave:hover .nav-mc-letter {
+    animation: none;
+    color: #35220A;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .nav-mc-letter {
+      animation: none;
+    }
+  }
+</style>
