@@ -1,6 +1,13 @@
 [
  {
   "date": "2026-10-02",
+  "macrostructure": "surgical pass (structure preserved)",
+  "theme": "triba-brand (locked tokens)",
+  "enrichment": "none",
+  "brief": "Triba /mi-cuenta surgical: flat hero, left bias, reveal minimum, duration/z hygiene, logic preserved"
+ },
+ {
+  "date": "2026-10-02",
   "macrostructure": "Split Studio (variant: hero-plan + secondary-plan diptych)",
   "theme": "triba-brand (locked tokens)",
   "enrichment": "none (typography only)",

@@ -189,6 +189,7 @@ const miCuentaMessages = {
   <section class="pt-0 md:pt-[max(1rem,var(--nav-height,64px))]" data-mi-cuenta-messages={JSON.stringify(miCuentaMessages)}>
     <div class="max-w-6xl mx-auto">
 
+      {/* z-scale del sitio: nav 40 · menú móvil 50 · aviso checkout 70 · visor PDF 80 */}
       {checkoutSuccessKind && (
         <div data-banner="checkout-success" class="fixed inset-0 z-[70] flex items-center justify-center p-5" role="dialog" aria-modal="true" aria-label={checkoutSuccessCopy.title}>
           <div class="absolute inset-0 bg-triba-black/40" data-dismiss-banner></div>
@@ -226,7 +227,7 @@ const miCuentaMessages = {
 
       <!-- ===== HERO (solo si hay ediciones cargadas) ===== -->
       {featured && (
-      <div class="relative overflow-hidden rounded-none md:rounded-[32px] bg-gradient-to-br from-triba-pink via-triba-pink/60 to-triba-cream px-5 md:px-14 lg:px-20 py-10 md:py-16 lg:py-20 reveal" data-reveal>
+      <div class="relative overflow-hidden rounded-none md:rounded-[32px] bg-triba-pink px-5 md:px-14 lg:px-20 py-10 md:py-16 lg:py-20 reveal" data-reveal>
         <div class="grid grid-cols-1 md:grid-cols-2 md:gap-12 md:items-center">
           <p class="font-heading text-sm md:text-base uppercase tracking-[0.2em] text-triba-brown/60 mb-4 md:col-start-1 md:row-start-1">{dict.miCuenta.monthlyEdition}</p>
           <h1 class="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-triba-brown leading-tight mb-2 md:col-start-1 md:row-start-2">
@@ -239,7 +240,7 @@ const miCuentaMessages = {
           </div>
           <div class="md:col-start-1 md:row-start-3">
             <div class="mt-6 mb-3 flex flex-col items-center md:items-start gap-2">
-              <h2 class="font-heading text-2xl md:text-3xl text-triba-brown text-center md:text-left">{featured.title}</h2>
+              <h2 class="font-heading text-2xl md:text-3xl text-triba-brown">{featured.title}</h2>
               {featured.badge && (
                 <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-white border border-triba-black/10 font-heading text-[10px] uppercase tracking-wider text-triba-brown">{featured.badge}</span>
               )}
@@ -250,10 +251,10 @@ const miCuentaMessages = {
                 <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-green font-heading text-[10px] uppercase tracking-wider text-triba-brown">EN</span>
               )}
             </div>
-            <p class="font-sans text-base md:text-base text-triba-brown/80 leading-relaxed mb-8 max-w-lg whitespace-pre-line text-center md:text-left mx-auto md:mx-0 mt-3">
+            <p class="font-sans text-base md:text-base text-triba-brown/80 leading-relaxed mb-8 max-w-lg whitespace-pre-line mt-3">
               {featured.description}
             </p>
-            <div class="flex flex-wrap gap-4 justify-center md:justify-start">
+            <div class="flex flex-wrap gap-4 justify-start">
               {featured.pdf !== "#" && (
                 <Button variant="primary" size="md" href="#visor-revista">{dict.miCuenta.continueReading}</Button>
               )}
@@ -268,7 +269,7 @@ const miCuentaMessages = {
 
       <!-- Admin banner -->
       {isAdmin && (
-        <div class="mt-4 mx-5 md:mx-14 lg:mx-20 mb-8 reveal" data-reveal>
+        <div class="mt-4 mx-5 md:mx-14 lg:mx-20 mb-8">
           <div class="bg-triba-green/30 rounded-xl border-2 border-triba-black p-6 text-center max-w-lg mx-auto">
             <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">{dict.miCuenta.adminSession}</p>
             <p class="font-sans text-base text-triba-brown mb-4 text-balance" set:html={dict.miCuenta.adminLoggedIn}></p>
@@ -279,7 +280,7 @@ const miCuentaMessages = {
 
       <!-- ===== UPGRADE MAIL CLUB (solo plan digital activo) ===== -->
       {showUpgrade && (
-        <div class="mx-5 md:mx-14 lg:mx-20 mb-8 reveal" data-reveal>
+        <div class="mx-5 md:mx-14 lg:mx-20 mb-8">
           <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 md:p-8 max-w-2xl mx-auto">
             <div class="inline-block bg-triba-green text-triba-brown font-heading text-xs uppercase tracking-wider px-5 py-1.5 rounded-full border border-triba-black mb-4">{dict.mailClub.tag}</div>
             <h2 class="font-heading text-2xl md:text-3xl text-triba-brown mb-4">{dict.miCuenta.upgradeLead}</h2>
@@ -348,7 +349,7 @@ const miCuentaMessages = {
 
       <!-- ===== DIRECCIÓN DE ENVÍO (solo plan Mail Club activo) ===== -->
       {showDowngrade && (
-        <div class="mx-5 md:mx-14 lg:mx-20 mb-8 reveal" data-reveal>
+        <div class="mx-5 md:mx-14 lg:mx-20 mb-8">
           <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 max-w-2xl mx-auto">
             <h2 class="font-heading text-xl md:text-2xl text-triba-brown mb-2">{dict.miCuenta.addressTitle}</h2>
             <p class="font-sans text-sm text-triba-brown/60 mb-5">{dict.miCuenta.addressBody}</p>
@@ -406,7 +407,7 @@ const miCuentaMessages = {
 
       <!-- ===== DOWNGRADE A DIGITAL (solo plan Mail Club activo) ===== -->
       {showDowngrade && (
-        <div class="mx-5 md:mx-14 lg:mx-20 mb-8 reveal" data-reveal>
+        <div class="mx-5 md:mx-14 lg:mx-20 mb-8">
           <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 max-w-2xl mx-auto text-center">
             <h2 class="font-heading text-xl md:text-2xl text-triba-brown mb-3">{dict.miCuenta.downgradeTitle}</h2>
             <p class="font-sans text-sm text-triba-brown/70 leading-relaxed mb-5">{dict.miCuenta.downgradeBody}</p>
@@ -424,7 +425,7 @@ const miCuentaMessages = {
       )}
 
       <!-- ===== COLECCIÓN (carrusel "Tus tomos") ===== -->
-      <div id="tus-tomos" class="relative px-5 md:px-14 lg:px-20 py-12 md:py-16 reveal bg-transparent" data-reveal>
+      <div id="tus-tomos" class="relative px-5 md:px-14 lg:px-20 py-12 md:py-16 bg-transparent">
         <div class="max-w-6xl mx-auto">
           <p class="font-heading text-xs uppercase tracking-[0.25em] text-triba-brown/50 mb-8">{dict.miCuenta.tusTomos}</p>
 
@@ -459,7 +460,7 @@ const miCuentaMessages = {
       <div class="bg-triba-cream w-full px-5 md:px-14 lg:px-20 xl:px-32 2xl:px-48 py-12 md:py-20">
         <div class="max-w-6xl mx-auto">
           {featured && featured.pdf !== "#" && (
-          <div id="visor-revista" class="scroll-anchor reveal" data-reveal>
+          <div id="visor-revista" class="scroll-anchor">
             <PatchTitle content={featured.title} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
             <div class="-mx-5 md:mx-0">
@@ -474,7 +475,7 @@ const miCuentaMessages = {
 
       <!-- ===== FEEDBACK ===== -->
       <div class="px-5 md:px-14 lg:px-20 py-12 md:py-16">
-        <div class="max-w-lg mx-auto reveal" data-reveal>
+        <div class="max-w-lg mx-auto">
           <h2 class="font-heading text-2xl md:text-3xl text-triba-brown text-center mb-8">{dict.miCuenta.feedbackTitle}</h2>
 
           <form id="feedback-form">
@@ -500,7 +501,7 @@ const miCuentaMessages = {
 
       {
         !hasActiveSub && (
-          <div class="max-w-lg mx-auto mt-10 text-center reveal px-5" data-reveal>
+          <div class="max-w-lg mx-auto mt-10 text-center px-5">
             <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-8">
               {
                 checkoutOutcome === "canceled" ? (
@@ -646,7 +647,7 @@ const miCuentaMessages = {
                 }
                 return (
                   '<a href="' + messages.revistaBase + ed.slug + '#visor-revista" class="group block">' +
-                  '<div class="relative aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg transition-all duration-400 group-hover:rotate-0 group-hover:scale-[1.04] group-hover:shadow-2xl">' +
+                  '<div class="relative aspect-[3/4] rounded-xl overflow-hidden border-2 border-triba-black shadow-lg transition-transform duration-300 group-hover:rotate-0 group-hover:scale-[1.04] group-hover:shadow-2xl">' +
                   '<img src="' + ed.cover + '" alt="' + messages.coverCardAlt.replace("{edition}", ed.edition).replace("{title}", ed.title) + '" loading="lazy" class="w-full h-full object-cover" />' + pill +
                   "</div>" +
                   '<p class="font-heading text-xs uppercase tracking-wider text-triba-brown/60 text-center mt-2 leading-relaxed">' + ed.title + "</p>" +
