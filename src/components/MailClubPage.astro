@@ -36,33 +36,31 @@ const faqs = dict.subscribe.faqs;
     <div class="max-w-6xl mx-auto">
 
       <!-- Declaración -->
-      <div class="max-w-3xl pt-8 md:pt-12 reveal-text" data-reveal>
-        <PatchTitle content={page.heroTitle} tag="h1" centered={false} class="text-5xl md:text-7xl text-triba-brown" />
+      <div class="max-w-3xl mx-auto text-center pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content={page.heroTitle} tag="h1" class="text-5xl md:text-7xl text-triba-brown" />
       </div>
 
       <div class="flex justify-center my-10 md:my-14">
         <img src="/mailClub.webp" alt={page.heroTitle} fetchpriority="high" width="1054" height="985" class="w-full max-w-3xl rounded-xl border-2 border-triba-black object-cover" />
       </div>
 
-      <div class="max-w-3xl mb-20 md:mb-28">
-        <p class="font-serif italic text-xl md:text-2xl text-triba-red mt-6">{page.heroLead}</p>
+      <div class="max-w-3xl mx-auto text-center mb-20 md:mb-28">
+        <p class="font-serif italic text-xl md:text-2xl text-triba-red mt-6 text-balance">{page.heroLead}</p>
         <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mt-6 text-balance">
           {page.heroBody}
         </p>
-        <div class="mt-10">
+        <div class="mt-10 flex justify-center">
           <Button variant="primary" size="md" href={subscribeHref} class="px-10 py-4 text-base">{page.heroButton}</Button>
         </div>
       </div>
 
-      <p class="font-sans text-base text-triba-brown/80 mb-20 md:mb-28 text-balance max-w-2xl">{page.box2Note}</p>
-
-      <!-- Cómo funciona · declaraciones numeradas -->
+      <!-- Cómo funciona · pasos vivos en zigzag -->
       <h2 class="font-heading text-3xl md:text-5xl uppercase tracking-wide text-triba-brown mb-12 md:mb-16 max-w-3xl">{page.box3Title}</h2>
-      <ol class="mb-20 md:mb-28">
+      <ol class="reveal-stagger mb-20 md:mb-28" data-reveal>
         {page.box3Steps.map((step, i) => (
-          <li class={`flex gap-5 md:gap-8 items-baseline mb-10 md:mb-12 max-w-3xl ${i % 2 === 1 ? "md:ml-24" : ""}`}>
-            <span class="shrink-0 font-heading text-5xl md:text-7xl text-triba-red leading-none">{i + 1}</span>
-            <p class="font-sans text-base md:text-xl text-triba-brown leading-relaxed">{step}</p>
+          <li class={`group flex gap-4 md:gap-6 items-start rounded-xl border-2 border-triba-black p-5 md:p-7 mb-6 md:mb-8 max-w-3xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[4px_4px_0_#35220A] ${i % 2 === 1 ? "bg-triba-white rotate-1 hover:rotate-0 md:ml-24" : "bg-triba-cream -rotate-1 hover:rotate-0 md:mr-24"}`}>
+            <span class="shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-full bg-triba-red text-triba-white border-2 border-triba-black font-heading text-xl md:text-2xl flex items-center justify-center -rotate-6 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110">{i + 1}</span>
+            <p class="font-sans text-base md:text-xl text-triba-brown leading-relaxed pt-2 md:pt-2.5">{step}</p>
           </li>
         ))}
       </ol>
