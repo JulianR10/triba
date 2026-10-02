@@ -40,19 +40,12 @@ async function supersedeMigratedSub(userId: string) {
     .eq("provider", "migrated");
 }
 
-// Upgrade digital -> Mail Club (Stripe): pago único de la diferencia ya
-// cobrado en un Checkout mode=payment. Cambia la tarifa recurrente sin
-// prorrateo para la próxima renovación. Idempotente por upgrade_id.
-async function handleMailClubUpgradePayment(session: Stripe.Checkout.Session): Promise<void> {
-  if (!stripe) return;
-  if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
-    logger.info({ sessionId: session.id }, "mail club upgrade unpaid — leaving pending");
-    return;
-  }
-  const upgradeId = session.metadata?.upgrade_id || "";
-  const userId = session.client_reference_id || session.metadata?.user_id || "";
+// Confirma el pago único de un upgrade y aplica el cambio de tarifa.
+// Fuente del pago indistinta: Checkout mode=payment o PaymentIntent con
+// tarjeta guardada. Idempotente: upgrades ya aplicados se omiten.
+async function confirmUpgradePayment(upgradeId: string, userId: string): Promise<void> {
   if (!upgradeId || !userId) {
-    logger.warn({ sessionId: session.id }, "mail club upgrade without upgrade_id/user — skipping");
+    logger.warn({ upgradeId }, "mail club upgrade without upgrade_id/user — skipping");
     return;
   }
 
@@ -61,7 +54,7 @@ async function handleMailClubUpgradePayment(session: Stripe.Checkout.Session): P
     .select("*")
     .eq("id", upgradeId)
     .maybeSingle();
-  if (!row || (row as any).status !== "pending") return;
+  if (!row || (row as any).status === "recurrence_updated") return;
   if ((row as any).user_id !== userId) {
     logger.warn({ upgradeId, userId }, "mail club upgrade user mismatch — skipping");
     return;
@@ -76,6 +69,42 @@ async function handleMailClubUpgradePayment(session: Stripe.Checkout.Session): P
   } catch (err: any) {
     logger.error({ err, upgradeId, userId }, "mail club upgrade apply error (stripe)");
   }
+}
+
+// Upgrade digital -> Mail Club (Stripe): pago único de la diferencia ya
+// cobrado en un Checkout mode=payment. Cambia la tarifa recurrente sin
+// prorrateo para la próxima renovación. Idempotente por upgrade_id.
+async function handleMailClubUpgradePayment(session: Stripe.Checkout.Session): Promise<void> {
+  if (!stripe) return;
+  if (session.payment_status !== "paid" && session.payment_status !== "no_payment_required") {
+    logger.info({ sessionId: session.id }, "mail club upgrade unpaid — leaving pending");
+    return;
+  }
+  const upgradeId = session.metadata?.upgrade_id || "";
+  const userId = session.client_reference_id || session.metadata?.user_id || "";
+  await confirmUpgradePayment(upgradeId, userId);
+}
+
+// Fallo asincrónico de un PaymentIntent de upgrade: deja registro para
+// auditoría/admin. El cobro sincrónico ya responde 402 en el checkout.
+async function handleUpgradePaymentFailed(pi: Stripe.PaymentIntent): Promise<void> {
+  if (pi.metadata?.plan !== "mail_club_upgrade") return;
+  const upgradeId = pi.metadata?.upgrade_id || "";
+  if (!upgradeId) return;
+  const { data: row } = await supabaseAdmin
+    .from("mail_club_upgrades")
+    .select("id, status")
+    .eq("id", upgradeId)
+    .maybeSingle();
+  if (!row || (row as any).status !== "pending") return;
+  await supabaseAdmin
+    .from("mail_club_upgrades")
+    .update({
+      status: "failed",
+      error: `Stripe: ${pi.last_payment_error?.message || "payment failed"}`.slice(0, 500),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", upgradeId);
 }
 
 export const POST: APIRoute = async ({ request }) => {
@@ -107,8 +136,7 @@ export const POST: APIRoute = async ({ request }) => {
             await handleMailClubUpgradePayment(session);
           }
           break;
-        }
-        if (session.mode !== "subscription") break;
+        }        if (session.mode !== "subscription") break;
 
         const stripeSub = (await stripe.subscriptions.retrieve(
           session.subscription as string,
@@ -190,6 +218,21 @@ export const POST: APIRoute = async ({ request }) => {
             }
           }
 
+        break;
+      }
+
+      case "payment_intent.succeeded": {
+        // Upgrade con tarjeta guardada (cobro off-session confirmado).
+        const pi = event.data.object as Stripe.PaymentIntent;
+        if (pi.metadata?.plan === "mail_club_upgrade") {
+          await confirmUpgradePayment(pi.metadata?.upgrade_id || "", pi.metadata?.user_id || "");
+        }
+        break;
+      }
+
+      case "payment_intent.payment_failed": {
+        const pi = event.data.object as Stripe.PaymentIntent;
+        await handleUpgradePaymentFailed(pi);
         break;
       }
 

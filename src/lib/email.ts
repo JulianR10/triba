@@ -164,7 +164,7 @@ export function mailClubWelcomeHtml(data: MailClubWelcomeData, locale: Locale = 
                   <tr>
                     <td style="padding:16px 20px;background-color:#FFF8EE;border-radius:8px;border:2px dashed #35220A;">
                       <p style="font-family:Montserrat,Arial,sans-serif;font-size:12px;font-weight:700;letter-spacing:1px;color:#35220A;margin:0 0 6px;">
-                        <strong>${en ? "We'll send it to:" : "Lo vamos a mandar a:"}</strong>
+                        <strong>${en ? "We'll send it to this address:" : "Lo vamos a mandar a esta dirección:"}</strong>
                       </p>
                       <p style="font-family:Montserrat,Arial,sans-serif;font-size:14px;color:#35220A;line-height:1.6;margin:0;">${address}
                       </p>
@@ -187,8 +187,13 @@ export function mailClubWelcomeHtml(data: MailClubWelcomeData, locale: Locale = 
               <td align="left" style="padding:24px 40px 40px;">
                 <p style="font-family:Montserrat,Arial,sans-serif;font-size:11px;color:#35220A;line-height:1.5;margin:0;">
                   ${en
-                    ? `If something looks wrong, fix your address from your profile before the 15th.`
-                    : `Si ves algo mal, podés corregir tu dirección desde tu perfil antes del 15.`}
+                    ? `If something looks wrong, you can correct it from your profile before the 15th.`
+                    : `Si ves algo mal, podés corregirla desde tu perfil antes del 15.`}
+                </p>
+                <p style="font-family:Montserrat,Arial,sans-serif;font-size:14px;color:#35220A;line-height:1.6;margin:16px 0 0;">
+                  ${en
+                    ? `Thanks for joining our universe. Team Triba`
+                    : `Gracias por sumarte a nuestro universo. Equipo Triba`}
                 </p>
               </td>
             </tr>

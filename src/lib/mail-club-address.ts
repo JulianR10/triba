@@ -39,7 +39,12 @@ export function validateMailClubAddress(
   if (!countryIso || !SUPPORTED_COUNTRY_ISO.has(countryIso)) {
     return { ok: false, error: "País de envío inválido." };
   }
+  // Provincia y código postal obligatorios: Correos los necesita para
+  // entregar y cada devolución sale del margen. Solo el complemento
+  // (piso/puerta) queda opcional porque no siempre existe.
+  if (!region) return { ok: false, error: "Falta la provincia o estado." };
   if (!city) return { ok: false, error: "Falta la ciudad." };
+  if (!postalCode) return { ok: false, error: "Falta el código postal." };
   if (!streetAddress) return { ok: false, error: "Falta la dirección." };
   if (requireTerms && !termsAccepted) {
     return { ok: false, error: "Tenés que aceptar las condiciones del Mail Club." };

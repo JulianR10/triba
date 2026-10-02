@@ -183,6 +183,105 @@ export async function createMailClubBatch(
   return { batchId, included: included || 0, skipped, reused };
 }
 
+export interface MailClubBatchItemView {
+  id: string;
+  email: string;
+  zone: string;
+  plan_currency: string;
+  founder_number: number | null;
+  status: string;
+  notice_sent: boolean;
+  address: {
+    recipient_name: string;
+    street_address: string;
+    address_extra: string;
+    city: string;
+    region: string;
+    postal_code: string;
+    country_iso: string;
+  };
+  joined_at: string;
+  live_status: string;
+}
+
+// Fecha de alta Mail Club: fundación > upgrade confirmado > creación de la sub.
+async function resolveMailClubJoinedAt(userId: string, subscriptionId: string | null): Promise<string> {
+  const { data: founder } = await supabaseAdmin
+    .from("mail_club_founders")
+    .select("first_confirmed_at")
+    .eq("user_id", userId)
+    .maybeSingle();
+  if ((founder as any)?.first_confirmed_at) {
+    return (founder as any).first_confirmed_at as string;
+  }
+  const { data: up } = await supabaseAdmin
+    .from("mail_club_upgrades")
+    .select("updated_at")
+    .eq("user_id", userId)
+    .eq("status", "recurrence_updated")
+    .order("updated_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  if ((up as any)?.updated_at) {
+    return (up as any).updated_at as string;
+  }
+  if (subscriptionId) {
+    const { data: sub } = await supabaseAdmin
+      .from("subscriptions")
+      .select("created_at")
+      .eq("id", subscriptionId)
+      .maybeSingle();
+    return (sub as any)?.created_at || "";
+  }
+  return "";
+}
+
+async function resolveLiveStatus(subscriptionId: string | null): Promise<string> {
+  if (!subscriptionId) return "";
+  const { data: sub } = await supabaseAdmin
+    .from("subscriptions")
+    .select("status")
+    .eq("id", subscriptionId)
+    .maybeSingle();
+  return (sub as any)?.status || "";
+}
+
+// Detalle de un lote para pantalla: snapshot congelado + fecha de alta.
+// Misma fuente que el CSV; la pantalla es lectura, el CSV sigue siendo la
+// vía de etiquetas/impresión.
+export async function listMailClubBatchItems(batchId: string): Promise<MailClubBatchItemView[]> {
+  const { data: items } = await supabaseAdmin
+    .from("mail_club_batch_items")
+    .select("*")
+    .eq("batch_id", batchId)
+    .order("email", { ascending: true });
+  const out: MailClubBatchItemView[] = [];
+  for (const it of (items as any[]) || []) {
+    const snap = (it.address_snapshot as any) || {};
+    out.push({
+      id: it.id,
+      email: it.email || "",
+      zone: it.zone || "",
+      plan_currency: it.plan_currency || "",
+      founder_number: it.founder_number ?? null,
+      status: it.status || "",
+      notice_sent: !!it.notice_sent,
+      address: {
+        recipient_name: snap.recipient_name || "",
+        street_address: snap.street_address || "",
+        address_extra: snap.address_extra || "",
+        city: snap.city || "",
+        region: snap.region || "",
+        postal_code: snap.postal_code || "",
+        country_iso: snap.country_iso || "",
+      },
+      joined_at: await resolveMailClubJoinedAt(it.user_id, it.subscription_id),
+      live_status: await resolveLiveStatus(it.subscription_id),
+    });
+  }
+  return out;
+}
+
 export async function exportMailClubBatchCSV(batchId: string): Promise<string> {
   const { data: items } = await supabaseAdmin
     .from("mail_club_batch_items")
@@ -198,44 +297,8 @@ export async function exportMailClubBatchCSV(batchId: string): Promise<string> {
   const lines: string[] = [];
   for (const it of (items as any[]) || []) {
     const snap = (it.address_snapshot as any) || {};
-    // Fecha de alta: fundación > upgrade confirmado > creación de la sub.
-    let joinedAt = "";
-    const { data: founder } = await supabaseAdmin
-      .from("mail_club_founders")
-      .select("first_confirmed_at")
-      .eq("user_id", it.user_id)
-      .maybeSingle();
-    if ((founder as any)?.first_confirmed_at) {
-      joinedAt = (founder as any).first_confirmed_at;
-    } else {
-      const { data: up } = await supabaseAdmin
-        .from("mail_club_upgrades")
-        .select("updated_at")
-        .eq("user_id", it.user_id)
-        .eq("status", "recurrence_updated")
-        .order("updated_at", { ascending: true })
-        .limit(1)
-        .maybeSingle();
-      if ((up as any)?.updated_at) {
-        joinedAt = (up as any).updated_at;
-      } else if (it.subscription_id) {
-        const { data: sub } = await supabaseAdmin
-          .from("subscriptions")
-          .select("created_at")
-          .eq("id", it.subscription_id)
-          .maybeSingle();
-        joinedAt = (sub as any)?.created_at || "";
-      }
-    }
-    let liveStatus = "";
-    if (it.subscription_id) {
-      const { data: sub } = await supabaseAdmin
-        .from("subscriptions")
-        .select("status")
-        .eq("id", it.subscription_id)
-        .maybeSingle();
-      liveStatus = (sub as any)?.status || "";
-    }
+    const joinedAt = await resolveMailClubJoinedAt(it.user_id, it.subscription_id);
+    const liveStatus = await resolveLiveStatus(it.subscription_id);
     lines.push(
       [
         snap.recipient_name, snap.street_address, snap.address_extra, snap.city,

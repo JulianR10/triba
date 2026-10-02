@@ -71,6 +71,18 @@ export function resolveMailClubZone(countryIsoInput: unknown): {
   return { zone: "rest", currency: "USD", provider: "stripe", countryIso };
 }
 
+// El upgrade conserva moneda y proveedor de la suscripción digital vigente.
+// La dirección debe pertenecer a la misma zona; cambiar de zona implica
+// cambiar de proveedor y requiere alta nueva, no upgrade.
+export function isUpgradeZoneCompatible(
+  planCurrency: string,
+  provider: string,
+  countryIsoInput: unknown,
+): boolean {
+  const resolved = resolveMailClubZone(countryIsoInput);
+  return resolved.currency === planCurrency && resolved.provider === provider;
+}
+
 function madridParts(date: Date): { year: number; month: number; day: number } {
   const fmt = new Intl.DateTimeFormat("en-CA", {
     timeZone: MAIL_CLUB_TIME_ZONE,

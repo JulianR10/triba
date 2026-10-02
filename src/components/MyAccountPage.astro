@@ -76,7 +76,9 @@ const upgradeMessages = {
   processing: dict.miCuenta.upgradeProcessing,
   error: dict.miCuenta.upgradeError,
   networkError: dict.miCuenta.upgradeNetworkError,
+  declined: dict.miCuenta.upgradeCardDeclined,
 };
+const upgradeSuccessHref = localizePath("/mi-cuenta", lang) + "?checkout=success&flow=mail_club_upgrade";
 const showDowngrade = hasActiveSub && getPlanType(subscription) === "mail_club";
 
 let savedAddress: Record<string, string> | null = null;
@@ -230,7 +232,7 @@ const miCuentaMessages = {
       <div class="relative overflow-hidden rounded-none md:rounded-[32px] bg-triba-pink px-5 md:px-14 lg:px-20 py-10 md:py-16 lg:py-20 reveal" data-reveal>
         <div class="grid grid-cols-1 md:grid-cols-2 md:gap-12 md:items-center">
           <p class="font-heading text-sm md:text-base uppercase tracking-[0.2em] text-triba-brown/60 mb-4 md:col-start-1 md:row-start-1">{dict.miCuenta.monthlyEdition}</p>
-          <h1 class="font-heading text-4xl sm:text-5xl md:text-6xl lg:text-7xl text-triba-brown leading-tight mb-2 md:col-start-1 md:row-start-2">
+          <h1 class="font-heading text-5xl md:text-7xl text-triba-brown leading-tight mb-2 md:col-start-1 md:row-start-2">
             {dict.miCuenta.hello} <span class="text-triba-red">{displayName}</span>
           </h1>
           <div class="w-full flex justify-center md:col-start-2 md:row-start-1 md:row-span-3 md:justify-end mt-4 mb-6 md:mt-0 md:mb-0">
@@ -288,7 +290,7 @@ const miCuentaMessages = {
               {dict.miCuenta.upgradeBody.replace("{diff}", upgradeDiffLabel).replace("{full}", upgradeFullLabel)}
             </p>
             <p class="font-sans text-sm text-triba-brown/60 mb-6">{dict.miCuenta.upgradeCutoffNote}</p>
-            <form class="space-y-3 text-left" id="upgrade-form" data-messages={JSON.stringify(upgradeMessages)} data-terms-version={MAIL_CLUB_TERMS_VERSION}>
+            <form class="space-y-3 text-left" id="upgrade-form" data-messages={JSON.stringify(upgradeMessages)} data-terms-version={MAIL_CLUB_TERMS_VERSION} data-success-href={upgradeSuccessHref} data-zone-title={dict.miCuenta.upgradeZoneMismatchTitle} data-zone-body={dict.miCuenta.upgradeZoneMismatchBody} data-zone-fix={dict.miCuenta.upgradeZoneFixAddress} data-zone-howto-title={dict.miCuenta.upgradeZoneHowToTitle} data-zone-howto-body={dict.miCuenta.upgradeZoneHowToBody} data-zone-howto-link={dict.miCuenta.upgradeZoneHowToLink} data-subscribe-href={localizePath("/suscribirme", lang)}>
               <label class="block">
                 <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.recipient}</span>
                 <input name="recipient_name" required maxlength="120" autocomplete="name"
@@ -307,7 +309,7 @@ const miCuentaMessages = {
               <div class="grid grid-cols-2 gap-3">
                 <label class="block">
                   <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.region}</span>
-                  <input name="region" maxlength="120" autocomplete="address-level1"
+                  <input name="region" required maxlength="120" autocomplete="address-level1"
                     class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
                 </label>
                 <label class="block">
@@ -318,7 +320,7 @@ const miCuentaMessages = {
               </div>
               <label class="block">
                 <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.postal}</span>
-                <input name="postal_code" maxlength="30" autocomplete="postal-code"
+                <input name="postal_code" required maxlength="30" autocomplete="postal-code"
                   class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
               </label>
               <label class="block">
@@ -339,6 +341,22 @@ const miCuentaMessages = {
                 </span>
               </label>
               <p id="upgrade-msg" class="hidden font-sans text-xs text-triba-red text-center"></p>
+              <div class="hidden text-center" id="upgrade-alt-pay-wrap">
+                <button id="upgrade-alt-pay" type="button" class="rounded-button bg-triba-white px-5 py-2.5 font-heading text-xs font-medium uppercase text-triba-brown border-2 border-triba-black transition-all hover:scale-[1.02]">{dict.miCuenta.upgradePayAnotherCard}</button>
+              </div>
+              <div id="upgrade-zone-mismatch" class="hidden rounded-xl border-2 border-triba-black bg-triba-white p-5">
+                <p class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-2" data-zone-title></p>
+                <p class="font-sans text-sm text-triba-brown/80 leading-relaxed mb-4" data-zone-body></p>
+                <div class="flex flex-col sm:flex-row gap-2">
+                  <button type="button" class="rounded-button bg-triba-green px-5 py-2.5 font-heading text-xs font-medium uppercase text-triba-brown border-2 border-triba-black transition-all hover:scale-[1.02]" data-zone-fix></button>
+                  <button type="button" class="rounded-button bg-transparent px-5 py-2.5 font-heading text-xs font-medium uppercase text-triba-brown border-2 border-triba-black transition-all hover:scale-[1.02]" data-zone-howto-toggle></button>
+                </div>
+                <div class="hidden mt-4 pt-4 border-t border-triba-black/10" data-zone-howto>
+                  <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-2" data-zone-howto-title></p>
+                  <p class="font-sans text-sm text-triba-brown/80 leading-relaxed mb-3" data-zone-howto-body></p>
+                  <a class="font-sans text-sm text-triba-red hover:underline" data-zone-howto-link></a>
+                </div>
+              </div>
               <div class="text-center pt-2">
                 <Button variant="primary" size="md" type="submit">{dict.miCuenta.upgradeSubmit}</Button>
               </div>
@@ -372,7 +390,7 @@ const miCuentaMessages = {
               <div class="grid grid-cols-2 gap-3">
                 <label class="block">
                   <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.region}</span>
-                  <input name="region" maxlength="120" autocomplete="address-level1" value={savedAddress?.region ?? ""}
+                  <input name="region" required maxlength="120" autocomplete="address-level1" value={savedAddress?.region ?? ""}
                     class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
                 </label>
                 <label class="block">
@@ -383,7 +401,7 @@ const miCuentaMessages = {
               </div>
               <label class="block">
                 <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.postal}</span>
-                <input name="postal_code" maxlength="30" autocomplete="postal-code" value={savedAddress?.postal_code ?? ""}
+                <input name="postal_code" required maxlength="30" autocomplete="postal-code" value={savedAddress?.postal_code ?? ""}
                   class="mt-1 w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
               </label>
               <label class="block">
@@ -806,12 +824,24 @@ const miCuentaMessages = {
   function setupUpgradeForm() {
     var form = document.getElementById("upgrade-form") as HTMLFormElement | null;
     if (!form) return;
-    var messages = { processing: "Procesando...", error: "Error", networkError: "Error" };
+    var messages = { processing: "Procesando...", error: "Error", networkError: "Error", declined: "Error" };
     try { Object.assign(messages, JSON.parse(form.dataset.messages || "{}")); } catch { /* keep defaults */ }
     var termsVersion = form.dataset.termsVersion || "v1";
+    var successHref = form.dataset.successHref || "/mi-cuenta?checkout=success&flow=mail_club_upgrade";
+    var ds = form.dataset;
     var msgEl = document.getElementById("upgrade-msg");
     var submitBtn = form.querySelector("button[type=submit]") as HTMLButtonElement | null;
     var originalBtnText = submitBtn ? submitBtn.textContent : "";
+    var zonePanel = document.getElementById("upgrade-zone-mismatch");
+    var zoneTitle = zonePanel ? zonePanel.querySelector("[data-zone-title]") : null;
+    var zoneBody = zonePanel ? zonePanel.querySelector("[data-zone-body]") : null;
+    var zoneFixBtn = zonePanel ? zonePanel.querySelector("[data-zone-fix]") as HTMLButtonElement | null : null;
+    var zoneHowtoToggle = zonePanel ? zonePanel.querySelector("[data-zone-howto-toggle]") as HTMLButtonElement | null : null;
+    var zoneHowto = zonePanel ? zonePanel.querySelector("[data-zone-howto]") : null;
+    var zoneHowtoTitle = zonePanel ? zonePanel.querySelector("[data-zone-howto-title]") : null;
+    var zoneHowtoBody = zonePanel ? zonePanel.querySelector("[data-zone-howto-body]") : null;
+    var zoneHowtoLink = zonePanel ? zonePanel.querySelector("[data-zone-howto-link]") as HTMLAnchorElement | null : null;
+    var countrySelect = form.querySelector("select[name=country_iso]") as HTMLSelectElement | null;
 
     function showMsg(text: string) {
       if (!msgEl) return;
@@ -819,9 +849,74 @@ const miCuentaMessages = {
       msgEl.classList.remove("hidden");
     }
 
-    form.addEventListener("submit", async function (e) {
-      e.preventDefault();
+    function hideZonePanel() {
+      if (zonePanel) zonePanel.classList.add("hidden");
+      if (zoneHowto) zoneHowto.classList.add("hidden");
+    }
+
+    function showZonePanel(current: string, expected: string) {
+      if (!zonePanel) return;
+      if (zoneTitle) zoneTitle.textContent = ds.zoneTitle || "";
+      if (zoneBody) {
+        zoneBody.textContent = (ds.zoneBody || "")
+          .replace("{current}", current)
+          .replace("{expected}", expected);
+      }
+      if (zoneFixBtn) zoneFixBtn.textContent = ds.zoneFix || "";
+      if (zoneHowtoToggle) zoneHowtoToggle.textContent = ds.zoneHowtoTitle || "";
+      if (zoneHowtoTitle) zoneHowtoTitle.textContent = ds.zoneHowtoTitle || "";
+      if (zoneHowtoBody) zoneHowtoBody.textContent = ds.zoneHowtoBody || "";
+      if (zoneHowtoLink) {
+        zoneHowtoLink.textContent = ds.zoneHowtoLink || "";
+        zoneHowtoLink.href = ds.subscribeHref || "/suscribirme";
+      }
+      zonePanel.classList.remove("hidden");
+      zonePanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    if (zoneFixBtn) {
+      zoneFixBtn.addEventListener("click", function () {
+        hideZonePanel();
+        if (countrySelect) countrySelect.focus();
+      });
+    }
+    if (zoneHowtoToggle) {
+      zoneHowtoToggle.addEventListener("click", function () {
+        if (zoneHowto) zoneHowto.classList.toggle("hidden");
+      });
+    }
+    if (countrySelect) {
+      countrySelect.addEventListener("change", hideZonePanel);
+    }
+
+    var altPayWrap = document.getElementById("upgrade-alt-pay-wrap");
+    var altPayBtn = document.getElementById("upgrade-alt-pay");
+    // Reintento con otra tarjeta: salta el cobro off-session y va directo al Checkout.
+    var forceCheckout = false;
+
+    function hideAltPay() {
+      if (altPayWrap) altPayWrap.classList.add("hidden");
+    }
+
+    function restoreSubmit() {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.textContent = originalBtnText;
+      }
+    }
+
+    if (altPayBtn) {
+      altPayBtn.addEventListener("click", function () {
+        forceCheckout = true;
+        hideAltPay();
+        submitUpgrade();
+      });
+    }
+
+    async function submitUpgrade() {
       if (msgEl) msgEl.classList.add("hidden");
+      hideZonePanel();
+      hideAltPay();
       if (submitBtn) {
         submitBtn.disabled = true;
         submitBtn.textContent = messages.processing;
@@ -842,7 +937,9 @@ const miCuentaMessages = {
           address_extra: String(fd.get("address_extra") || ""),
           terms_accepted: fd.get("terms_accepted") === "on",
           terms_version: termsVersion,
+          force_checkout: forceCheckout,
         };
+        forceCheckout = false;
 
         var res = await fetch("/api/upgrade-checkout", {
           method: "POST",
@@ -853,7 +950,25 @@ const miCuentaMessages = {
           body: JSON.stringify(payload),
         });
         var data = await res.json().catch(function () { return {}; });
-        if (!res.ok) throw new Error(data.error || messages.error);
+        if (!res.ok) {
+          if (data.code === "ZONE_MISMATCH" && data.current && data.expected) {
+            showZonePanel(String(data.current.currency || ""), String(data.expected.currency || ""));
+            restoreSubmit();
+            return;
+          }
+          if (data.code === "PAYMENT_FAILED") {
+            showMsg(data.error || messages.declined);
+            if (altPayWrap) altPayWrap.classList.remove("hidden");
+            restoreSubmit();
+            return;
+          }
+          throw new Error(data.error || messages.error);
+        }
+        // Cobro off-session aplicado: éxito sin salir de la página.
+        if (data.applied) {
+          window.location.href = successHref;
+          return;
+        }
         if (data.url) {
           window.location.href = data.url;
           return;
@@ -861,11 +976,13 @@ const miCuentaMessages = {
         throw new Error(data.error || messages.error);
       } catch (err: any) {
         showMsg(err && err.message ? err.message : messages.networkError);
-        if (submitBtn) {
-          submitBtn.disabled = false;
-          submitBtn.textContent = originalBtnText;
-        }
+        restoreSubmit();
       }
+    }
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      submitUpgrade();
     });
   }
 

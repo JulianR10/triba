@@ -10,6 +10,7 @@ export const ui = {
     dateLocale: "es-AR",
     nav: {
       home: "Inicio",
+      mailClub: "Mail Club",
       magazine: "Revista",
       subscribe: "Suscribirme",
       creators: "Triba Creators",
@@ -55,15 +56,24 @@ export const ui = {
       existingResynced: "Ya estás suscripta — te reenviamos la bienvenida",
       existing: "Ya estás suscripta",
       error: "Error al suscribirte. Intentalo de nuevo.",
-      networkError: "Error de conexión. Intentalo de nuevo.",
+      networkError: "Error de conexión. Intentá de nuevo.",
+    },
+    popup: {
+      badge: "Nuevo",
+      eyebrow: "✦ Novedad",
+      title: "La revista llegó a tu buzón",
+      lead: "Un sobre cada mes, con piezas para guardar y coleccionar.",
+      body: "Zine, carta, stickers y más — con envío gratis a todo el mundo.",
+      cta: "Quiero mi sobre",
+      dismiss: "Seguir explorando",
+      closeLabel: "Cerrar",
     },
     home: {
       title: "Inicio",
       description:
-        "Triba es una revista digital mensual escrita por y para mujeres. Descubrí nuestra comunidad, ediciones, newsletter y mucho más.",
+        "Triba es una revista digital mensual escrita por y para mujeres. Descubrí nuestra comunidad, ediciones, Mail Club y mucho más.",
       tagline: "Tu nueva lectura favorita<br />en forma de revista digital",
-      subscribe: "Suscribirme",
-      freeNewsletter: "Recibir newsletter gratis",
+      digitalMagazine: "Revista digital",
       whatAreWe: "¿Qué somos?",
       bullets: [
         "Una revista digital mensual",
@@ -81,10 +91,6 @@ export const ui = {
       mujeres: "MUJERES",
       collaborations:
         "Todos los meses sumamos colaboradoras a nuestra revista y nos encanta recibir nuevas propuestas.<br /><br />Hasta ahora hemos tenido Triba creators que escriben desde España, Argentina, Estados Unidos, Puerto Rico, México, Colombia, Francia, Chile, Uruguay, etc.<br /><br />Triba es un proyecto universal que se enriquece en la convivencia de diferentes voces provenientes de todo el mundo, la suma de culturas y puntos de vista que se nutren entre sí es uno de nuestros pilares más importantes.",
-      newsletterTitle: "newsletter gratuito",
-      newsletterLead: "Recibí triba gratis todos los meses",
-      newsletterBody:
-        "Dos artículos periodísticos + un artículo de la revista de muestra, directo a tu casilla de correo.",
       becomeCreator: "Conviértete en Triba Creator",
       creatorParagraph1:
         "A Triba la construimos entre todas las personas que forman parte de nuestra comunidad. Cada nueva edición suma voces, ideas y experiencias que enriquecen el proyecto y lo hacen crecer.",
@@ -139,7 +145,7 @@ export const ui = {
     subscribe: {
       title: "Suscribirme",
       description:
-        "Elegí tu plan de suscripción a Triba: newsletter gratuito o suscripción paga con acceso a la revista completa, archivo y descarga PDF. Pago seguro con Stripe o Mercado Pago.",
+        "Elegí tu plan de suscripción a Triba: digital o Mail Club, con acceso a la revista completa, archivo y descarga PDF. Pago seguro con Stripe o Mercado Pago.",
       patchTitle: "Nuestra suscripción",
       recommended: "Recomendado",
       subTitle: "Suscripción Triba",
@@ -151,13 +157,6 @@ export const ui = {
       accessNote: "Accedés a través de tu perfil de usuario en nuestro sitio web",
       period: "/mes",
       monthlyNote: "Suscripción mensual. Cancelá cuando quieras.",
-      newsTitle: "Newsletter gratuito",
-      newsBullets: [
-        "2 ARTÍCULOS PERIODÍSTICOS POR MES",
-        "1 ARTÍCULO SELECTO DE NUESTRA REVISTA",
-      ],
-      newsNote: "Te llega a tu correo todos los meses, como un blog de noticias",
-      newsButton: "Quiero el newsletter",
       socialProof:
         "\"Somos una comunidad de mujeres que escriben para mujeres. Cada suscripción nos ayuda a seguir creciendo.\"",
       team: "— Equipo Triba",
@@ -203,7 +202,6 @@ export const ui = {
       checkoutCanceled: "Pago cancelado. No se realizó ningún cargo. Podés intentar de nuevo cuando quieras.",
       checkoutPending: "Tu pago está siendo procesado. Te avisaremos por email cuando se confirme.",
       close: "Cerrar",
-      newsletterPlaceholder: "tu@email.com",
     },
     mailClub: {
       tag: "Nuevo",
@@ -265,7 +263,6 @@ export const ui = {
         "Una postal coleccionable",
         "Y una sorpresa que cambia cada mes",
       ],
-      box2Note: "Y además, todo lo de la suscripción digital: la revista completa, el acceso a los archivos.",
       box3Title: "Cómo funciona",
       box3Steps: [
         "Te suscribís y nos dejás tu dirección. Hacemos envíos gratis a todo el mundo.",
@@ -402,15 +399,24 @@ export const ui = {
       noSubBody: "No tenés una suscripción activa. Podés suscribirte para acceder a la revista completa, el archivo histórico y la descarga PDF.",
       updatePaymentBody: "No se procesó tu último pago. Actualizá tu medio de pago para recuperar el acceso a la revista completa, el archivo histórico y la descarga PDF.",
       subscribe: "Suscribirme",
-      upgradeTitle: "Pasarme al Mail Club",
       upgradeLead: "Sumate al Mail Club",
       upgradeBody:
-        "Seguís teniendo todo lo de tu suscripción digital y además te llega un sobre a casa cada mes. Hoy pagás solo la diferencia de este mes ({diff}). Desde tu próxima renovación, tu cuota pasa a ser {full}/mes.",
+        "Seguís teniendo todo lo de tu suscripción digital y además te llega un sobre a casa cada mes. Hoy pagás solo la diferencia de este mes ({diff}). Desde tu próxima renovación, tu cuota pasa a ser {full}.",
       upgradeCutoffNote: "Si te sumás antes del 15, tu sobre sale este mes.",
       upgradeSubmit: "Confirmar y pagar la diferencia",
       upgradeProcessing: "Procesando...",
       upgradeError: "No pudimos procesar tu upgrade. Intentá de nuevo.",
       upgradeNetworkError: "Error de conexión. Intentá de nuevo.",
+      upgradeCardDeclined: "Tu tarjeta fue rechazada. Podés intentar con otra tarjeta.",
+      upgradePayAnotherCard: "Pagar con otra tarjeta",
+      upgradeZoneMismatchTitle: "Tu dirección y tu pago tienen que coincidir",
+      upgradeZoneMismatchBody:
+        "Tu suscripción es en {current} y la dirección ingresada corresponde a envíos en {expected}. El upgrade mantiene tu moneda y proveedor actual.",
+      upgradeZoneFixAddress: "Corregir dirección",
+      upgradeZoneHowToTitle: "¿Te mudaste de zona?",
+      upgradeZoneHowToBody:
+        "Para cambiar de zona tenés que cancelar tu suscripción actual al fin del período y hacer un alta nueva en la zona correcta desde Suscribirme. Si tenés dudas, escribinos.",
+      upgradeZoneHowToLink: "Ir a Suscribirme",
       downgradeTitle: "Volver al plan digital",
       downgradeBody:
         "Seguís recibiendo el sobre hasta el final del período ya pagado. Desde tu próxima renovación pagás el precio digital y no recibís más sobres.",
@@ -444,6 +450,7 @@ export const ui = {
     dateLocale: "en-US",
     nav: {
       home: "Home",
+      mailClub: "Mail Club",
       magazine: "Magazine",
       subscribe: "Subscribe",
       creators: "Triba Creators",
@@ -491,13 +498,22 @@ export const ui = {
       error: "There was an error subscribing. Try again.",
       networkError: "Connection error. Try again.",
     },
+    popup: {
+      badge: "New",
+      eyebrow: "✦ Just landed",
+      title: "The magazine lands in your mailbox",
+      lead: "An envelope every month, with pieces to keep and collect.",
+      body: "Zine, letter, stickers and more — free worldwide shipping.",
+      cta: "I want my envelope",
+      dismiss: "Keep exploring",
+      closeLabel: "Close",
+    },
     home: {
       title: "Home",
       description:
-        "Triba is a monthly digital magazine written by and for women. Discover our community, editions, newsletter and much more.",
+        "Triba is a monthly digital magazine written by and for women. Discover our community, editions, Mail Club and much more.",
       tagline: "Your new favorite read<br />in the shape of a digital magazine",
-      subscribe: "Subscribe",
-      freeNewsletter: "Get the free newsletter",
+      digitalMagazine: "Digital magazine",
       whatAreWe: "WHAT ARE WE?",
       bullets: [
         "A monthly digital magazine",
@@ -515,10 +531,6 @@ export const ui = {
       mujeres: "WOMEN",
       collaborations:
         "Every month we add contributors to our magazine and we love receiving new proposals.<br /><br />So far we've had Triba Creators writing from Spain, Argentina, the United States, Puerto Rico, Mexico, Colombia, France, Chile, Uruguay, etc.<br /><br />Triba is a universal project enriched by different voices from all over the world. The sum of cultures and viewpoints feeding each other is one of our most important pillars.",
-      newsletterTitle: "free newsletter",
-      newsletterLead: "Get triba for free every month",
-      newsletterBody:
-        "Two journalistic articles + one sample magazine article, straight to your inbox.",
       becomeCreator: "Become a Triba Creator",
       creatorParagraph1:
         "Triba is built by all the people who are part of our community. Each new edition adds voices, ideas and experiences that enrich the project and make it grow.",
@@ -572,7 +584,7 @@ export const ui = {
     subscribe: {
       title: "Subscribe",
       description:
-        "Choose your Triba subscription plan: free newsletter or paid subscription with access to the full magazine, archive and PDF download. Secure payment with Stripe or Mercado Pago.",
+        "Choose your Triba subscription plan: digital or Mail Club, with access to the full magazine, archive and PDF download. Secure payment with Stripe or Mercado Pago.",
       patchTitle: "Our subscription",
       recommended: "Recommended",
       subTitle: "Triba subscription",
@@ -584,13 +596,6 @@ export const ui = {
       accessNote: "You access it through your user profile on our website",
       period: "/mo",
       monthlyNote: "Monthly subscription. Cancel anytime.",
-      newsTitle: "Free newsletter",
-      newsBullets: [
-        "2 JOURNALISTIC ARTICLES PER MONTH",
-        "1 FEATURED ARTICLE FROM OUR MAGAZINE",
-      ],
-      newsNote: "It lands in your inbox every month, like a news blog",
-      newsButton: "I want the newsletter",
       socialProof:
         "\"We are a community of women who write for women. Every subscription helps us keep growing.\"",
       team: "— Triba Team",
@@ -622,7 +627,7 @@ export const ui = {
         },
         {
           q: "I'm already subscribed, how do I switch to the Mail Club?",
-          a: "From your profile, under “Switch to the Mail Club”. You enter your address and only pay this month's difference (€3.50 / US$5.50 / $9,000). From your next renewal you pay the club price.",
+          a: "From your profile, under “Join the Mail Club”. You enter your address and only pay this month's difference (€3.50 / US$5.50 / $9,000). From your next renewal you pay the club price.",
         },
         {
           q: "Can I change my address?",
@@ -636,7 +641,6 @@ export const ui = {
       checkoutCanceled: "Payment canceled. No charge was made. You can try again whenever you want.",
       checkoutPending: "Your payment is being processed. We'll email you when it's confirmed.",
       close: "Close",
-      newsletterPlaceholder: "you@email.com",
     },
     mailClub: {
       tag: "New",
@@ -698,7 +702,6 @@ export const ui = {
         "A collectible postcard",
         "And a surprise that changes every month",
       ],
-      box2Note: "Plus everything from the digital subscription: the full magazine and archive access.",
       box3Title: "How it works",
       box3Steps: [
         "You subscribe and leave us your address. We ship free worldwide.",
@@ -835,15 +838,24 @@ export const ui = {
       noSubBody: "You don't have an active subscription. Subscribe to access the full magazine, the historical archive and PDF download.",
       updatePaymentBody: "Your last payment didn't go through. Update your payment method to regain access to the full magazine, the historical archive and PDF download.",
       subscribe: "Subscribe",
-      upgradeTitle: "Switch to the Mail Club",
       upgradeLead: "Join the Mail Club",
       upgradeBody:
-        "You keep everything from your digital subscription plus an envelope at home every month. Today you only pay this month's difference ({diff}). From your next renewal, your fee becomes {full}/mo.",
+        "You keep everything from your digital subscription plus an envelope at home every month. Today you only pay this month's difference ({diff}). From your next renewal, your fee becomes {full}.",
       upgradeCutoffNote: "If you join before the 15th, your envelope ships this month.",
       upgradeSubmit: "Confirm and pay the difference",
       upgradeProcessing: "Processing...",
       upgradeError: "We couldn't process your upgrade. Try again.",
       upgradeNetworkError: "Connection error. Try again.",
+      upgradeCardDeclined: "Your card was declined. You can try another card.",
+      upgradePayAnotherCard: "Pay with another card",
+      upgradeZoneMismatchTitle: "Your address and payment must match",
+      upgradeZoneMismatchBody:
+        "Your subscription is in {current} and the address you entered corresponds to {expected} shipping. The upgrade keeps your current currency and provider.",
+      upgradeZoneFixAddress: "Fix address",
+      upgradeZoneHowToTitle: "Moved to another zone?",
+      upgradeZoneHowToBody:
+        "To change zones you need to cancel your current subscription at the end of the period and start a new signup in the right zone from Subscribe. If in doubt, write to us.",
+      upgradeZoneHowToLink: "Go to Subscribe",
       downgradeTitle: "Switch back to the digital plan",
       downgradeBody:
         "You keep receiving the envelope until the end of the already-paid period. From your next renewal you pay the digital price and envelopes stop.",
