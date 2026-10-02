@@ -156,7 +156,8 @@ export const ui = {
       ],
       accessNote: "Accedés a través de tu perfil de usuario en nuestro sitio web",
       period: "/mes",
-      monthlyNote: "Suscripción mensual. Cancelá cuando quieras.",
+      subscribeButton: "Suscribirse",
+      accountFirst: "Primero debés crear tu cuenta gratis.",
       socialProof:
         "\"Somos una comunidad de mujeres que escriben para mujeres. Cada suscripción nos ayuda a seguir creciendo.\"",
       team: "— Equipo Triba",
@@ -214,8 +215,6 @@ export const ui = {
       ],
       cutoffNote:
         "Te llega por correo a donde estés. Suscribite antes del 15 y tu sobre sale ese mes.",
-      monthlyNote: "Suscripción mensual. Cancelá cuando quieras.",
-      button: "Quiero el Mail Club",
       howItWorks: "¿Cómo funciona?",
       eurPrice: "€10,50",
       usdPrice: "U$S 12,50",
@@ -595,7 +594,8 @@ export const ui = {
       ],
       accessNote: "You access it through your user profile on our website",
       period: "/mo",
-      monthlyNote: "Monthly subscription. Cancel anytime.",
+      subscribeButton: "Subscribe",
+      accountFirst: "First create your free account.",
       socialProof:
         "\"We are a community of women who write for women. Every subscription helps us keep growing.\"",
       team: "— Triba Team",
@@ -653,8 +653,6 @@ export const ui = {
       ],
       cutoffNote:
         "It arrives by mail wherever you are. Subscribe before the 15th and your envelope ships that month.",
-      monthlyNote: "Monthly subscription. Cancel anytime.",
-      button: "I want the Mail Club",
       howItWorks: "How does it work?",
       eurPrice: "€10.50",
       usdPrice: "US$12.50",

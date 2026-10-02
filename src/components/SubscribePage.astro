@@ -160,15 +160,15 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
 
               {plans.map((p) => (
                 <div data-plan={p.moneda} class={p.moneda === "EUR" ? "" : "hidden"}>
-                  <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1 whitespace-nowrap">{p.simbolo}{p.precio}</p>
-                  <p class="font-sans text-base text-triba-brown/60 mb-8">{dict.subscribe.period}</p>
+                  <p class="font-heading text-4xl md:text-5xl font-bold text-triba-red mb-1 whitespace-nowrap">{p.simbolo}{p.precio} <span class="font-sans text-lg md:text-xl font-normal text-triba-brown/60">{dict.subscribe.period}</span></p>
+                  <p class="font-sans text-xs text-triba-brown/60 mb-8">{p.moneda === "ARS" ? dict.mailClub.mpLabel : dict.mailClub.cardLabel}</p>
 
                   <div class="space-y-3 mb-6">
-                    {p.moneda !== "ARS" && <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth lang={lang} />}
-                    {p.moneda === "ARS" && <CheckoutButton provider="mercadopago" currency={p.moneda} variant="default" fullWidth lang={lang} />}
+                    {p.moneda !== "ARS" && <CheckoutButton provider="stripe" currency={p.moneda} variant="default" fullWidth lang={lang} label={dict.subscribe.subscribeButton} />}
+                    {p.moneda === "ARS" && <CheckoutButton provider="mercadopago" currency={p.moneda} variant="default" fullWidth lang={lang} label={dict.subscribe.subscribeButton} />}
                   </div>
 
-                  <p class="font-sans text-[11px] text-triba-brown/50">{dict.subscribe.monthlyNote}</p>
+                  <p class="font-sans text-[11px] text-triba-brown/50">{dict.subscribe.accountFirst}</p>
                 </div>
               ))}
             </div>
@@ -283,10 +283,10 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
                   </span>
                 </label>
                 <p id="mailclub-msg" class="hidden font-sans text-xs text-triba-red text-center"></p>
-                <Button variant="default" size="md" type="submit">{dict.mailClub.button}</Button>
+                <Button variant="default" size="md" type="submit">{dict.subscribe.subscribeButton}</Button>
               </form>
 
-              <p class="font-sans text-[11px] text-triba-brown/50 mt-4 text-center">{dict.mailClub.monthlyNote}</p>
+              <p class="font-sans text-[11px] text-triba-brown/50 mt-4 text-center">{dict.subscribe.accountFirst}</p>
               <div class="text-center">
                 <a href={localizePath("/mail-club", lang)} class="inline-block mt-2 font-sans text-xs text-triba-red hover:underline">{dict.mailClub.howItWorks}</a>
               </div>
