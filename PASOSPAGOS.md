@@ -114,7 +114,7 @@ Hecho: alta nueva Mail Club EUR (Stripe) y USD (Stripe) → activas en staging. 
 Falta:
 
 - Upgrade ARS cuando esté MP de prueba.
-- Webhook repetido explícito (reenviar un evento desde el dashboard y comprobar que no duplica nada).
+- Webhook repetido explícito: reenviado `checkout.session.completed` desde el dashboard → HTTP 200 sin errores y sin duplicados (mismas suscripciones, fundadoras 1–4 intactas).
 - Cancelación o vuelta a digital al final del período pagado.
 - Confirmar que la bienvenida llega a una casilla controlada. Los emails transaccionales pueden enviarse de verdad si Preview utiliza Sender live.
 - No registrar despachos físicos ni preparar envíos reales desde cuentas de prueba.
