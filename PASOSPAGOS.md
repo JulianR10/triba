@@ -2,7 +2,7 @@
 
 Guía para probar Mail Club sin usar credenciales live en Preview ni tocar la base de producción.
 
-## Estado actual (02-oct-2026)
+## Estado actual (02-oct-2026, cierre)
 
 Hecho (además de lo anterior):
 
@@ -23,12 +23,16 @@ Hecho (además de lo anterior):
 - Rediseño UI (hallmark, tokens de marca intactos): `/mail-club` Manifesto, Suscribirme con Mail Club héroe y digital secundario, Mi Cuenta pasada quirúrgica (hero sólido, reveals mínimos), emails de bienvenida (carta) y despacho (sello) sin cambiar textos ni envíos.
 - Mercado Pago: webhook de prueba configurado en el dashboard (URL Preview) y variables de prueba con alcance Preview/`mail-club` verificadas por nombre. OJO: el Access Token de prueba se expuso en el chat → regenerarlo y actualizar la variable.
 - Supabase Production: historial reconciliado (`017–020` marcadas aplicadas sin reejecutar) y `db push --dry-run` limpio (solo aplicaría `021–024`). Sin cambios aplicados todavía.
+- Webhook Stripe reenviado manualmente → 200 sin duplicados (ver §7).
+- Decisión MP: sin sandbox (bloqueado por cuenta compradora); se valida en live el día del lanzamiento. Webhook de prueba configurado en el dashboard; variables de prueba en Preview/`mail-club` verificadas por nombre. El token de prueba expuesto en el chat conviene regenerarlo por higiene, sin urgencia (los tokens test no mueven dinero real).
+- Envío postal: confirmado que está **incluido** en el precio del plan (sin cargo separado). Pendiente de las propietarias: medir el sobre prototipo y cotizar Correos para validar el margen (`docs/postal-costing.md`).
 
-Pendiente:
+Pendiente (uno a la vez, en orden):
 
-- Mercado Pago ARS: probar en sandbox (bloqueado por cuenta compradora) o validar en live el día del lanzamiento. Confirmar regeneración del token de prueba expuesto.
-- Preparación de producción (§8) y día del lanzamiento (§9).
-- Puertas no técnicas: costeo postal medido, export del newsletter, fotos definitivas, aprobación legal.
+1. Costeo postal medido (propietarias).
+2. Export y verificación del newsletter desde producción (solo lectura).
+3. Fotos definitivas + aprobación legal.
+4. Día del lanzamiento (§9): migraciones `021–024`, validación MP live (alta + upgrade ARS), merge + deploy, prueba live mínima, retiro del newsletter.
 
 ## 1. Conseguir acceso de forma segura
 
@@ -113,13 +117,11 @@ Sin este paso, ninguna prueba de pago puede funcionar.
 
 Después de guardar las variables, redeplegar el Preview para que Vercel las aplique. Confirmar que el deployment pertenece a la rama `mail-club` y usar cuentas de prueba.
 
-Hecho: alta nueva Mail Club EUR (Stripe) y USD (Stripe) → activas en staging. Upgrade digital → Mail Club EUR/USD, tarjeta rechazada y downgrade al fin del período → verificados (ver Estado actual).
+Hecho: altas Mail Club EUR/USD, upgrades EUR/USD, tarjeta rechazada, 3DS/`invoice.paid`, downgrade al fin del período y webhook repetido → verificados (ver Estado actual).
 
-Falta:
+Falta (solo live, día del lanzamiento):
 
-- Upgrade ARS cuando esté MP de prueba.
-- Webhook repetido explícito: reenviado `checkout.session.completed` desde el dashboard → HTTP 200 sin errores y sin duplicados (mismas suscripciones, fundadoras 1–4 intactas).
-- Cancelación o vuelta a digital al final del período pagado.
+- Upgrade ARS con Mercado Pago (sin sandbox; validar con cargo real mínimo).
 - Confirmar que la bienvenida llega a una casilla controlada. Los emails transaccionales pueden enviarse de verdad si Preview utiliza Sender live.
 - No registrar despachos físicos ni preparar envíos reales desde cuentas de prueba.
 - Las cuentas que ya tienen Mail Club activo no sirven para probar un checkout nuevo: usar cuentas de prueba nuevas o cancelar la suscripción test en Stripe.
@@ -131,7 +133,7 @@ Todo esto se puede dejar cargado **antes** del día de la presentación; el
 código nuevo solo empieza a usarlo cuando `mail-club` se integre en `main`
 y se despliegue a Production. No requiere deploy previo.
 
-- En Stripe **Live mode**, crear los precios mensuales Mail Club EUR 10,50 y USD 12,50 y guardar sus nuevos Price IDs live.
+- En Stripe **Live mode**, crear los precios mensuales Mail Club EUR 10,50 y USD 12,50 y guardar sus nuevos Price IDs live. ✅ Hecho 02-oct y cargados en Vercel Production (ver Estado actual).
 - En Vercel **Production**, agregar `STRIPE_PRICE_MAIL_CLUB_EUR` y `STRIPE_PRICE_MAIL_CLUB_USD` con esos IDs live.
 - Conservar las credenciales y precios digitales actuales de Production (`STRIPE_SECRET_KEY`, `STRIPE_PRICE_EUR`, `STRIPE_PRICE_USD`). Nunca poner valores de prueba en Production.
 - Revisar el webhook Stripe live existente en `https://www.universotriba.com/api/webhook/stripe` y habilitar los eventos indicados en §3. Si se crea un endpoint live distinto o se rota su signing secret, actualizar el `STRIPE_WEBHOOK_SECRET` de Production con el secreto que corresponda.
@@ -153,15 +155,8 @@ y se despliegue a Production. No requiere deploy previo.
 3. Integrar `mail-club` en `main` y desplegar. Verificar checkout live mínimo.
 4. Recién después, retirar newsletter y borrar solo contactos gratuitos.
 
-## 10. Estado de variables (01-oct-2026)
+## 10. Estado de variables (02-oct-2026, cierre)
 
-Preview rama `mail-club`: Stripe completo en modo prueba (`sk_test_…`,
-webhook secret y los 4 Price IDs). Supabase de pruebas. `SITE` del Preview.
+Preview rama `mail-club`: Stripe completo en modo prueba, Supabase de pruebas, `SITE` del Preview y variables MP de prueba (verificadas por nombre; regenerar el token expuesto cuando se pueda).
 
-Pendiente en Preview: `MP_ACCESS_TOKEN` y `MP_WEBHOOK_SECRET` de prueba
-(todavía con valores live → no probar ARS). Todo lo demás de pago en
-Preview ya es de prueba.
-
-Production (intacto): credenciales live y precios digitales vigentes.
-Faltan `STRIPE_PRICE_MAIL_CLUB_EUR` y `STRIPE_PRICE_MAIL_CLUB_USD` live
-(ver §8).
+Production (intacto, sin redeploy): credenciales live y precios digitales vigentes + los 2 Price IDs live de Mail Club ya cargados. Resta el día del lanzamiento: migraciones `021–024`, eventos de webhooks live, merge + deploy, prueba live mínima (incluido ARS) y retiro del newsletter.
