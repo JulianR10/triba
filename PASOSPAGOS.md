@@ -67,6 +67,8 @@ Habilitar estos eventos:
 - `invoice.paid`
 - `customer.subscription.updated`
 - `customer.subscription.deleted`
+- `payment_intent.succeeded` (upgrade con tarjeta guardada)
+- `payment_intent.payment_failed` (auditoría de rechazos del upgrade)
 
 Guardar el signing secret (`whsec_…`) generado para ese endpoint de prueba. Cada endpoint/modo tiene su propio secreto.
 
@@ -119,6 +121,12 @@ Después de guardar las variables, redeplegar el Preview para que Vercel las apl
 
 Hecho: altas Mail Club EUR/USD, upgrades EUR/USD, tarjeta rechazada, 3DS/`invoice.paid`, downgrade al fin del período y webhook repetido → verificados (ver Estado actual).
 
+Upgrade con tarjeta guardada (nuevo, pendiente de matriz en Preview):
+- Tarjeta OK sin SCA → cobro off-session instantáneo, sin salir de Mi Cuenta.
+- 3DS (`4000000000003220`) → cae al Checkout automáticamente y se completa ahí.
+- Rechazo (`4000000000000002`) → 402 inline + botón "Pagar con otra tarjeta" → Checkout.
+- Sin tarjeta guardada → Checkout directo (flujo anterior intacto).
+
 Falta (solo live, día del lanzamiento):
 
 - Upgrade ARS con Mercado Pago (sin sandbox; validar con cargo real mínimo).
@@ -136,7 +144,7 @@ y se despliegue a Production. No requiere deploy previo.
 - En Stripe **Live mode**, crear los precios mensuales Mail Club EUR 10,50 y USD 12,50 y guardar sus nuevos Price IDs live. ✅ Hecho 02-oct y cargados en Vercel Production (ver Estado actual).
 - En Vercel **Production**, agregar `STRIPE_PRICE_MAIL_CLUB_EUR` y `STRIPE_PRICE_MAIL_CLUB_USD` con esos IDs live.
 - Conservar las credenciales y precios digitales actuales de Production (`STRIPE_SECRET_KEY`, `STRIPE_PRICE_EUR`, `STRIPE_PRICE_USD`). Nunca poner valores de prueba en Production.
-- Revisar el webhook Stripe live existente en `https://www.universotriba.com/api/webhook/stripe` y habilitar los eventos indicados en §3. Si se crea un endpoint live distinto o se rota su signing secret, actualizar el `STRIPE_WEBHOOK_SECRET` de Production con el secreto que corresponda.
+- Revisar el webhook Stripe live existente en `https://www.universotriba.com/api/webhook/stripe` y habilitar los eventos indicados en §3 (incluidos `payment_intent.succeeded` y `payment_intent.payment_failed` del upgrade con tarjeta guardada). Si se crea un endpoint live distinto o se rota su signing secret, actualizar el `STRIPE_WEBHOOK_SECRET` de Production con el secreto que corresponda.
 - Revisar el webhook live de Mercado Pago en `https://www.universotriba.com/api/webhook/mercadopago` y habilitar los tipos indicados en §4. Si se crea una configuración distinta o rota el secreto de firma, actualizar `MP_WEBHOOK_SECRET` de Production.
 - Mantener en Production el Access Token live de Mercado Pago. No se necesita una variable nueva de precio para ARS.
 - Supabase Production: su historial registra migraciones hasta la `016`,

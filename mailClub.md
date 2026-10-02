@@ -1,10 +1,10 @@
 # Triba Mail Club — bases y plan de trabajo
 
-**Estado (cierre del día):** implementación Mail Club completa en la rama y publicada para Preview; pendiente validación externa (pagos, correo, legal, fotos) y lanzamiento.  
-**Última verificación local:** `astro check` 0 errores · `npm test` 15/15 · `npm run build` OK.  
-**Rama de trabajo:** `mail-club` (`C:\Users\julia\Desktop\Proyectos web\triba-mail-club`), publicada en `origin/mail-club` (commit `da3d6d0`).  
-**Preview Vercel (rama):** `https://triba-gqpgwguo2-julianrecarte.vercel.app` — producción (`www.universotriba.com`) intacta.  
-**Regla:** `main` = sitio live; `mail-club` = trabajo aparte. Sin merge a `main` hasta el lanzamiento.  
+**Estado (cierre del día):** Mail Club mergeado a `main` (`ee2db0d`) + auditoría PDF completa en working tree (bloque 2, zona upgrade con paso obligado, tarjeta guardada off-session, dirección 6/7, admin con direcciones, mail con despedida, micro-copy, SEO, tarjeta lado-a-lado); pendiente validación externa (pagos, correo, legal, fotos) y lanzamiento. Sin commitear ni deployar todavía.  
+**Última verificación local:** `astro check` 0 errores · `npm test` 20/20 · `npm run build` OK.  
+**Ramas:** `main` = trabajo + sitio live (producción intacta hasta el merge + deploy del lanzamiento); `mail-club` = rama histórica ya integrada.  
+**Preview Vercel (rama):** `https://triba-gqpgwguo2-julianrecarte.vercel.app` — regenerar contra `main` antes de la matriz de pruebas.  
+**Regla:** sin push a `main` hasta el lanzamiento (secuencia §9).  
 **Especificación de origen:** `Triba Mail Club – Pedido para la web.pdf` (27-sep-2026), complementada por las decisiones de producto registradas aquí.
 
 Este documento resume las decisiones vigentes y el orden recomendado para el upgrade. Si las notas preliminares `docs/mail-club-base-funcional.md` o `docs/verificacion-flujos-de-pago.md` difieren de lo que se confirma aquí, prevalecen las decisiones más recientes de este documento.
@@ -45,7 +45,7 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 ### Para mañana (en orden)
 
 1. Configurar variables del entorno **Preview** en Vercel (claves de prueba + `SITE` del Preview + webhooks de prueba) y correr `prelaunch-check` contra ese entorno.
-2. Probar en el Preview: alta y upgrade por moneda, rechazo/pendiente/SCA, webhooks repetidos, cancelación y downgrade al fin del período, lote + CSV + despacho.
+2. Probar en el Preview: alta y upgrade por moneda, rechazo/pendiente/SCA, webhooks repetidos, cancelación y downgrade al fin del período, lote + CSV + despacho. Matriz nueva del upgrade con tarjeta guardada (detalle en `PASOSPAGOS.md`): cobro instantáneo sin SCA, 3DS→Checkout automático, rechazo→otra tarjeta, sin tarjeta→Checkout.
 3. Completar `docs/postal-costing.md` con el sobre medido y la cotización de Correos.
 4. Exportar y verificar la lista del newsletter (sin borrar todavía).
 5. Cobros reales EUR/USD/ARS, fotos definitivas y aprobación legal → go/no-go y merge a `main`.
@@ -78,7 +78,7 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 | USD | 5,50 | USD 12,50/mes |
 | ARS | 9.000 | ARS 16.000/mes |
 
-- El upgrade conserva cuenta, proveedor, moneda y fecha de renovación actuales; no requiere cancelar ni crear una suscripción desde cero. La regla de zona por destino se aplica a las altas nuevas, no fuerza a una suscriptora existente a cambiar de moneda al actualizar su dirección.
+- El upgrade conserva cuenta, proveedor, moneda y fecha de renovación actuales; no requiere cancelar ni crear una suscripción desde cero. La regla de zona por destino se aplica a las altas nuevas, no fuerza a una suscriptora existente a cambiar de moneda al actualizar su dirección. Si la dirección del upgrade cae en otra zona, el checkout lo frena con un paso obligado: corregir la dirección o cambiar de zona vía baja al fin del período + alta nueva.
 - Stripe: cobrar la diferencia una sola vez con el medio guardado; al confirmarse, cambiar el precio recurrente sin prorrateo para la próxima renovación.
 - Mercado Pago: cobrar una vez la diferencia de ARS 9.000; solo tras el pago aprobado actualizar el importe recurrente de ARS 7.000 a ARS 16.000.
 - Si el pago está pendiente, falla, se abandona o requiere autenticación adicional, no se completa el upgrade ni se asigna número de fundadora. Los reintentos de webhooks no pueden cobrar ni actualizar más de una vez.
@@ -219,9 +219,10 @@ Comparativo PDF vs. implementación. Estado: `pendiente` / `en progreso` / `hech
   `PrivacyPage.astro` (ES/EN) se quitó hasta que exista el campo. Cuando se implemente el
   selector, restaurar la mención + columna en CSV/admin.
 
-### P4. Formato tarjeta: PDF §8 pedía "al lado, mismo formato" · Estado: pendiente (dueña)
-- Implementado Mail Club héroe + digital secundario (decisión hallmark, tokens intactos).
-  Confirmar con la propietaria que vale el layout héroe antes del lanzamiento.
+### P4. Formato tarjeta: PDF §8 pedía "al lado, mismo formato" · Estado: hecho (literal PDF)
+- Dos tarjetas blancas iguales lado a lado (`md:grid-cols-2`, mismo padding/estructura) en
+  `SubscribePage.astro`; Mail Club conserva solo la etiqueta Nuevo como diferenciador.
+  Sin tocar lógica, ids, copy ni rutas. Verificado con `build` OK.
 
 ### P5. Plazo España 2–7 (§9) vs 3–7 (§10/§12) · Estado: hecho (código en 3–7)
 - Inconsistencia interna del PDF; el código unifica en **3–7 días** (página, FAQ, términos
@@ -247,4 +248,69 @@ próximo push a `main` y se puede seguir trabajando en local/rama sin tocar prod
 4. Merge `mail-club` → `main` + deploy + prueba live mínima (alta + upgrade, conciliar o
    reembolsar) + regenerar token MP de prueba expuesto.
 5. Recién después: retirar newsletter y borrar solo contactos gratuitos.
-6. Post-merge: P4/P5 (formato héroe, plazo 3–7) y CSV de etiquetas a confirmar con la dueña.
+6. Post-merge: P5 (plazo 3–7) y CSV de etiquetas a confirmar con la dueña.
+
+## 10. Auditoría pre-lanzamiento PDF vs código (02-oct-2026)
+
+Comparativo exhaustivo ES+EN. Estado: `hecho` / `pendiente` (+ `dueña` si requiere su decisión).
+
+### Hecho (verificado en código)
+
+- Precios y diferencias exactas: Mail Club EUR 10,50 / USD 12,50 / ARS 16.000
+  (`src/lib/mail-club.ts:23-27`); upgrade EUR 3,50 / USD 5,50 / ARS 9.000 (`:30-34`).
+- Dos tarjetas en Suscribirme (digital secundaria + Mail Club héroe) y newsletter
+  retirado del público (`POST /api/newsletter` en 410).
+- Zona/moneda/proveedor derivados del país postal en servidor en el alta
+  (`src/pages/api/create-checkout.ts:79-90`); AR→ARS/MP, Europa→EUR/Stripe, resto→USD/Stripe.
+- Upgrade sin cancelar: cobra diferencia una vez, cambia recurrencia sin prorrateo
+  (Stripe `proration_behavior:none`, MP 7.000→16.000) vía `src/lib/upgrade-apply.ts:48-74`.
+- Downgrade a digital al fin del período (`src/pages/api/downgrade.ts`) + cancelación existente.
+- Fecha de corte visible pre-pago (15/20) en tarjeta, upgrade, FAQs y página.
+- Casilla de condiciones exigida en servidor (alta y upgrade; edición de dirección la omite).
+- Dirección editable desde Mi Cuenta (`PUT /api/address`); fundadoras 1–100 inmutables.
+- Términos: 10 puntos ES+EN (`src/components/TermsPage.astro:80-97,164-181`), con los dos
+  mails del PDF (reposición `universotriba@`, desistimiento `comunidadtriba@`).
+- Privacidad: dirección postal, finalidad limitada, retención 30 días + 60 días por envío.
+- Mail de bienvenida con dirección + mes del primer sobre en alta y upgrade
+  (`src/lib/mail-club-activation.ts`, `src/lib/email.ts:126-214`); aviso de despacho al registrar lote.
+- CSV con BOM anti-fórmulas: 7 campos postales + email, zona/moneda, fecha de alta
+  derivada, estado, nº fundadora (`src/lib/admin/mail-club.ts:186-252`).
+- Página `/mail-club` + `/en/mail-club`: hero, cómo funciona (5 pasos), cierre, FAQ (9).
+- Script de actualización trimestral ARS en MP (`scripts/update-mp-mailclub-price.mjs`, P1).
+- Nav: link Mail Club entre Inicio y Revista (desktop/mobile, ES/EN) con ola letra por
+  letra (`src/components/MailClubWaveLink.astro`); CTA home con efecto novedad
+  (`variant="mailclub"` en `src/components/Button.astro` + `Home.astro`); cierre sobre
+  `cartas.webp` a sangre con velo de contraste.
+
+### Pendiente
+
+- [x] **Bloque 2 integrado al hero.** `MailClubPage.astro` muestra la foto con 6 puntitos numerados
+  + leyenda `box2Items` a la derecha (`box2Title` como encabezado); sin sección separada ni nota.
+- [x] **Upgrade con control de zona.** `isUpgradeZoneCompatible()` en `mail-club.ts` + guard en
+  `upgrade-checkout.ts` que devuelve `code: ZONE_MISMATCH` con `current/expected`; `MyAccountPage`
+  muestra paso obligado (corregir dirección con foco en país, o cómo cambiar de zona vía baja +
+  alta nueva) con textos ES/EN en `ui.ts`.
+- [x] **Upgrade con tarjeta guardada (PDF §2).** `upgrade-checkout.ts` intenta primero el cobro
+  off-session de la diferencia exacta (`upgrade-payment.ts`: medio por defecto, clave idempotente
+  por upgrade). Sin tarjeta o con SCA → Checkout existente automático; rechazo → 402 inline con
+  reintento explícito a Checkout (`force_checkout`). Webhook suma `payment_intent.succeeded` /
+  `payment_failed` con confirmación compartida e idempotente. MP sin cambios. Resta matriz en
+  Preview (OK sin SCA, 3DS→Checkout, rechazo→otra tarjeta, sin tarjeta→Checkout).
+- [x] **Dirección 6 de 7 obligatorios.** Servidor (`mail-club-address.ts`) exige provincia y código
+  postal; solo el complemento queda opcional. `required` en los 3 formularios (alta, upgrade,
+  edición) + test. Direcciones viejas incompletas se completan en la próxima edición.
+- [x] **Admin con direcciones en pantalla.** Botón Ver por lote + `GET .../batches/[id]/items`
+  (`listMailClubBatchItems`): dirección congelada, email, zona/moneda, alta, estado y fundadora.
+  `joined_at`/estado extraídos a helpers compartidos con el CSV (sin duplicar lógica).
+- [x] **Mail con despedida.** `email.ts:126-201` cierra con `Gracias por sumarte a nuestro universo.
+  Equipo Triba` (ES+EN); etiqueta literal del PDF `Lo vamos a mandar a esta dirección:`
+  (`We'll send it to this address:` en EN) y `corregirla` / `correct it`.
+- [x] **Micro-copy perfil.** `upgradeBody` sin `/mes` (`{full}` solo, ES+EN); `upgradeTitle` huérfano
+  eliminado (la pantalla visible es `Sumate al Mail Club` / `Join the Mail Club`). FAQ restaurada al
+  literal del PDF (`en “Pasarme al Mail Club”`, nombre del botón en el perfil según §11).
+- [x] **SEO vivo.** Metas `subscribe.description` (ES+EN) y `home.description` (ES+EN) sin newsletter,
+  con digital/Mail Club; eliminadas claves muertas `newsletterTitle/Lead/Body`, `freeNewsletter`,
+  tarjeta `news*` de suscribirme y `newsletterPlaceholder` (cero usos verificados).
+- [ ] **Pendientes dueña ya registrados:** España 3–7 (P5),
+  CSV vs `.xlsx` para etiquetas (P6), fotos definitivas, aprobación legal, pagos reales
+  EUR/USD/ARS, export lista newsletter.
