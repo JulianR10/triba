@@ -57,12 +57,29 @@ export const POST: APIRoute = async ({ params, locals }) => {
       return error(rpcErr.message || "Error actualizando la suscripción", 500);
     }
 
-    // RPC éxito → solo limpiar BD y log
+    // RPC éxito (diferida: conserva acceso hasta el vencimiento) → frenar
+    // la recurrencia en el proveedor y log. Sin esto, Stripe seguiría
+    // cobrando cada mes aunque el acceso expire.
+    let providerWarning: string | undefined;
+    if (
+      provider &&
+      subscription.provider_subscription_id &&
+      subscription.provider !== "migrated"
+    ) {
+      try {
+        await provider.scheduleCancel(subscription.provider_subscription_id);
+      } catch (err: any) {
+        providerWarning = err.message || "Provider scheduleCancel failed";
+      }
+    }
+
     logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", profile.id, {
       canceled_email: profile.email,
     });
 
-    return ok();
+    return ok(
+      providerWarning ? { providerWarnings: [providerWarning] } : {},
+    );
   }
 
   // Try migration (migrated user without account)

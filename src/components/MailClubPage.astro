@@ -1,0 +1,116 @@
+---
+import Layout from "../layouts/Layout.astro";
+import Button from "../components/Button.astro";
+import PatchTitle from "../components/PatchTitle.astro";
+import { t, type Locale } from "../i18n/ui";
+import { localizePath } from "../i18n/locale";
+
+const { lang = "es" } = Astro.props as { lang?: Locale };
+const dict = t(lang);
+const page = dict.mailClubPage;
+const canonical = lang === "en" ? "/en/mail-club" : "/mail-club";
+const subscribeHref = localizePath("/suscribirme", lang);
+const faqs = dict.subscribe.faqs;
+---
+
+<style>
+  /* Hallmark · macrostructure: Manifesto · genre: editorial · theme: triba-brand (locked tokens)
+   * pre-emit critique: P5 H4 E5 S4 R5 V4 · nav/footer: global chrome preserved (out of scope)
+   * reveal: hero entrance only · copy/brand/routes unchanged */
+  details[data-faq] .faq-content {
+    display: grid;
+    grid-template-rows: 0fr;
+    transition: grid-template-rows 1s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+  }
+  details[data-faq][open] .faq-content {
+    grid-template-rows: 1fr;
+  }
+  details[data-faq] .faq-content-inner {
+    min-height: 0;
+    overflow: hidden;
+  }
+</style>
+
+<Layout title={page.title} description={page.description} canonical={canonical} lang={lang} navLogoAlways>
+  <section class="page-shell page-gutter bg-triba-bone overflow-x-clip">
+    <div class="max-w-6xl mx-auto">
+
+      <!-- Declaración -->
+      <div class="max-w-3xl mx-auto text-center pt-8 md:pt-12 reveal-text" data-reveal>
+        <PatchTitle content={page.heroTitle} tag="h1" class="text-5xl md:text-7xl text-triba-brown" />
+      </div>
+
+      <div class="flex justify-center my-10 md:my-14">
+        <img src="/mailClub.webp" alt={page.heroTitle} fetchpriority="high" width="1054" height="985" class="w-full max-w-3xl rounded-xl border-2 border-triba-black object-cover" />
+      </div>
+
+      <div class="max-w-3xl mx-auto text-center mb-20 md:mb-28">
+        <p class="font-serif italic text-xl md:text-2xl text-triba-red mt-6 text-balance">{page.heroLead}</p>
+        <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mt-6 text-balance">
+          {page.heroBody}
+        </p>
+        <div class="mt-10 flex justify-center">
+          <Button variant="primary" size="md" href={subscribeHref} class="px-10 py-4 text-base">{page.heroButton}</Button>
+        </div>
+      </div>
+
+      <!-- Cómo funciona · pasos vivos en zigzag -->
+      <h2 class="font-heading text-3xl md:text-5xl uppercase tracking-wide text-triba-brown mb-12 md:mb-16 max-w-3xl">{page.box3Title}</h2>
+      <ol class="reveal-stagger mb-20 md:mb-28" data-reveal>
+        {page.box3Steps.map((step, i) => (
+          <li class={`group flex gap-4 md:gap-6 items-start rounded-xl border-2 border-triba-black p-5 md:p-7 mb-6 md:mb-8 max-w-3xl transition-all duration-300 hover:-translate-y-1 hover:shadow-[4px_4px_0_#35220A] ${i % 2 === 1 ? "bg-triba-white rotate-1 hover:rotate-0 md:ml-24" : "bg-triba-cream -rotate-1 hover:rotate-0 md:mr-24"}`}>
+            <span class="shrink-0 w-12 h-12 md:w-14 md:h-14 rounded-full bg-triba-red text-triba-white border-2 border-triba-black font-heading text-xl md:text-2xl flex items-center justify-center -rotate-6 transition-transform duration-300 group-hover:rotate-6 group-hover:scale-110">{i + 1}</span>
+            <p class="font-sans text-base md:text-xl text-triba-brown leading-relaxed pt-2 md:pt-2.5">{step}</p>
+          </li>
+        ))}
+      </ol>
+
+      <!-- Cierre -->
+      <div class="bg-triba-pink rounded-xl border-2 border-triba-black p-8 md:p-12 mb-20 md:mb-28 max-w-4xl">
+        <p class="font-sans text-base md:text-lg text-triba-brown mb-3">{page.closingTitle}</p>
+        <p class="font-serif italic text-2xl md:text-4xl text-triba-brown mb-10">{page.closingBody}</p>
+        <Button variant="primary" size="md" href={subscribeHref} class="px-10 py-4 text-base">{page.closingButton}</Button>
+      </div>
+
+      <!-- FAQ -->
+      <div class="mb-8 max-w-4xl">
+        <h2 class="font-heading text-2xl md:text-3xl uppercase tracking-wide text-triba-brown mb-8">{page.faqTitle}</h2>
+        <div class="space-y-4">
+          {faqs.map((faq) => (
+            <details data-faq class="bg-triba-cream rounded-xl border-2 border-triba-black overflow-hidden group transition-shadow duration-300 hover:shadow-md">
+              <summary class="px-5 py-4 font-heading text-sm font-medium uppercase tracking-wider text-triba-brown cursor-pointer list-none flex items-center justify-between">
+                {faq.q}
+                <span class="text-triba-red text-lg transition-transform duration-300 group-open:rotate-45 shrink-0 ml-3">+</span>
+              </summary>
+              <div class="faq-content">
+                <div class="faq-content-inner px-5 pb-4 font-sans text-base text-triba-brown leading-relaxed">
+                  {faq.a}
+                </div>
+              </div>
+            </details>
+          ))}
+        </div>
+      </div>
+
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import { onPageCycle } from "../lib/onPageCycle";
+
+  function setup() {
+    var faqDetails = document.querySelectorAll<HTMLDetailsElement>("details[data-faq]");
+    faqDetails.forEach(function (detail) {
+      detail.addEventListener("toggle", function () {
+        if (detail.open) {
+          faqDetails.forEach(function (other) {
+            if (other !== detail) other.open = false;
+          });
+        }
+      });
+    });
+  }
+
+  onPageCycle(setup);
+</script>

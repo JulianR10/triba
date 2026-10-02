@@ -3,6 +3,7 @@ import { isActiveSubscription } from "../lib/subscription-status";
 interface SubscriptionStatusResult {
   subscription: {
     status?: string | null;
+    plan_type?: string | null;
     current_period_end?: string | null;
   } | null;
 }
@@ -18,6 +19,7 @@ export function startCheckoutPoll(
   getAccessToken: () => Promise<string | undefined>,
   onTimeout?: () => void,
   onNetworkError?: () => void,
+  expectedPlanType?: "mail_club",
 ): void {
   let attempts = 0;
   let consecutiveFailures = 0;
@@ -45,14 +47,15 @@ export function startCheckoutPoll(
       consecutiveFailures = 0;
 
       if (
-    isActiveSubscription(
-      data.subscription?.status,
-      data.subscription?.current_period_end ?? undefined,
-    )
-  ) {
-    window.clearInterval(timer);
-    window.location.reload();
-  }
+        isActiveSubscription(
+          data.subscription?.status,
+          data.subscription?.current_period_end ?? undefined,
+        ) &&
+        (!expectedPlanType || data.subscription?.plan_type === expectedPlanType)
+      ) {
+        window.clearInterval(timer);
+        window.location.reload();
+      }
     } catch {
       consecutiveFailures += 1;
       if (consecutiveFailures >= NETWORK_ERROR_THRESHOLD && !networkErrorNotified) {

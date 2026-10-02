@@ -23,6 +23,9 @@ const CSP_CONNECT_SRC = [
 const CSP_IMG_SRC = [
   "'self'",
   "data:",
+  // LOREM provisorio: fotos de marcador para la página Mail Club.
+  // Reemplazar por assets propios antes del lanzamiento.
+  "https://picsum.photos",
   ...(supabaseOrigin
     ? [`${supabaseOrigin}/storage/v1/storage/file/`, `${supabaseOrigin}/storage/v1/object/public/`]
     : []),
