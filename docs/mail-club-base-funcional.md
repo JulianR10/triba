@@ -1,6 +1,8 @@
 # Base funcional y técnica — Triba Mail Club
 
-Estado: bases de producto acordadas; código funcional todavía sin implementar.
+> **Estado 03-oct-2026:** implementado y live en producción. Este documento conserva el análisis base; la fuente vigente es `mailClub.md`.
+>
+> Estado original: bases de producto acordadas; código funcional todavía sin implementar.
 Fuente funcional: `Triba Mail Club – Pedido para la web.pdf` (7 páginas) y decisiones posteriores de producto.
 
 ## 1. Decisiones confirmadas
@@ -60,7 +62,7 @@ Esta excepción protege suscripciones existentes; no cambia la regla de destino 
 | Emails | `src/lib/email.ts` contiene emails transaccionales digitales y de edición. No hay bienvenida Mail Club con dirección/primer despacho ni aviso de despacho. | Agregar email de bienvenida al alta/upgrade con dirección y mes del primer sobre, más aviso cuando se registra el despacho. |
 | Página pública/i18n | No existen `/mail-club` ni `/en/mail-club`. i18n usa páginas físicas EN, `src/i18n/ui.ts` y `src/i18n/locale.ts`. | Añadir página ES/EN y actualizar rutas localizadas; el acceso puede enlazarse desde Suscribirme sin alterar la navegación global existente. |
 | Newsletter | Hay formularios en `Home.astro` y `SubscribePage.astro`, API `/api/newsletter`, textos en i18n, términos/privacidad y estado Sender en el dashboard. No hay export administrativo dedicado. | Exportar y verificar antes de retirar. En la salida eliminar el beneficio “NEWSLETTER INCLUIDO”, formularios, nuevas altas y automatizaciones; borrar luego solo los contactos/registros del newsletter gratuito, sin afectar pagos ni emails transaccionales. |
-| Documentación pública | `README.md` y `docs/flujo-funcional.md` describen el newsletter gratis como oferta vigente. | Actualizar documentación de producto al mismo tiempo que la retirada, manteniendo scripts/tablas necesarios para conservar y exportar la lista histórica. |
+| Documentación pública | ~~`README.md` y `docs/flujo-funcional.md` describen el newsletter gratis como oferta vigente.~~ | **Hecho 03-oct-2026:** README, AGENTS y flujo-funcional actualizados; el newsletter figura como retirado y Mail Club como producto vigente. |
 
 ## 3. Modelo técnico recomendado
 

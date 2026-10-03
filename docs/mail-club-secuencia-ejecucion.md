@@ -1,5 +1,7 @@
 # Triba Mail Club — secuencia de ejecución
 
+> **Estado 03-oct-2026:** secuencia ejecutada; Mail Club está live en producción (migraciones `021–025`, precios verificados, smoke 12/12). Este documento queda como referencia del plan. Pendientes reales: `mailClub.md §Pendiente actual`.
+
 **Rama de trabajo:** `mail-club` (`Proyectos web\triba-mail-club`).
 **Fuente de verdad funcional:** `mailClub.md`.
 **Regla de publicación:** trabajar solo en `mail-club`; sin push, merge ni deploy hasta el día de salida. `main` y la web publicada permanecen sin cambios.

@@ -2,6 +2,8 @@
 
 Plan de validación previo a producción. Los checks comienzan pendientes; no representan pruebas ya ejecutadas.
 
+> **Estado 03-oct-2026:** documento histórico. La matriz de Preview y el estado vigente están en `PASOSPAGOS.md`; los precios live EUR/USD ya fueron verificados por API. Queda pendiente solo el cobro real de validación.
+
 ## 1. Validar los recorridos de cobro
 
 ### Stripe — EUR y USD

@@ -59,6 +59,13 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 - [x] **Retención 60 días operativa.** `scripts/purge-mail-club-retention.mjs` (dry-run por defecto, `--real`, `--days N`) purga snapshots despachados y direcciones sin suscripción activa.
 - [x] **Nueva API pública.** `isBeforeCutoffThisMonth()` en `src/lib/mail-club.ts`, con test (suite 21/21).
 
+### Cierre 03-oct-2026 (noche)
+
+- [x] **Precios live verificados contra Stripe.** `price_1UM3BBLIVKTt84JHU5FJwZ6r` (EUR 10,50) y `price_1UM3BBLIVKTt84JHu7GwpUxB` (USD 12,50): `livemode`, `active`, recurrentes mensuales, mismo producto “Triba Mail Club” (`prod_VMmk5XaYJcoK0V`), sin precios duplicados. Coinciden con Vercel Production y con `MAIL_CLUB_PRICE_CENTS`.
+- [x] **Badge única en el panel.** El hero de Mi Cuenta muestra el badge antes del título; se limpió el badge heredado de la edición #4 en producción y `syncFeaturedBadges()` lo evita al crear/editar/borrar desde admin.
+- [x] **Cuentas de prueba al día.** `suscriptora-digital@triba.test` (digital EUR) y `suscriptora-mailclub@triba.test` (Mail Club EUR), activas y con login verificado; `create-test-subscriber.mjs` acepta plan/moneda y reutiliza la suscripción. Documentadas en `README.md §Accesos de prueba`.
+- [x] **Docs.** `AGENTS.md`, `README.md` y `PASOSPAGOS.md` actualizados al estado live.
+
 ### Pendiente actual
 
 - [ ] Repetir la verificación interactiva del teaser plegable del upgrade: expandir, contraer, foco, etiquetas ES/EN y `aria-expanded`.
@@ -72,11 +79,9 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 
 ### Siguiente orden operativo
 
-1. Verificar el teaser en local con una suscriptora digital de prueba.
-2. Commitear, pushear y desplegar; luego correr `scripts/smoke-prod.mjs`.
-3. Probar cobros live EUR/USD/ARS y el portal con suscripciones reales.
-4. Retirar el newsletter solo después de verificar su exportación.
-5. Cerrar costeo postal, fotos y aprobación legal.
+1. Cobros live de validación: alta digital, upgrade digital → Mail Club y upgrade ARS en Mercado Pago, conciliando o reembolsando; validar el portal con una suscripción real.
+2. Retirar el newsletter solo después de verificar su exportación.
+3. Cerrar costeo postal, fotos y aprobación legal.
 
 > El retiro total del newsletter queda condicionado a la exportación verificada. Los formularios y datos actuales no se han eliminado todavía; los emails transaccionales continúan.
 

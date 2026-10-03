@@ -18,13 +18,13 @@ Hecho (además de lo anterior):
 - 3D Secure (`4000000000003220`, alta Mail Club EUR): challenge mock completado en iframe, retorno con `flow=mail_club`, activación por la vía asincrónica (`checkout.session.completed` pendiente + `invoice.paid`), fundadora #4 asignada sin duplicados. Suscripción de prueba cancelada y filas eliminadas después.
 - Downgrade a digital al fin del período verificado vía app: flags `scheduled_plan_type=digital` + schedule Stripe con fase Mail Club vigente y fase digital posterior (`end_behavior=release`). Requirió fix: anclar la fase actual con su `start_date` vigente (commits `18c0ad1`/`eccb46f`).
 - Limpieza: suscripciones e2e canceladas desde Stripe (webhooks conciliaron las bajas en staging) y filas de prueba eliminadas. Restan solo usuarios `e2e-*@example.com` inertes (sin suscripciones ni perfil) + sus consentimientos y números de fundadora, que son inmutables por diseño y no se reutilizan.
-- Precios live de Stripe creados y cargados en Vercel Production: `STRIPE_PRICE_MAIL_CLUB_EUR=price_1UM3BBLIVKTt84JHU5FJwZ6r`, `STRIPE_PRICE_MAIL_CLUB_USD=price_1UM3BBLIVKTt84JHu7GwpUxB`. Production no se redepleó: el sitio live no cambia hasta el merge + deploy. Falta verificar importes/moneda de esos IDs el día del lanzamiento (`prelaunch-check` + cobro mínimo live).
+- Precios live de Stripe creados y cargados en Vercel Production: `STRIPE_PRICE_MAIL_CLUB_EUR=price_1UM3BBLIVKTt84JHU5FJwZ6r`, `STRIPE_PRICE_MAIL_CLUB_USD=price_1UM3BBLIVKTt84JHu7GwpUxB`. **Verificados por API el 03-oct-2026**: live, activos, recurrentes mensuales, €10,50 / $12,50, producto “Triba Mail Club”, sin duplicados; coinciden con Production y con `MAIL_CLUB_PRICE_CENTS`. Falta solo el cobro real de validación.
 - `MyAccountPage` tolera lista de ediciones vacía; aviso de éxito post-compra convertido en tarjeta flotante centrada y cerrable (X, fondo, Escape) para todos los pagos.
 - Aviso de éxito diferenciado por flujo (verificado en Preview con usuarios de prueba): digital conserva el texto actual; alta Mail Club confirma la suscripción postal activa; upgrade confirma el pase de digital a Mail Club con acceso digital conservado. Retorno explícito `flow=mail_club_upgrade` para Stripe y ruta `/api/checkout-return/mail-club-upgrade` para Mercado Pago (303).
 - Grilla de Suscribirme con altura mínima en desktop (el footer ya no se monta sobre el formulario).
 - Rediseño UI (hallmark, tokens de marca intactos): `/mail-club` Manifesto, Suscribirme con Mail Club héroe y digital secundario, Mi Cuenta pasada quirúrgica (hero sólido, reveals mínimos), emails de bienvenida (carta) y despacho (sello) sin cambiar textos ni envíos.
 - Mercado Pago: webhook de prueba configurado en el dashboard (URL Preview) y variables de prueba con alcance Preview/`mail-club` verificadas por nombre. OJO: el Access Token de prueba se expuso en el chat → regenerarlo y actualizar la variable.
-- Supabase Production: historial reconciliado (`017–020` marcadas aplicadas sin reejecutar) y `db push --dry-run` limpio (solo aplicaría `021–024`). Sin cambios aplicados todavía.
+- Supabase Production: historial reconciliado (`017–020` marcadas aplicadas sin reejecutar) y `db push` aplicado: `021–025` están en producción (`025` verificada por REST).
 - Webhook Stripe reenviado manualmente → 200 sin duplicados (ver §7).
 - Decisión MP: sin sandbox (bloqueado por cuenta compradora); se valida en live el día del lanzamiento. Webhook de prueba configurado en el dashboard; variables de prueba en Preview/`mail-club` verificadas por nombre. El token de prueba expuesto en el chat conviene regenerarlo por higiene, sin urgencia (los tokens test no mueven dinero real).
 - Envío postal: confirmado que está **incluido** en el precio del plan (sin cargo separado). Pendiente de las propietarias: medir el sobre prototipo y cotizar Correos para validar el margen (`docs/postal-costing.md`).
@@ -38,11 +38,12 @@ Hecho (además de lo anterior):
 - `scripts/smoke-prod.mjs` cubre home, Suscribirme, Mail Club, reveal en legales y errores de consola. Hay que volver a ejecutarlo después de cada deploy.
 - Las cuentas manuales de prueba con IDs de Stripe inventados no pueden abrir el portal: `POST /api/portal` intenta recuperar una suscripción inexistente y responde 500. El portal debe validarse con suscripciones creadas por checkout real.
 - **Recuperación 03-oct (tarde):** upgrades `pending` expiran a los 60 min (`upgrade-recovery.ts`); el portal y la cancelación aceptan `past_due`/`incomplete`; la cancelación devuelve error 502 si el proveedor falla; la bienvenida usa reclamo `welcome_sent_at` (at-most-once con reintento); el retorno MP distingue approved/pending/rejected; el lote congela `joined_at`/`sub_status`; `scripts/purge-mail-club-retention.mjs` implementa la retención de 60 días.
+- **Precios live verificados por API (03-oct):** EUR 10,50 y USD 12,50, live, activos, mensuales, mismo producto, sin duplicados. Vercel Production y `MAIL_CLUB_PRICE_CENTS` coinciden.
 
 Pendiente (uno a la vez, en orden):
 
 1. Verificación interactiva del teaser plegable del upgrade.
-2. Prueba live mínima: alta digital, upgrade digital → Mail Club y upgrade ARS en Mercado Pago, con conciliación o reembolso.
+2. Cobro live de validación: alta digital, upgrade digital → Mail Club y upgrade ARS en Mercado Pago, con conciliación o reembolso.
 3. Portal de gestión validado con suscripciones creadas por checkout real.
 4. Export y verificación del newsletter desde producción, con retiro posterior solo de contactos gratuitos.
 5. Costeo postal medido, fotos definitivas y aprobación legal.

@@ -1,6 +1,6 @@
 # TRIBA — Revista digital mensual
 
-Newsletter gratuito + suscripción paga, escrita por y para mujeres. Detalle de análisis: `docs/flujo-funcional.md`.
+Suscripción digital + Triba Mail Club (sobre postal mensual), escrita por y para mujeres. Detalle de análisis: `docs/flujo-funcional.md`. Estado operativo y pendientes: `mailClub.md` · Runbook de pagos: `PASOSPAGOS.md`.
 
 ## Stack
 | Capa | Tecnología |
@@ -20,8 +20,8 @@ Newsletter gratuito + suscripción paga, escrita por y para mujeres. Detalle de 
 ## Navegación
 | Rol | Items |
 |---|---|
-| Público | INICIO · REVISTA · SUSCRIBIRME · TRIBA CREATORS · INICIAR SESION |
-| Suscriptora | REVISTA · TRIBA CREATORS (+ botón "MI CUENTA" → dropdown) |
+| Público | INICIO · MAIL CLUB · REVISTA · SUSCRIBIRME · TRIBA CREATORS · INICIAR SESION |
+| Suscriptora | INICIO · MAIL CLUB · REVISTA · TRIBA CREATORS (+ botón "MI CUENTA" → dropdown) |
 
 ## Convenciones
 - Naming: kebab archivos, PascalCase componentes, camelCase vars
@@ -34,7 +34,12 @@ Newsletter gratuito + suscripción paga, escrita por y para mujeres. Detalle de 
 
 ## Quirks clave — no reintroducir
 - `--nav-height`: `Navbar` con `ResizeObserver`; secciones `padding-top: max(1rem, var(--nav-height))`. Excepción `MyAccountPage` `pt-0 md:pt-[max(...)]` en mobile.
-- **Badge única:** `edition_languages.badge` solo en `max(edition_number)`/`featured=true` (hoy #4). Duplicarla causa pill doble.
+- **Badge única:** `edition_languages.badge` solo en `max(edition_number)`/`featured=true` (hoy #5). Duplicarla causa pill doble. Guard: `syncFeaturedBadges()` (`src/lib/admin/editions.ts`) limpia badges de no-destacadas y completa el default al crear/editar/borrar desde admin.
+- **Upgrades pending:** TTL 60 min (`src/lib/upgrade-recovery.ts`) expira a `failed` antes de insertar; `failed` se re-aplica si el pago confirma (Stripe y MP). Un `pending` solo bloquea mientras dure.
+- **Bienvenida Mail Club:** claim condicional `subscriptions.welcome_sent_at` = at-most-once; si Sender falla se revierte el claim para reintento.
+- **Cancelación/portal:** aceptan `active`/`trialing`/`past_due`/`incomplete`; si el proveedor falla la cancelación responde 502 y NO marca local. Preaprobación MP `cancelled/expired/paused` → `cancel_at_period_end` conservando acceso.
+- **`past_due`:** no degrada a `free` (solo `canceled`); el gate corta por estado/fecha y la UI ofrece actualizar medio de pago.
+- **Retención postal 60 días:** `scripts/purge-mail-club-retention.mjs [--real] [--days N]` (dry-run default). Purga snapshots despachados y direcciones sin sub activa.
 - **Dedup 24h:** triggers `015`/`016` (`creator_applications` 1/24h por email; `feedback` mismo user+mensaje/24h) con `pg_advisory_xact_lock(hashtext(...))`. Cuidado `coalesce(col::text,'')` no `coalesce(col,'')` (22P02).
 - **PDFViewer:** `client:only="react"` obligatorio (DOMMatrix en Node). Import ESTÁTICO `react-pdf` + `workerUrl` de `pdfjs-dist/build/pdf.worker.min.mjs?url`. No `client:visible`, no `import("react-pdf")` dinámico, no `vite.optimizeDeps` excluyendo react-pdf. Lazy `useIsVisible`. Carga: watchdog 25s + `isExpiredError(msg, age)` → `expired` muestra `Recargar página` (`location.reload()` regenera 30m) vs `Reintentar` (`retryKey`) para transitorios. `lang` prop ES/EN. Agrandar = SIEMPRE overlay portal `fixed inset-0 z-[80]` (NO Fullscreen API nativa: mover el nodo al portal sale de fullscreen y el botón parece no hacer nada). Cierre por botón/Escape vía `collapse()` (+`resetInline`).
 - Rate limiting: tabla `rate_limits`.
@@ -74,8 +79,9 @@ triba/
 ├── astro.config.mjs · tailwind.config.mjs
 ```
 
-## Newsletter / Sender
-- `POST /api/newsletter` → `newsletters` (23505 → `{existing,resynced}` idempotente). Welcome = automatización Sender grupo `newsletter-gratuito` (`trigger_automation`).
+## Newsletter / Sender (retirado del público)
+- `POST /api/newsletter` responde **410**: el newsletter gratuito se retiró como producto. La tabla `newsletters`, el grupo `newsletter-gratuito` y la automatización de Sender se conservan solo para exportar/borrar la lista histórica al lanzamiento (`scripts/export-newsletters.mjs`, solo lectura).
+- Emails transaccionales (bienvenida, pagos, Mail Club) siguen activos vía Sender.
 - Sender API v2 `Bearer`, `POST /subscribers` con `groups` en una llamada, `POST /message/send` transaccional. Cliente `src/lib/sender.ts` reintenta `429/5xx` con backoff. Failures `sender_synced=false` visibles en dashboard + `scripts/resync-newsletters.mjs`.
 - Grupos `newsletter-gratuito`/`suscriptora-paga`. `SENDER_FROM_EMAIL: hola@comunidadtriba.com` (plan free 429 a nivel cuenta).
 
@@ -89,9 +95,11 @@ triba/
 - Admin queda ES.
 
 ## Deuda de tipos
-`npx astro check` → 0 errores · `npm run build` OK (23-Ago-2026 Fase 1 completa, incl. P7/P8). Sin pendientes de la lista de mejoras; ver `docs/flujo-funcional.md §6`.
+`npx astro check` → 0 errores · `npm test` → 21/21 · `npm run build` OK (03-Oct-2026: Mail Club live, migraciones `021–025` aplicadas, precios Stripe EUR/USD verificados por API). Smoke público: `node scripts/smoke-prod.mjs` (12/12). Ver `docs/flujo-funcional.md §6`.
 
-⚠️ `src/lib/database.types.ts` canónico, sincronizado con `supabase/migrations/`.
+⚠️ `src/lib/database.types.ts` canónico, sincronizado con `supabase/migrations/` (última: `025_recovery_cancel_snapshot.sql`).
+
+Cuentas de prueba: ver `README.md §Accesos de prueba` (digital y Mail Club; no sirven para el portal porque no existen en Stripe).
 
 Lecciones:
 - Siempre `onPageCycle(fn)` (sin View Transitions `astro:page-load` no dispara).

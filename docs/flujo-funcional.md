@@ -1,6 +1,8 @@
 # MAPA FUNCIONAL DE TRIBA — documento de referencia
 
 > Generado desde el código real (agosto 2026). Cada `FLOW-xx` / `COMP-xx` traza a archivo y línea del repo.
+>
+> **Estado 03-oct-2026:** Mail Club está live (migraciones `021–025`, precios Stripe EUR/USD verificados por API, smoke 12/12). El newsletter gratuito está **retirado del público** (`POST /api/newsletter` → 410); sus referencias en este mapa quedan como históricas. Estado operativo vigente: `mailClub.md` y `PASOSPAGOS.md`.
 
 ## 0. Inventario con IDs
 
@@ -8,8 +10,9 @@
 |---|---|
 | PAGE-01→10 | Públicas: `/`, `/revista`, `/revista/[slug]`, `/suscribirme`, `/iniciar-sesion`, `/mi-cuenta`, `/triba-creators`, `/terminos`, `/privacidad`, `/404` |
 | PAGE-11→18 | Admin: `/admin`, `/admin/suscriptoras`, `/admin/creators`, `/admin/feedback`, `/admin/audit-log`, `/admin/ediciones`, `/admin/ediciones/nuevo`, `/admin/ediciones/[id]` |
+| PAGE-19 | Mail Club público: `/mail-club` · `/en/mail-club` |
 | COMP-01 | Navbar (desktop + mobile + dropdown) |
-| COMP-02 | NewsletterForm (home) |
+| COMP-02 | ~~NewsletterForm (home)~~ retirado; hoy CTA Mail Club |
 | COMP-03 | Card-stack carousel mobile (home) |
 | COMP-04 | MagazineScroller + FlipCover + MagazineCard (familia carrusel) |
 | COMP-05 | Currency segments (suscribirme) |
@@ -68,14 +71,14 @@ SITIO — universotriba.com (Astro SSR on-demand, Sin ISR)
 │
 ├─ PÚBLICO
 │  ├─ PAGE-01  HOME  (/)
-│  │   ├─ SEC-01 Hero: logo · botones [Suscribirme → PAGE-04][Recibir newsletter → #newsletter]
+│  │  ├─ SEC-01 Hero: logo · botones [Suscribirme → PAGE-04][Mail Club → PAGE-19]
 │  │   └─ COMP-03 card-stack carousel (solo mobile: dots + swipe)
 │  │   ├─ SEC-02 "¿Qué somos?": copy estático
 │  │   ├─ SEC-03 Ediciones: COMP-04 [MagazineSlider mobile | deslizables] + [MagazineCard grid desktop]
 │  │   │                        cada FlipCover: hover → flip → link /suscribirme
 │  │   │                    + Button "Ver más" → PAGE-04
-│  │   ├─ SEC-04 Creators: Button → PAGE-07
-│  │   └─ SEC-05 Newsletter: COMP-02 (FLOW-01)
+│  │   └─ SEC-04 Creators: Button → PAGE-07
+│  │   (SEC-05 Newsletter retirada del público)
 │  │
 │  ├─ PAGE-02  REVISTA  (/revista)
 │  │   ├─ COMP-15 portada destacada: CTA dinámico [sub activa→/mi-cuenta][no sub→/suscribirme]
@@ -92,9 +95,10 @@ SITIO — universotriba.com (Astro SSR on-demand, Sin ISR)
 │  │   ├─ COMP-10 banners resultado checkout [canceled][pending] ← query params
 │  │   ├─ COMP-05 currency segments [EUR|USD|ARS] → muestra plan correspondiente
 │  │   ├─ COMP-06 CheckoutButton [EUR/USD→Stripe][ARS→MP]  (FLOW-06/07)
-│  │   ├─ COMP-07 newsletter card form (FLOW-01 bis)
+│  │   ├─ COMP-25 tarjeta Mail Club: país → zona derivada en servidor + form postal (FLOW-17)
 │  │   ├─ COMP-08 FAQ accordion (solo uno abierto)
 │  │   └─ flushPendingCheckout: intent guardado + sesión → auto-clic del botón correcto
+│  │   (COMP-07 newsletter card retirada; `POST /api/newsletter` responde 410)
 │  │
 │  ├─ PAGE-05  INICIAR SESIÓN  (/iniciar-sesion)
 │  │   ├─ COMP-09 login (FLOW-02) · signup (FLOW-03) · forgot/reset (FLOW-04)
@@ -134,7 +138,7 @@ SITIO — universotriba.com (Astro SSR on-demand, Sin ISR)
 
 ```
 PÚBLICOS (requireUser / rate-limit por IP):
-  POST /api/newsletter           5/min      · 23505 → existing/resync
+  POST /api/newsletter           410 (retirado; se conserva solo para export/borrado histórico)
   POST /api/creators             3/min      · dedup email 24h (trigger 015)
   POST /api/feedback             usuario+msg dedup 24h (trigger 016)
   POST /api/create-checkout      10/min     · → provider.createCheckout
@@ -156,7 +160,8 @@ ADMIN (requireAdmin vía locals):
 
 ## 2. FLUJOS FUNCIONALES CON RAMIFICACIONES
 
-### FLOW-01 · Newsletter gratis  ★core-conversión *(actualizado 2026-08-22 — $ST-04 mitigado)*
+### FLOW-01 · Newsletter gratis — **RETIRADO 2026-10-03** (se conserva como histórico)
+> `POST /api/newsletter` responde 410; Home y Suscribirme ya no ofrecen newsletter. La tabla/grupo Sender se conservan solo para exportar y borrar la lista histórica (`scripts/export-newsletters.mjs`). Emails transaccionales siguen activos.
 ```
 [Usuaria] ingresá email → submit COMP-02/07
   → handler: btn.disabled=true (in-flight) + aria-live
@@ -273,10 +278,11 @@ Stripe POST (firma constructEvent; falla → 400 "Invalid signature")
   │   → syncPaidSubscriber(email) [Sender grupo suscriptora-paga]
   │   → sendWelcomeEmail(email, false)
   ├─ customer.subscription.updated / deleted
-  │   → UPDATE subscriptions.status + period
-  │   → si status canceled|past_due → profiles {role:free, subscription_id:null}
+  │   → UPDATE subscriptions.status + period (badge plan desde priceId; downgrade programado se completa al pasar a precio digital)
+  │   → si status canceled → profiles {role:free, subscription_id:null}
+  │     (past_due NO degrada: el gate corta por estado/fecha y la UI ofrece actualizar medio de pago)
   └─ errores → 500
-ESTADOS: pending → active / past_due / canceled · (incomplete/trialing quedan sin handler de acceso)
+ESTADOS: pending → active / past_due / canceled · incomplete espera invoice.paid (Mail Club) · bienvenida reclamada con welcome_sent_at
 ```
 
 ### FLOW-09 · Webhook MP → activación self-healing  ⭐⭐ (el más complejo)
@@ -445,7 +451,7 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 
 | ID | Estado | Dónde debería existir | Situación actual |
 |---|---|---|---|
-| $ST-01 | `past_due` / `incomplete` / `trialing` | AccountMenuItems, mi-cuenta gate, admin | Se muestran "Aún no estás suscripta" — confunde a una pagadora con cobro fallido; no hay aviso de "falló tu pago" |
+| $ST-01 | `past_due` / `incomplete` / `trialing` | AccountMenuItems, mi-cuenta gate, admin | **resuelto 2026-10-03**: `past_due` mantiene rol y muestra "Tu último cobro falló" con CTA de actualizar pago; el portal y la cancelación aceptan esos estados; `cancel_subscription` (migración `025`) los cubre |
 | $ST-02 | Migrated caducada | Flujo automático | Nada obliga a revocar el acceso tras los 7 días si no paga (no hay job/cron; solo lo resuelve un nuevo pago o acción admin) |
 | $ST-03 | Email null en profiles | notificar edición | se filtran (no cuentan como `failed`) y se reporta `noEmail` | **hecho** |
 | $ST-04 | Newsletter sync silenciosa | FLOW-01 | éxito visible pero `sender_synced=false` (429 de Sender) y la welcome nunca llega; la usuaria cree que está suscripta al pago | **mitigado 2026-08-22** (retry 429/5xx en `sender.ts` + dashboard `newsletter_pending_sync` + banner resync) |
