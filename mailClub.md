@@ -317,8 +317,7 @@ Comparativo exhaustivo ES+EN. Estado: `hecho` / `pendiente` (+ `dueña` si requi
 
 ### Pendiente
 
-- [x] **Bloque 2 integrado al hero.** `MailClubPage.astro` muestra la foto con 6 puntitos numerados
-  + leyenda `box2Items` a la derecha (`box2Title` como encabezado); sin sección separada ni nota.
+- [x] **Bloque 2 integrado al hero.** `MailClubPage.astro` muestra la foto + leyenda `box2Items` a la derecha (`box2Title` como encabezado); sin sección separada ni nota. Los 6 puntitos numerados sobre la imagen se retiraron a pedido de la dueña (03-oct).
 - [x] **Upgrade con control de zona.** `isUpgradeZoneCompatible()` en `mail-club.ts` + guard en
   `upgrade-checkout.ts` que devuelve `code: ZONE_MISMATCH` con `current/expected`; `MyAccountPage`
   muestra paso obligado (corregir dirección con foco en país, o cómo cambiar de zona vía baja +

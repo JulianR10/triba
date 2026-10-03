@@ -41,18 +41,8 @@ const faqs = dict.subscribe.faqs;
       </div>
 
       <div class="grid md:grid-cols-[1.8fr_1fr] gap-6 md:gap-10 items-center my-10 md:my-14 max-w-6xl" data-reveal>
-        <figure class="relative">
+        <figure>
           <img src="/mailClub.webp" alt={page.heroTitle} fetchpriority="high" width="1054" height="985" class="w-full h-auto rounded-xl" />
-          {[
-            { x: 42, y: 80 },
-            { x: 47, y: 22 },
-            { x: 78, y: 30 },
-            { x: 85, y: 72 },
-            { x: 20, y: 60 },
-            { x: 55, y: 48 },
-          ].map((dot, i) => (
-            <span aria-hidden="true" style={`left:${dot.x}%;top:${dot.y}%`} class="absolute -translate-x-1/2 -translate-y-1/2 w-7 h-7 md:w-8 md:h-8 rounded-full bg-triba-cream text-triba-red border-2 border-triba-black font-heading text-sm md:text-base flex items-center justify-center shadow-[2px_2px_0_#35220A]">{i + 1}</span>
-          ))}
         </figure>
         <div>
           <h2 class="font-heading text-2xl md:text-3xl uppercase tracking-wide text-triba-brown mb-6">{page.box2Title}</h2>
