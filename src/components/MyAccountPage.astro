@@ -556,6 +556,14 @@ const miCuentaMessages = {
   import { getCheckoutOutcome, isAwaitingActivation } from "../lib/checkout-status";
   import { startCheckoutPoll } from "../scripts/checkout-poll";
 
+  // Fallo de red/timeout: el navegador tira "Failed to fetch"/"Load failed"
+  // (inglés técnico). Se mapea a un mensaje claro para la usuaria.
+  function isConnectionError(err: unknown): boolean {
+    if (err instanceof TypeError) return true;
+    const msg = String((err as { message?: string } | null)?.message || "").toLowerCase();
+    return msg.includes("failed to fetch") || msg.includes("load failed") || msg.includes("networkerror");
+  }
+
   function setup() {
 
   var messagesEl = document.querySelector<HTMLElement>("[data-mi-cuenta-messages]");
@@ -992,7 +1000,7 @@ const miCuentaMessages = {
         }
         throw new Error(data.error || messages.error);
       } catch (err: any) {
-        showMsg(err && err.message ? err.message : messages.networkError);
+        showMsg(isConnectionError(err) ? messages.networkError : err && err.message ? err.message : messages.networkError);
         restoreSubmit();
       }
     }
@@ -1053,7 +1061,7 @@ const miCuentaMessages = {
         }
       } catch (err: any) {
         if (msgEl) {
-          msgEl.textContent = err && err.message ? err.message : messages.networkError;
+          msgEl.textContent = isConnectionError(err) ? messages.networkError : err && err.message ? err.message : messages.networkError;
           msgEl.className = "font-sans text-xs text-triba-red text-center";
           msgEl.classList.remove("hidden");
         }
