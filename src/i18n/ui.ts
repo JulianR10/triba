@@ -400,6 +400,8 @@ export const ui = {
       upgradeBody:
         "Seguís teniendo todo lo de tu suscripción digital y además te llega un sobre a casa cada mes. Hoy pagás solo la diferencia de este mes ({diff}). Desde tu próxima renovación, tu cuota pasa a ser {full}.",
       upgradeCutoffNote: "Si te sumás antes del 15, tu sobre sale este mes.",
+      upgradeInterestButton: "Me interesa",
+      upgradeHideFormButton: "Ocultar formulario",
       upgradeSubmit: "Confirmar y pagar la diferencia",
       upgradeProcessing: "Procesando...",
       upgradeError: "No pudimos procesar tu upgrade. Intentá de nuevo.",
@@ -414,15 +416,6 @@ export const ui = {
       upgradeZoneHowToBody:
         "Para cambiar de zona tenés que cancelar tu suscripción actual al fin del período y hacer un alta nueva en la zona correcta desde Suscribirme. Si tenés dudas, escribinos.",
       upgradeZoneHowToLink: "Ir a Suscribirme",
-      downgradeTitle: "Volver al plan digital",
-      downgradeBody:
-        "Seguís recibiendo el sobre hasta el final del período ya pagado. Desde tu próxima renovación pagás el precio digital y no recibís más sobres.",
-      downgradeSubmit: "Volver al plan digital",
-      downgradeConfirm: "¿Volver al plan digital al final del período ya pagado?",
-      downgradeProcessing: "Procesando...",
-      downgradeSuccess: "Listo: volvés al plan digital al final del período ya pagado.",
-      downgradeError: "No pudimos programar el cambio. Intentá de nuevo.",
-      downgradeNetworkError: "Error de conexión. Intentá de nuevo.",
       addressTitle: "Mi dirección de envío",
       addressBody: "Si la cambiás antes del 15, el sobre de ese mes ya va a la dirección nueva.",
       addressSave: "Guardar dirección",
@@ -836,6 +829,8 @@ export const ui = {
       upgradeBody:
         "You keep everything from your digital subscription plus an envelope at home every month. Today you only pay this month's difference ({diff}). From your next renewal, your fee becomes {full}.",
       upgradeCutoffNote: "If you join before the 15th, your envelope ships this month.",
+      upgradeInterestButton: "I'm interested",
+      upgradeHideFormButton: "Hide form",
       upgradeSubmit: "Confirm and pay the difference",
       upgradeProcessing: "Processing...",
       upgradeError: "We couldn't process your upgrade. Try again.",
@@ -850,15 +845,6 @@ export const ui = {
       upgradeZoneHowToBody:
         "To change zones you need to cancel your current subscription at the end of the period and start a new signup in the right zone from Subscribe. If in doubt, write to us.",
       upgradeZoneHowToLink: "Go to Subscribe",
-      downgradeTitle: "Switch back to the digital plan",
-      downgradeBody:
-        "You keep receiving the envelope until the end of the already-paid period. From your next renewal you pay the digital price and envelopes stop.",
-      downgradeSubmit: "Switch back to digital",
-      downgradeConfirm: "Switch back to the digital plan at the end of the paid period?",
-      downgradeProcessing: "Processing...",
-      downgradeSuccess: "Done: you switch back to digital at the end of the paid period.",
-      downgradeError: "We couldn't schedule the change. Try again.",
-      downgradeNetworkError: "Connection error. Try again.",
       addressTitle: "My shipping address",
       addressBody: "If you change it before the 15th, that month's envelope goes to the new address.",
       addressSave: "Save address",

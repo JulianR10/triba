@@ -2,7 +2,9 @@
 
 Guía para probar Mail Club sin usar credenciales live en Preview ni tocar la base de producción.
 
-## Estado actual (02-oct-2026, cierre)
+> Nota 03-oct-2026: las secciones 1–8 conservan la matriz histórica previa al lanzamiento. Producción ya está publicada; no usar cuentas con `provider_subscription_id` manuales como evidencia del portal o de los cobros.
+
+## Estado actual (03-oct-2026)
 
 Hecho (además de lo anterior):
 
@@ -27,12 +29,22 @@ Hecho (además de lo anterior):
 - Decisión MP: sin sandbox (bloqueado por cuenta compradora); se valida en live el día del lanzamiento. Webhook de prueba configurado en el dashboard; variables de prueba en Preview/`mail-club` verificadas por nombre. El token de prueba expuesto en el chat conviene regenerarlo por higiene, sin urgencia (los tokens test no mueven dinero real).
 - Envío postal: confirmado que está **incluido** en el precio del plan (sin cargo separado). Pendiente de las propietarias: medir el sobre prototipo y cotizar Correos para validar el margen (`docs/postal-costing.md`).
 
+### Actualización post-lanzamiento
+
+- Mail Club está publicado en `main`/producción.
+- Mi Cuenta ahora usa un teaser plegable para el upgrade: **“Me interesa” / “Ocultar formulario”**, con foco accesible y respeto por `prefers-reduced-motion`.
+- El panel Mail Club ya no invita al downgrade; conserva la edición de dirección.
+- El botón de checkout restaura su etiqueta original al volver desde Stripe mediante bfcache.
+- `scripts/smoke-prod.mjs` cubre home, Suscribirme, Mail Club, reveal en legales y errores de consola. Hay que volver a ejecutarlo después de cada deploy.
+- Las cuentas manuales de prueba con IDs de Stripe inventados no pueden abrir el portal: `POST /api/portal` intenta recuperar una suscripción inexistente y responde 500. El portal debe validarse con suscripciones creadas por checkout real.
+
 Pendiente (uno a la vez, en orden):
 
-1. Costeo postal medido (propietarias).
-2. Export y verificación del newsletter desde producción (solo lectura).
-3. Fotos definitivas + aprobación legal.
-4. Día del lanzamiento (§9): migraciones `021–024`, validación MP live (alta + upgrade ARS), merge + deploy, prueba live mínima, retiro del newsletter.
+1. Verificación interactiva del teaser plegable del upgrade.
+2. Prueba live mínima: alta digital, upgrade digital → Mail Club y upgrade ARS en Mercado Pago, con conciliación o reembolso.
+3. Portal de gestión validado con suscripciones creadas por checkout real.
+4. Export y verificación del newsletter desde producción, con retiro posterior solo de contactos gratuitos.
+5. Costeo postal medido, fotos definitivas y aprobación legal.
 
 ## 1. Conseguir acceso de forma segura
 
@@ -156,15 +168,15 @@ y se despliegue a Production. No requiere deploy previo.
   la base de producción y una ventana sin escrituras.
 - Hacer un go/no-go de pagos, webhooks, costos postales, textos legales y fotos antes de publicar Mail Club.
 
-## 9. Día del lanzamiento (orden)
+## 9. Lanzamiento y controles posteriores
 
 1. Exportar y verificar la lista del newsletter (`scripts/export-newsletters.mjs`).
 2. Confirmar variables Production + migraciones aplicadas + webhooks live.
-3. Integrar `mail-club` en `main` y desplegar. Verificar checkout live mínimo.
+3. Publicar en `main` y desplegar. Verificar checkout live mínimo.
 4. Recién después, retirar newsletter y borrar solo contactos gratuitos.
 
-## 10. Estado de variables (02-oct-2026, cierre)
+## 10. Estado de variables (03-oct-2026)
 
 Preview rama `mail-club`: Stripe completo en modo prueba, Supabase de pruebas, `SITE` del Preview y variables MP de prueba (verificadas por nombre; regenerar el token expuesto cuando se pueda).
 
-Production (intacto, sin redeploy): credenciales live y precios digitales vigentes + los 2 Price IDs live de Mail Club ya cargados. Resta el día del lanzamiento: migraciones `021–024`, eventos de webhooks live, merge + deploy, prueba live mínima (incluido ARS) y retiro del newsletter.
+Production: credenciales live y precios digitales vigentes + los 2 Price IDs live de Mail Club ya cargados. Queda pendiente la prueba live mínima (incluido ARS y portal con suscripciones reales) y el retiro del newsletter.

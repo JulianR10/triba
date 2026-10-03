@@ -1,10 +1,10 @@
 # Triba Mail Club — bases y plan de trabajo
 
-**Estado (cierre del día):** Mail Club mergeado a `main` (`ee2db0d`) + auditoría PDF completa en working tree (bloque 2, zona upgrade con paso obligado, tarjeta guardada off-session, dirección 6/7, admin con direcciones, mail con despedida, micro-copy, SEO, tarjeta lado-a-lado); pendiente validación externa (pagos, correo, legal, fotos) y lanzamiento. Sin commitear ni deployar todavía.  
-**Última verificación local:** `astro check` 0 errores · `npm test` 20/20 · `npm run build` OK.  
-**Ramas:** `main` = trabajo + sitio live (producción intacta hasta el merge + deploy del lanzamiento); `mail-club` = rama histórica ya integrada.  
-**Preview Vercel (rama):** `https://triba-gqpgwguo2-julianrecarte.vercel.app` — regenerar contra `main` antes de la matriz de pruebas.  
-**Regla:** sin push a `main` hasta el lanzamiento (secuencia §9).  
+**Estado (03-oct-2026):** Mail Club está publicado en `main`/producción. Esta actualización incorpora el teaser plegable del upgrade en Mi Cuenta, la separación superior de las tarjetas de upgrade/dirección y el retiro visual de la invitación al downgrade en el panel Mail Club.
+**Última verificación local:** `astro check` 0 errores · `npm test` 20/20 · `npm run build` OK. La verificación interactiva del nuevo toggle quedó pendiente porque la corrida local no devolvió salida.
+**Ramas:** `main` = trabajo + sitio live; cada push a `main` despliega producción. `mail-club` = rama histórica ya integrada.
+**Preview Vercel (rama):** `https://triba-gqpgwguo2-julianrecarte.vercel.app` — referencia histórica de la matriz previa al lanzamiento.
+**Regla:** validar `astro check`, tests y build antes de cada push a `main`; no commitear secretos ni datos personales.
 **Especificación de origen:** `Triba Mail Club – Pedido para la web.pdf` (27-sep-2026), complementada por las decisiones de producto registradas aquí.
 
 Este documento resume las decisiones vigentes y el orden recomendado para el upgrade. Si las notas preliminares `docs/mail-club-base-funcional.md` o `docs/verificacion-flujos-de-pago.md` difieren de lo que se confirma aquí, prevalecen las decisiones más recientes de este documento.
@@ -26,29 +26,38 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 - [x] Upgrade voluntario en Mi Cuenta: sección solo para plan digital activo con dirección y aceptación; `POST /api/upgrade-checkout` cobra una vez la diferencia (Stripe Checkout `payment` con `price_data`, MP Preference ARS 9.000); webhooks confirman el pago, cambian la tarifa recurrente sin prorrateo (Stripe) o el importe de la preaprobación (MP 7.000→16.000), pasan a `mail_club` y activan fundadora + bienvenida. Sin cancelar ni recrear la suscripción.
 - [x] Operación admin en `/admin/mail-club`: crear lote mensual (elegibles con período vigente al corte Madrid, snapshot inmutable, idempotente), export CSV con BOM y celdas anti-fórmulas, registro manual de despacho del día 20 con aviso por email y reintento de fallidos. Corte verificado (CEST 21:59:59Z, CET 22:59:59Z).
 - [x] Página pública `/mail-club` + `/en/mail-club` (ruta localizada): bloques del PDF, fotos lorem provisorias (picsum + CSP), cierre y FAQ ampliada (también en Suscribirme).
-- [x] Cancelación y vuelta a digital al fin del período (migración `023`): RPC diferida, `scheduleCancel`/schedules Stripe, baja de importe MP, webhooks que completan el downgrade y cierran la baja; reembolso admin sigue revocando en el acto.
+- [x] Cancelación y vuelta a digital al fin del período (migración `023`): RPC diferida, `scheduleCancel`/schedules Stripe, baja de importe MP, webhooks que completan el downgrade y cierran la baja; reembolso admin sigue revocando en el acto. La invitación visible al downgrade se retiró del panel Mail Club por decisión de producto; la ruta/API existente queda disponible para rehabilitación futura.
 - [x] Retiro del newsletter en la rama: Home sin sección ni botón gratis (segundo CTA lleva a Mail Club), legales sin oferta gratuita, `POST /api/newsletter` en 410, componentes muertos eliminados. Datos y export pendientes al lanzamiento: `scripts/export-newsletters.mjs` (solo lectura, CSV + conteos Supabase/Sender).
 - [x] Estabilización (check + build en 0): elegibilidad de lote exige vencimiento conocido, gate corta acceso vencido, cancel admin frena recurrencia, reembolso revoca en el acto, upgrades con apply compartido + reintento admin, dirección editable en Mi Cuenta (`PUT /api/address`), moneda validada en upgrade MP.
 - [x] Hardening 2 (migración `024` + tests): un pending por usuaria (409 si hay upgrade en curso), consentimientos sin reescritura, lote despachado inmutable, elegibilidad al corte (inicio ≤ corte ≤ fin), aviso separado del despacho físico, export newsletter en unión Supabase/Sender con protección del grupo pago, `csv.ts` puro y 15 tests vitest (`npm test`).
 - [x] Publicación para Preview: commit `da3d6d0` pusheado a `origin/mail-club`. Vercel genera Preview aparte; `main` y producción intactos. Pendiente configurar en Vercel las variables del entorno **Preview** (claves de prueba, `SITE` con la URL `.vercel.app` del Preview y webhooks de prueba) antes de probar pagos.
 
-### Pendiente (gates de lanzamiento)
+### Novedades 03-oct-2026
 
-- [x] Notas preliminares reconciliadas con la decisión de borrado (`docs/mail-club-base-funcional.md`).
-- [x] Gate de configuración: `scripts/prelaunch-check.mjs` (bloquea sin claves/precios reales; probado: exit 1 sin `.env`).
-- [x] Planilla de costeo: `docs/postal-costing.md` (completar con prototipo medido y cotización Correos).
-- [ ] Exportar la lista del newsletter desde producción (`scripts/export-newsletters.mjs`) y verificar archivo/conteo antes de borrar contactos gratuitos.
-- [ ] Cobros reales EUR/USD/ARS en sandbox y producción con webhooks, conciliados o reembolsados.
+- [x] Teaser plegable del upgrade en Mi Cuenta: la tarjeta muestra insignia, título, cuerpo dinámico por moneda y nota del corte; el formulario completo solo aparece al pulsar **“Me interesa” / “I'm interested”**. El mismo botón cambia a **“Ocultar formulario” / “Hide form”**, vuelve al estado inicial, usa `aria-expanded`/`aria-controls`, respeta `prefers-reduced-motion` y lleva el foco al primer campo postal.
+- [x] Separación superior de tarjetas en Mi Cuenta: upgrade y dirección usan `mt-12 md:mt-16`, con el mismo ritmo vertical general del sitio.
+- [x] Retiro visual del downgrade: el panel Mail Club ya no muestra la tarjeta **“Volver al plan digital”**. Se conserva la edición de dirección; también se conservan la ruta/API y webhooks de downgrade existentes por si se rehabilitan. Se eliminaron su botón, mensajes, handler y claves i18n del panel.
+- [x] Reset del botón de checkout tras volver de Stripe: el texto original viaja en `data-original-text` y se restaura en `pageshow` persistido.
+- [x] Script `scripts/smoke-prod.mjs`: verificación pública de home, Suscribirme, Mail Club, reveal en legales y errores de consola. Volver a correrlo después de cada deploy.
+- [x] Las cuentas manuales de prueba con `provider_subscription_id` inventados no representan suscripciones reales en Stripe. Por eso **“Gestionar suscripción”** falla contra Stripe para esas fixtures: el portal intenta recuperar un `subscription` inexistente. No usar ese error como evidencia contra el flujo productivo; validar el portal con una suscripción creada por checkout real.
+
+### Pendiente actual
+
+- [ ] Repetir la verificación interactiva del teaser plegable del upgrade: expandir, contraer, foco, etiquetas ES/EN y `aria-expanded`.
+- [ ] Cobros reales EUR/USD/ARS con webhooks, conciliados o reembolsados.
+- [ ] Validar el portal de gestión con suscripciones creadas por checkout real, no con fixtures manuales.
+- [ ] Exportar/verificar la lista del newsletter y retirar/borrar únicamente los contactos gratuitos.
 - [ ] Medir el sobre, confirmar tarifas/cobertura/trámites postales y margen por zona.
-- [ ] Recibir las fotos definitivas (hoy lorem con seeds fijos) y aprobar los textos legales.
+- [ ] Recibir las fotos definitivas y aprobar los textos legales.
+- [ ] Confirmar con la dueña: España 3–7 días, formato útil del CSV para etiquetas y ausencia permanente de la invitación al downgrade.
 
-### Para mañana (en orden)
+### Siguiente orden operativo
 
-1. Configurar variables del entorno **Preview** en Vercel (claves de prueba + `SITE` del Preview + webhooks de prueba) y correr `prelaunch-check` contra ese entorno.
-2. Probar en el Preview: alta y upgrade por moneda, rechazo/pendiente/SCA, webhooks repetidos, cancelación y downgrade al fin del período, lote + CSV + despacho. Matriz nueva del upgrade con tarjeta guardada (detalle en `PASOSPAGOS.md`): cobro instantáneo sin SCA, 3DS→Checkout automático, rechazo→otra tarjeta, sin tarjeta→Checkout.
-3. Completar `docs/postal-costing.md` con el sobre medido y la cotización de Correos.
-4. Exportar y verificar la lista del newsletter (sin borrar todavía).
-5. Cobros reales EUR/USD/ARS, fotos definitivas y aprobación legal → go/no-go y merge a `main`.
+1. Verificar el teaser en local con una suscriptora digital de prueba.
+2. Commitear, pushear y desplegar; luego correr `scripts/smoke-prod.mjs`.
+3. Probar cobros live EUR/USD/ARS y el portal con suscripciones reales.
+4. Retirar el newsletter solo después de verificar su exportación.
+5. Cerrar costeo postal, fotos y aprobación legal.
 
 > El retiro total del newsletter queda condicionado a la exportación verificada. Los formularios y datos actuales no se han eliminado todavía; los emails transaccionales continúan.
 
@@ -311,6 +320,4 @@ Comparativo exhaustivo ES+EN. Estado: `hecho` / `pendiente` (+ `dueña` si requi
 - [x] **SEO vivo.** Metas `subscribe.description` (ES+EN) y `home.description` (ES+EN) sin newsletter,
   con digital/Mail Club; eliminadas claves muertas `newsletterTitle/Lead/Body`, `freeNewsletter`,
   tarjeta `news*` de suscribirme y `newsletterPlaceholder` (cero usos verificados).
-- [ ] **Pendientes dueña ya registrados:** España 3–7 (P5),
-  CSV vs `.xlsx` para etiquetas (P6), fotos definitivas, aprobación legal, pagos reales
-  EUR/USD/ARS, export lista newsletter.
+- [ ] **Pendientes dueña ya registrados:** España 3–7 (P5), CSV vs `.xlsx` para etiquetas (P6), fotos definitivas, aprobación legal, pagos reales EUR/USD/ARS, export lista newsletter y confirmación de que la invitación al downgrade debe permanecer oculta.
