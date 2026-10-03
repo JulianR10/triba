@@ -5,7 +5,7 @@ import { supabaseAdmin } from "../../lib/supabase-admin";
 import { logger } from "../../lib/logger";
 import { validateMailClubAddress, saveMailClubAddress } from "../../lib/mail-club-address";
 import { getActiveSubscriptionForUser } from "../../lib/subscription-guard";
-import { getPlanType } from "../../lib/mail-club";
+import { getPlanType, isBeforeCutoffThisMonth } from "../../lib/mail-club";
 
 // Lee (GET) y actualiza (PUT) la dirección postal de una suscriptora Mail Club.
 // Los cambios rigen hasta el corte del 15 inclusive; después, al mes siguiente.
@@ -48,5 +48,13 @@ export const PUT: APIRoute = async ({ request }) => {
     logger.error({ userId: user.id, step: saved.error }, "address update error");
     return error("No pudimos guardar tu dirección. Intentá de nuevo.", 500);
   }
-  return ok({ message: "Dirección actualizada." });
+  // El corte del 15 (Madrid) define a qué envío aplica el cambio. Se informa
+  // a la UI para que no prometa el mes en curso cuando ya pasó el corte.
+  const appliesThisMonth = isBeforeCutoffThisMonth(new Date());
+  return ok({
+    message: appliesThisMonth
+      ? "Dirección actualizada. Aplica al sobre de este mes."
+      : "Dirección actualizada. Aplica al sobre del mes que viene.",
+    appliesThisMonth,
+  });
 };

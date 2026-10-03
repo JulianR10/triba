@@ -376,7 +376,7 @@ const miCuentaMessages = {
           <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 max-w-2xl mx-auto">
             <h2 class="font-heading text-xl md:text-2xl text-triba-brown mb-2">{dict.miCuenta.addressTitle}</h2>
             <p class="font-sans text-sm text-triba-brown/60 mb-5">{dict.miCuenta.addressBody}</p>
-            <form class="space-y-3 text-left" id="address-form" data-messages={JSON.stringify({ saving: dict.miCuenta.addressSaving, saved: dict.miCuenta.addressSaved, error: dict.miCuenta.addressError, networkError: dict.miCuenta.addressNetworkError })}>
+            <form class="space-y-3 text-left" id="address-form" data-messages={JSON.stringify({ saving: dict.miCuenta.addressSaving, saved: dict.miCuenta.addressSaved, savedNextMonth: dict.miCuenta.addressSavedNextMonth, error: dict.miCuenta.addressError, networkError: dict.miCuenta.addressNetworkError })}>
               <label class="block">
                 <span class="font-sans text-xs text-triba-brown/70">{dict.mailClub.recipient}</span>
                 <input name="recipient_name" required maxlength="120" autocomplete="name" value={savedAddress?.recipient_name ?? ""}
@@ -1007,7 +1007,7 @@ const miCuentaMessages = {
   (function setupAddressForm() {
     var form = document.getElementById("address-form") as HTMLFormElement | null;
     if (!form) return;
-    var messages = { saving: "Guardando...", saved: "OK", error: "Error", networkError: "Error" };
+    var messages = { saving: "Guardando...", saved: "OK", savedNextMonth: "OK", error: "Error", networkError: "Error" };
     try { Object.assign(messages, JSON.parse(form.dataset.messages || "{}")); } catch { /* keep defaults */ }
     var msgEl = document.getElementById("address-msg");
     var submitBtn = form.querySelector("button[type=submit]") as HTMLButtonElement | null;
@@ -1044,7 +1044,10 @@ const miCuentaMessages = {
         var data = await res.json().catch(function () { return {}; });
         if (!res.ok) throw new Error(data.error || messages.error);
         if (msgEl) {
-          msgEl.textContent = messages.saved;
+          msgEl.textContent =
+            data.appliesThisMonth === false && messages.savedNextMonth
+              ? messages.savedNextMonth
+              : data.message || messages.saved;
           msgEl.className = "font-sans text-xs text-center text-triba-brown";
           msgEl.classList.remove("hidden");
         }

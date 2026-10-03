@@ -138,7 +138,9 @@ async function activateSubscription({
   if (!isActivePreapproval(preapproval.status)) return;
 
   const now = new Date().toISOString();
-  const currency = (preapproval.auto_recurring?.currency_id || "USD") as "EUR" | "USD" | "ARS";
+  // Mercado Pago solo procesa ARS en esta app: el fallback correcto es ARS,
+  // no USD (un currency_id ausente clasificaba mal el plan/precio).
+  const currency = (preapproval.auto_recurring?.currency_id || "ARS") as "EUR" | "USD" | "ARS";
   const periodEnd = preapproval.next_payment_date
     ? new Date(preapproval.next_payment_date).toISOString()
     : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -258,6 +260,35 @@ async function activateSubscription({
 async function handlePreApprovalEvent(preapprovalId: string): Promise<void> {
   const preapproval = await mpGet<MpPreapproval>(`/preapproval/${preapprovalId}`);
   if (!preapproval) return;
+
+  // Cancelación/pausa/expiración (desde el dashboard MP o por nuestro cancel):
+  // se frena la recurrencia y se conserva el acceso hasta el fin del período
+  // ya pagado (mismo criterio que Stripe cancel_at_period_end). No se degrada
+  // el rol acá: el gate corta por fecha y evita revocar acceso vigente.
+  if (
+    preapproval.status === "cancelled" ||
+    preapproval.status === "expired" ||
+    preapproval.status === "paused"
+  ) {
+    const { data: sub } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id")
+      .eq("provider", "mercadopago")
+      .eq("provider_subscription_id", preapprovalId)
+      .maybeSingle();
+    if ((sub as any)?.id) {
+      await supabaseAdmin
+        .from("subscriptions")
+        .update({ cancel_at_period_end: true, updated_at: new Date().toISOString() })
+        .eq("id", (sub as any).id);
+      logger.info(
+        { preapprovalId, status: preapproval.status },
+        "[MP webhook] preapproval inactive — recurrence stopped, access kept until period end",
+      );
+    }
+    return;
+  }
+
   if (!isActivePreapproval(preapproval.status)) return;
 
   let userId = preapproval.external_reference || null;
@@ -301,14 +332,28 @@ async function handleAuthorizedPaymentEvent(paymentId: string): Promise<void> {
   if (existingId && (existing as any)?.status === "active") {
     const { data: schedRow } = await supabaseAdmin
       .from("subscriptions")
-      .select("scheduled_plan_type")
+      .select("scheduled_plan_type, current_period_end")
       .eq("id", existingId)
       .maybeSingle();
     const downgradeDue = (schedRow as any)?.scheduled_plan_type === "digital";
+    const currentEnd = (schedRow as any)?.current_period_end as string | null;
+    // Webhook repetido: si el período ya fue extendido hace instantes
+    // (> ~28 días por delante) no se vuelve a extender. En la renovación
+    // real el vencimiento está cerca o vencido, así que la guarda no aplica.
+    const alreadyExtended =
+      !!currentEnd && new Date(currentEnd).getTime() > Date.now() + 28 * 24 * 60 * 60 * 1000;
+    if (alreadyExtended && !downgradeDue) return;
+
+    // Extender desde el vencimiento vigente (no desde "ahora"): evita el
+    // corrimiento acumulativo si el webhook llega tarde.
+    const base =
+      currentEnd && new Date(currentEnd).getTime() > Date.now()
+        ? new Date(currentEnd)
+        : new Date();
     await supabaseAdmin
       .from("subscriptions")
       .update({
-        current_period_end: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        current_period_end: new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
         status: "active",
         // El nuevo cobro ya vino con el importe digital: se completa acá.
         ...(downgradeDue
@@ -357,7 +402,7 @@ async function handleUpgradePaymentEvent(paymentId: string): Promise<void> {
   const payment = await mpGet<MpPayment & { external_reference?: string; transaction_amount?: number }>(
     `/v1/payments/${paymentId}`,
   );
-  if (!payment || payment.status !== "approved") return;
+  if (!payment) return;
 
   const ref = payment.external_reference || "";
   if (!ref.startsWith("mailclub-upgrade:")) return;
@@ -369,7 +414,7 @@ async function handleUpgradePaymentEvent(paymentId: string): Promise<void> {
     .select("*")
     .eq("id", upgradeId)
     .maybeSingle();
-  if (!row || (row as any).status !== "pending") return;
+  if (!row) return;
 
   const markFailed = async (message: string) => {
     await supabaseAdmin
@@ -377,6 +422,20 @@ async function handleUpgradePaymentEvent(paymentId: string): Promise<void> {
       .update({ status: "failed", error: message.slice(0, 500), updated_at: new Date().toISOString() })
       .eq("id", upgradeId);
   };
+
+  // Pago rechazado/cancelado del Checkout Pro: liberar el pending para que la
+  // usuaria pueda reintentar. El cobro nunca se aplicó.
+  if (payment.status === "rejected" || payment.status === "cancelled") {
+    if ((row as any).status === "pending") {
+      await markFailed(`Mercado Pago: pago ${payment.status}`);
+    }
+    return;
+  }
+
+  if (payment.status !== "approved") return;
+  // 'failed' se reintenta (mismo criterio que Stripe): applyUpgrade acepta
+  // failed→payment_confirmed sin volver a cobrar. recurrence_updated no repite.
+  if ((row as any).status !== "pending" && (row as any).status !== "failed") return;
 
   try {
     const expected = (row as any).amount_cents as number;

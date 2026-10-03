@@ -109,6 +109,12 @@ export function isOnOrBeforeCutoff(
   return p.day <= MAIL_CLUB_CUTOFF_DAY;
 }
 
+// ¿La fecha cae en o antes del corte del mes en curso (Madrid)? Se usa para
+// avisar si un cambio de dirección aplica al envío de este mes o al siguiente.
+export function isBeforeCutoffThisMonth(date: Date): boolean {
+  return madridParts(date).day <= MAIL_CLUB_CUTOFF_DAY;
+}
+
 export function shipmentMonthLabel(
   year: number,
   month: number,

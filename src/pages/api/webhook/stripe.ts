@@ -332,7 +332,10 @@ export const POST: APIRoute = async ({ request }) => {
           updated_at: new Date().toISOString(),
         }).eq("provider_subscription_id", sub.id).eq("provider", "stripe");
 
-        if (sub.status === "canceled" || sub.status === "past_due") {
+        // past_due NO revoca el acceso ni el rol: Stripe reintenta el cobro y
+        // el gate ya corta por estado/fecha. Solo la cancelación definitiva
+        // (deleted) libera el perfil.
+        if (sub.status === "canceled") {
           const { data: existing } = await supabaseAdmin
             .from("subscriptions")
             .select("user_id")

@@ -5,6 +5,7 @@ import {
   MAIL_CLUB_PRICE_CENTS,
   firstShipmentPeriod,
   getPlanType,
+  isBeforeCutoffThisMonth,
   isOnOrBeforeCutoff,
   isUpgradeZoneCompatible,
   normalizeCountryIso,
@@ -86,6 +87,13 @@ describe("corte día 15 Europe/Madrid", () => {
   it("etiqueta de mes por locale", () => {
     expect(shipmentMonthLabel(2026, 10, "es")).toBe("octubre 2026");
     expect(shipmentMonthLabel(2026, 10, "en")).toBe("October 2026");
+  });
+
+  it("isBeforeCutoffThisMonth usa el día Madrid", () => {
+    // 16 oct 00:30 Madrid = 15 oct 22:30 UTC -> ya pasó el corte
+    expect(isBeforeCutoffThisMonth(new Date("2026-10-15T22:30:00Z"))).toBe(false);
+    // 15 oct 20:00 UTC = 15 oct 22:00 Madrid -> dentro del corte
+    expect(isBeforeCutoffThisMonth(new Date("2026-10-15T20:00:00Z"))).toBe(true);
   });
 });
 

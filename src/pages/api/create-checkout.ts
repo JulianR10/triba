@@ -52,6 +52,12 @@ export const POST: APIRoute = async ({ request }) => {
     if (!validCurrencies.includes(currency)) {
       return error("Invalid currency", 400);
     }
+    // Pares válidos: Stripe opera EUR/USD; Mercado Pago solo ARS. Evita que
+    // el navegador fuerce una combinación que el proveedor no procesa.
+    const allowedCurrencies = provider === "stripe" ? ["EUR", "USD"] : ["ARS"];
+    if (!allowedCurrencies.includes(currency)) {
+      return error("La moneda no corresponde al proveedor de pago.", 400);
+    }
 
     try {
       const paymentProvider = getPaymentProvider(provider);

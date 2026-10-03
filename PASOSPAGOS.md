@@ -37,6 +37,7 @@ Hecho (además de lo anterior):
 - El botón de checkout restaura su etiqueta original al volver desde Stripe mediante bfcache.
 - `scripts/smoke-prod.mjs` cubre home, Suscribirme, Mail Club, reveal en legales y errores de consola. Hay que volver a ejecutarlo después de cada deploy.
 - Las cuentas manuales de prueba con IDs de Stripe inventados no pueden abrir el portal: `POST /api/portal` intenta recuperar una suscripción inexistente y responde 500. El portal debe validarse con suscripciones creadas por checkout real.
+- **Recuperación 03-oct (tarde):** upgrades `pending` expiran a los 60 min (`upgrade-recovery.ts`); el portal y la cancelación aceptan `past_due`/`incomplete`; la cancelación devuelve error 502 si el proveedor falla; la bienvenida usa reclamo `welcome_sent_at` (at-most-once con reintento); el retorno MP distingue approved/pending/rejected; el lote congela `joined_at`/`sub_status`; `scripts/purge-mail-club-retention.mjs` implementa la retención de 60 días.
 
 Pendiente (uno a la vez, en orden):
 

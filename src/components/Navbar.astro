@@ -423,6 +423,7 @@ const enHref = switchPath(currentPath, "en");
       var data = await res.json();
       if (data.url) { window.location.href = data.url; return; }
       if (data.note) { alert(data.note); return; }
+      if (data.error) { alert(data.error); return; }
       throw new Error(data.error || "Error");
     } catch (e) {
       alert("Error al abrir el portal de gestión");

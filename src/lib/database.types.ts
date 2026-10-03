@@ -50,6 +50,7 @@ export interface Database {
           cancel_at_period_end: boolean;
           scheduled_plan_type: "digital" | "mail_club" | null;
           scheduled_plan_at: string | null;
+          welcome_sent_at: string | null;
         };
         Insert: {
           id?: string;
@@ -67,6 +68,7 @@ export interface Database {
           cancel_at_period_end?: boolean;
           scheduled_plan_type?: "digital" | "mail_club" | null;
           scheduled_plan_at?: string | null;
+          welcome_sent_at?: string | null;
         };
         Update: {
           id?: string;
@@ -84,6 +86,7 @@ export interface Database {
           cancel_at_period_end?: boolean;
           scheduled_plan_type?: "digital" | "mail_club" | null;
           scheduled_plan_at?: string | null;
+          welcome_sent_at?: string | null;
         };
         Relationships: [];
       };
@@ -537,6 +540,8 @@ export interface Database {
           founder_number: number | null;
           status: "included" | "dispatched" | "failed" | "refunded";
           notice_sent: boolean;
+          joined_at: string | null;
+          sub_status: string | null;
           created_at: string;
         };
         Insert: {
@@ -551,6 +556,8 @@ export interface Database {
           founder_number?: number | null;
           status?: "included" | "dispatched" | "failed" | "refunded";
           notice_sent?: boolean;
+          joined_at?: string | null;
+          sub_status?: string | null;
           created_at?: string;
         };
         Update: {
@@ -565,6 +572,8 @@ export interface Database {
           founder_number?: number | null;
           status?: "included" | "dispatched" | "failed" | "refunded";
           notice_sent?: boolean;
+          joined_at?: string | null;
+          sub_status?: string | null;
           created_at?: string;
         };
         Relationships: [];

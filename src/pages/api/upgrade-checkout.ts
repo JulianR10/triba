@@ -16,6 +16,7 @@ import {
   upgradeIdempotencyKey,
 } from "../../lib/upgrade-payment";
 import { applyUpgrade } from "../../lib/upgrade-apply";
+import { expireStalePendingUpgrades } from "../../lib/upgrade-recovery";
 
 // Upgrade voluntario digital -> Mail Club: cobra UNA vez la diferencia del
 // mes en curso. La tarifa recurrente cambia solo cuando ese pago se confirma
@@ -96,23 +97,36 @@ export const POST: APIRoute = async ({ request }) => {
     return error("No pudimos guardar tu dirección. Intentá de nuevo.", 500);
   }
 
-  const { data: upgrade, error: rowError } = await supabaseAdmin
-    .from("mail_club_upgrades")
-    .insert({
-      user_id: user.id,
-      from_plan: "digital",
-      to_plan: "mail_club",
-      plan_currency: currency,
-      amount_cents: diffCents,
-      provider,
-      status: "pending",
-    })
-    .select("id")
-    .single();
+  // Liberar el slot si quedó un intento abandonado (TTL): el índice parcial
+  // único solo bloquea mientras el estado sea 'pending'.
+  await expireStalePendingUpgrades(user.id);
+
+  const insertUpgrade = () =>
+    supabaseAdmin
+      .from("mail_club_upgrades")
+      .insert({
+        user_id: user.id,
+        from_plan: "digital",
+        to_plan: "mail_club",
+        plan_currency: currency,
+        amount_cents: diffCents,
+        provider,
+        status: "pending",
+      })
+      .select("id")
+      .single();
+
+  let { data: upgrade, error: rowError } = await insertUpgrade();
+  if (rowError && (rowError as any)?.code === "23505") {
+    // Carrera: otro intento quedó pending entre la expiración y el insert.
+    // Se fuerza la expiración inmediata y se reintenta una sola vez.
+    await expireStalePendingUpgrades(user.id, 0);
+    ({ data: upgrade, error: rowError } = await insertUpgrade());
+  }
   if (rowError || !upgrade) {
     // 23505 del índice parcial: ya hay un upgrade pendiente en curso.
     if ((rowError as any)?.code === "23505") {
-      return error("Ya tenés un upgrade en curso. Revisá tu email o esperá unos minutos.", 409);
+      return error("Ya tenés un upgrade en curso. Esperá unos minutos y volvé a intentar.", 409);
     }
     logger.error({ err: rowError, userId: user.id }, "upgrade row insert error");
     return error("No pudimos iniciar el upgrade. Intentá de nuevo.", 500);

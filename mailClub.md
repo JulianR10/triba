@@ -1,7 +1,7 @@
 # Triba Mail Club — bases y plan de trabajo
 
 **Estado (03-oct-2026):** Mail Club está publicado en `main`/producción. Esta actualización incorpora el teaser plegable del upgrade en Mi Cuenta, la separación superior de las tarjetas de upgrade/dirección y el retiro visual de la invitación al downgrade en el panel Mail Club.
-**Última verificación local:** `astro check` 0 errores · `npm test` 20/20 · `npm run build` OK. La verificación interactiva del nuevo toggle quedó pendiente porque la corrida local no devolvió salida.
+**Última verificación local:** `astro check` 0 errores · `npm test` 21/21 · `npm run build` OK. Migración `025` aplicada a producción (columnas `welcome_sent_at`, `joined_at`, `sub_status` + `cancel_subscription` para dunning).
 **Ramas:** `main` = trabajo + sitio live; cada push a `main` despliega producción. `mail-club` = rama histórica ya integrada.
 **Preview Vercel (rama):** `https://triba-gqpgwguo2-julianrecarte.vercel.app` — referencia histórica de la matriz previa al lanzamiento.
 **Regla:** validar `astro check`, tests y build antes de cada push a `main`; no commitear secretos ni datos personales.
@@ -41,11 +41,30 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 - [x] Script `scripts/smoke-prod.mjs`: verificación pública de home, Suscribirme, Mail Club, reveal en legales y errores de consola. Volver a correrlo después de cada deploy.
 - [x] Las cuentas manuales de prueba con `provider_subscription_id` inventados no representan suscripciones reales en Stripe. Por eso **“Gestionar suscripción”** falla contra Stripe para esas fixtures: el portal intenta recuperar un `subscription` inexistente. No usar ese error como evidencia contra el flujo productivo; validar el portal con una suscripción creada por checkout real.
 
+### Recuperación y consistencia (03-oct-2026, tarde)
+
+- [x] **TTL de upgrades abandonados.** `src/lib/upgrade-recovery.ts` expira a `failed` los `pending` de más de 60 minutos; `upgrade-checkout.ts` lo ejecuta antes de insertar y reintenta una vez ante `23505`. Un checkout abandonado ya no bloquea intentos nuevos.
+- [x] **Mercado Pago rechazado ya no queda colgado.** El webhook de `payment` marca `failed` el upgrade si el pago llega `rejected`/`cancelled`, y un `failed` se puede re-confirmar si el pago aprueba después (mismo criterio que Stripe).
+- [x] **Cancelación de preaprobación MP.** Si MP reporta `cancelled`/`expired`/`paused`, la suscripción queda con `cancel_at_period_end=true` y conserva el acceso hasta el vencimiento (antes quedaba `active` sin reconciliar).
+- [x] **Portal y cancelación para dunning.** `/api/portal` y `/api/cancel-subscription` aceptan `active`, `trialing`, `past_due` e `incomplete`; migración `025` actualizó `cancel_subscription` para esos estados. Una suscriptora en dunning ya puede gestionar su tarjeta o cancelar.
+- [x] **Cancelación honesta.** Si el proveedor falla al frenar la recurrencia, la API responde 502 y no marca la baja local (antes respondía `ok` con warning y podía seguir cobrando).
+- [x] **Bienvenida at-most-once con reintento.** `subscriptions.welcome_sent_at` (migración `025`) reclama el envío de forma condicional: dos webhooks concurrentes no duplican el email; si Sender falla, el reclamo se revierte para reintentar.
+- [x] **Retorno MP según estado real.** `/api/checkout-return/mail-club-upgrade` mapea `status=rejected/cancelled` a canceled y `pending/in_process` a pending, en lugar de mostrar éxito incondicional.
+- [x] **Aviso de corte en dirección.** `PUT /api/address` responde `appliesThisMonth`; el perfil avisa si el cambio aplica al sobre de este mes o al siguiente.
+- [x] **Snapshot completo del lote.** Los items congelan `joined_at` y `sub_status` al crearse; CSV y pantalla los prefieren sobre el cálculo en vivo.
+- [x] **Despacho endurecido.** Un reintento de avisos no reescribe `dispatched_at`; un lote vacío no se marca despachado; el email se normaliza a minúsculas al crear el item.
+- [x] **Alta digital validada.** El servidor rechaza combinaciones proveedor/moneda inválidas (Stripe solo EUR/USD, Mercado Pago solo ARS).
+- [x] **`past_due` no degrada de inmediato.** Stripe `past_due` mantiene rol y mensaje de “actualizá tu medio de pago”; solo `canceled` libera el perfil.
+- [x] **Renovación MP más estable.** El período se extiende desde el vencimiento vigente (no desde “ahora”) y los webhooks repetidos no vuelven a extenderlo.
+- [x] **Retención 60 días operativa.** `scripts/purge-mail-club-retention.mjs` (dry-run por defecto, `--real`, `--days N`) purga snapshots despachados y direcciones sin suscripción activa.
+- [x] **Nueva API pública.** `isBeforeCutoffThisMonth()` en `src/lib/mail-club.ts`, con test (suite 21/21).
+
 ### Pendiente actual
 
 - [ ] Repetir la verificación interactiva del teaser plegable del upgrade: expandir, contraer, foco, etiquetas ES/EN y `aria-expanded`.
 - [ ] Cobros reales EUR/USD/ARS con webhooks, conciliados o reembolsados.
 - [ ] Validar el portal de gestión con suscripciones creadas por checkout real, no con fixtures manuales.
+- [ ] Correr `scripts/purge-mail-club-retention.mjs` (dry-run) cuando exista el primer lote despachado hace más de 60 días.
 - [ ] Exportar/verificar la lista del newsletter y retirar/borrar únicamente los contactos gratuitos.
 - [ ] Medir el sobre, confirmar tarifas/cobertura/trámites postales y margen por zona.
 - [ ] Recibir las fotos definitivas y aprobar los textos legales.

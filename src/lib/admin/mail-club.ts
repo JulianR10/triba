@@ -112,7 +112,7 @@ export async function createMailClubBatch(
   // al 15 no entra retroactivamente; sin vencimiento conocido no entra.
   const { data: subs } = await supabaseAdmin
     .from("subscriptions")
-    .select("id, user_id, plan_currency")
+    .select("id, user_id, plan_currency, status")
     .eq("plan_type", "mail_club")
     .eq("status", "active")
     .or(`current_period_start.is.null,current_period_start.lte.${cutoff}`)
@@ -152,6 +152,10 @@ export async function createMailClubBatch(
       address_extra: (addr as any).address_extra,
     };
     const zone = resolveMailClubZone((addr as any).country_iso).zone;
+    // Snapshot completo: además de la dirección, fecha de alta y estado de la
+    // suscripción quedan congelados al crear el item (el CSV ya no cambia en
+    // vivo si la suscripción se cancela después del corte).
+    const joinedAt = await resolveMailClubJoinedAt(s.user_id, s.id);
     // ignoreDuplicates: un reintento no pisa el snapshot ya congelado.
     const { error: itemError } = await supabaseAdmin.from("mail_club_batch_items").upsert(
       {
@@ -159,11 +163,13 @@ export async function createMailClubBatch(
         user_id: s.user_id,
         subscription_id: s.id,
         address_snapshot: snapshot,
-        email,
+        email: email.toLowerCase().trim(),
         zone,
         plan_currency: s.plan_currency,
         founder_number: (founder as any)?.founder_number ?? null,
         status: "included",
+        joined_at: joinedAt || null,
+        sub_status: s.status || "active",
       },
       { onConflict: "batch_id, user_id", ignoreDuplicates: true },
     );
@@ -275,8 +281,8 @@ export async function listMailClubBatchItems(batchId: string): Promise<MailClubB
         postal_code: snap.postal_code || "",
         country_iso: snap.country_iso || "",
       },
-      joined_at: await resolveMailClubJoinedAt(it.user_id, it.subscription_id),
-      live_status: await resolveLiveStatus(it.subscription_id),
+      joined_at: it.joined_at || (await resolveMailClubJoinedAt(it.user_id, it.subscription_id)),
+      live_status: it.sub_status || (await resolveLiveStatus(it.subscription_id)),
     });
   }
   return out;
@@ -297,8 +303,9 @@ export async function exportMailClubBatchCSV(batchId: string): Promise<string> {
   const lines: string[] = [];
   for (const it of (items as any[]) || []) {
     const snap = (it.address_snapshot as any) || {};
-    const joinedAt = await resolveMailClubJoinedAt(it.user_id, it.subscription_id);
-    const liveStatus = await resolveLiveStatus(it.subscription_id);
+    // Preferir el snapshot congelado; los lotes viejos (pre-025) caen a vivo.
+    const joinedAt = it.joined_at || (await resolveMailClubJoinedAt(it.user_id, it.subscription_id));
+    const liveStatus = it.sub_status || (await resolveLiveStatus(it.subscription_id));
     lines.push(
       [
         snap.recipient_name, snap.street_address, snap.address_extra, snap.city,
@@ -371,20 +378,32 @@ export async function dispatchMailClubBatch(
     }
   }
 
-  // El despacho físico queda registrado aunque falten avisos por reintentar.
-  await supabaseAdmin
-    .from("mail_club_batches")
-    .update({
-      status: "dispatched",
-      dispatched_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", batchId);
-  await supabaseAdmin
-    .from("mail_club_batch_items")
-    .update({ status: "dispatched" })
-    .eq("batch_id", batchId)
-    .eq("status", "included");
+  // El primer despacho registra fecha y estado; un reintento de avisos no
+  // reescribe dispatched_at ni vuelve a marcar items. Un lote sin items no
+  // se marca como despachado (no salió nada físicamente).
+  if (!alreadyDispatched) {
+    const { count: itemCount } = await supabaseAdmin
+      .from("mail_club_batch_items")
+      .select("id", { count: "exact", head: true })
+      .eq("batch_id", batchId);
+    if ((itemCount || 0) > 0) {
+      await supabaseAdmin
+        .from("mail_club_batches")
+        .update({
+          status: "dispatched",
+          dispatched_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", batchId);
+      await supabaseAdmin
+        .from("mail_club_batch_items")
+        .update({ status: "dispatched" })
+        .eq("batch_id", batchId)
+        .eq("status", "included");
+    } else {
+      logger.warn({ batchId }, "dispatch on empty batch — not marking dispatched");
+    }
+  }
 
   return { sent, failed, alreadyDispatched };
 }
