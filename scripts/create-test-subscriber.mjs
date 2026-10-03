@@ -1,29 +1,33 @@
 /**
- * Crea un usuario de prueba con suscripción activa para testear /mi-cuenta.
+ * Crea (o resetea) un usuario de prueba con suscripción activa para /mi-cuenta.
  *
  * Usage:
- *   node --env-file=.env scripts/create-test-subscriber.mjs <email> <password>
+ *   node --env-file=.env scripts/create-test-subscriber.mjs <email> <password> [digital|mail_club] [EUR|USD|ARS]
  *
  * Requires in .env:
  *   PUBLIC_SUPABASE_URL
  *   SUPABASE_SERVICE_ROLE_KEY
  *
- * Example:
- *   node --env-file=.env scripts/create-test-subscriber.mjs suscriptora@triba.com 'TestTriba2026!'
+ * Examples:
+ *   node --env-file=.env scripts/create-test-subscriber.mjs suscriptora-digital@triba.test 'TribuTest2024!' digital EUR
+ *   node --env-file=.env scripts/create-test-subscriber.mjs suscriptora-mailclub@triba.test 'TribuTest2024!' mail_club EUR
  */
 
 import { createClient } from "@supabase/supabase-js";
 
-const [, , emailArg, passwordArg] = process.argv;
+const [, , emailArg, passwordArg, planArg, currencyArg] = process.argv;
 
 if (!emailArg || !passwordArg) {
-  console.error("Uso: node --env-file=.env scripts/create-test-subscriber.mjs <email> <password>");
-  console.error("Ej:  node --env-file=.env scripts/create-test-subscriber.mjs suscriptora@triba.com 'TestTriba2026!'");
+  console.error("Uso: node --env-file=.env scripts/create-test-subscriber.mjs <email> <password> [digital|mail_club] [EUR|USD|ARS]");
+  console.error("Ej:  node --env-file=.env scripts/create-test-subscriber.mjs suscriptora-digital@triba.test 'TribuTest2024!' digital EUR");
   process.exit(1);
 }
 
 const email = emailArg.trim();
 const newPassword = passwordArg;
+const planType = planArg === "mail_club" ? "mail_club" : "digital";
+const currencyInput = (currencyArg || "USD").toUpperCase();
+const planCurrency = ["EUR", "USD", "ARS"].includes(currencyInput) ? currencyInput : "USD";
 
 if (newPassword.length < 6) {
   console.error("Error: la password debe tener al menos 6 caracteres.");
@@ -85,29 +89,62 @@ if (matches.length > 0) {
   console.log(`     OK: id=${userId.slice(0, 8)}…`);
 }
 
-// ─── 3. Crear subscription ────────────────────────────────────
-console.log(`\n[3/5] Creando suscripción de prueba (stripe, USD, activa)...`);
+// ─── 3. Crear o actualizar subscription ───────────────────────
+console.log(`\n[3/5] Preparando suscripción de prueba (stripe, ${planCurrency}, ${planType}, activa)...`);
 
 const periodStart = new Date();
-const periodEnd = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // +30 días
+const periodEnd = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000); // +1 año
 
-const { data: sub, error: subErr } = await admin
+// Reutilizar la suscripción existente del usuario si la hay: evita acumular
+// filas duplicadas al re-ejecutar el script.
+const { data: existingSub } = await admin
   .from("subscriptions")
-  .insert({
-    user_id: userId,
-    provider: "stripe",
-    provider_subscription_id: `test_sub_${Date.now()}`,
-    status: "active",
-    plan_currency: "USD",
-    current_period_start: periodStart.toISOString(),
-    current_period_end: periodEnd.toISOString(),
-  })
   .select("id")
-  .single();
+  .eq("user_id", userId)
+  .order("created_at", { ascending: false })
+  .limit(1)
+  .maybeSingle();
 
-if (subErr) {
-  console.error(`Error creando subscription: ${subErr.message}`);
-  process.exit(1);
+let sub = existingSub;
+if (existingSub?.id) {
+  const { error: updErr } = await admin
+    .from("subscriptions")
+    .update({
+      status: "active",
+      plan_currency: planCurrency,
+      plan_type: planType,
+      current_period_start: periodStart.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+      cancel_at_period_end: false,
+      scheduled_plan_type: null,
+      scheduled_plan_at: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", existingSub.id);
+  if (updErr) {
+    console.error(`Error actualizando subscription: ${updErr.message}`);
+    process.exit(1);
+  }
+} else {
+  const { data: inserted, error: subErr } = await admin
+    .from("subscriptions")
+    .insert({
+      user_id: userId,
+      provider: "stripe",
+      provider_subscription_id: `test_sub_${planType}_${Date.now()}`,
+      status: "active",
+      plan_currency: planCurrency,
+      plan_type: planType,
+      current_period_start: periodStart.toISOString(),
+      current_period_end: periodEnd.toISOString(),
+    })
+    .select("id")
+    .single();
+  if (subErr) {
+    console.error(`Error creando subscription: ${subErr.message}`);
+    process.exit(1);
+  }
+  sub = inserted;
 }
 console.log(`     OK: id=${sub.id.slice(0, 8)}… vence ${periodEnd.toLocaleDateString("es-AR")}`);
 

@@ -1,6 +1,6 @@
 # TRIBA
 
-Revista digital mensual — newsletter gratuito + suscripción paga. Escrita por y para mujeres, sobre cultura, arte e identidad.
+Revista digital mensual — suscripción digital + Triba Mail Club (sobre postal). Escrita por y para mujeres, sobre cultura, arte e identidad.
 
 **Stack:** Astro 5 · Supabase · Tailwind CSS 3 · Stripe · Mercado Pago · Sender · react-pdf
 
@@ -38,16 +38,22 @@ Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABAS
 | `node --env-file=.env scripts/recreate-migrated-billing.mjs [--dry-run]` | Recrea el cobro automático de las migradas (idempotente) |
 | `node --env-file=.env scripts/import-wp-subscribers.mjs <csv>` | Importa suscriptores de WooCommerce a `subscriber_migrations` + Sender |
 | `node --env-file=.env scripts/fix-admin.mjs <email> '<password>'` | Promueve admin / fix de acceso |
+| `node --env-file=.env scripts/update-mp-mailclub-price.mjs --amount <ARS> [--real] [--list-emails]` | Actualización trimestral ARS de preaprobaciones MP (dry-run default, aviso 30 días) |
+| `node --env-file=.env scripts/purge-mail-club-retention.mjs [--real] [--days 60]` | Retención postal: purga snapshots y direcciones vencidas (dry-run default) |
+| `node scripts/smoke-prod.mjs` | Smoke test de producción (home, Suscribirme, Mail Club, legales y consola) |
 
 ## Accesos de prueba
 
-**Suscriptora de prueba** (sub `stripe` activa, USD):
+Suscriptoras de prueba (sub `stripe` activa hasta oct-2027, creadas en el Supabase de producción):
 
-| Rol | Email | Password |
-|---|---|---|
-| Suscriptor | `suscriptora@triba.com` | `TestTriba2026!` |
+| Plan | Email | Password | Detalle |
+|---|---|---|---|
+| Digital | `suscriptora-digital@triba.test` | `TribuTest2024!` | EUR €7/mes — tarjeta en Mi Cuenta |
+| Mail Club | `suscriptora-mailclub@triba.test` | `TribuTest2024!` | EUR €10,50/mes — formulario de dirección en Mi Cuenta |
 
-> Se crea/resetea con `node --env-file=.env scripts/create-test-subscriber.mjs <email> '<password>'`.
+> Se crean/resetean con `node --env-file=.env scripts/create-test-subscriber.mjs <email> '<password>' [digital|mail_club] [EUR|USD|ARS]` (re-ejecutar no duplica: reutiliza la suscripción existente). El script también resetea la contraseña si la cuenta ya existe.
+>
+> ⚠️ Son fixtures locales: su `provider_subscription_id` no existe en Stripe, por eso **“Gestionar suscripción” falla a propósito** en estas cuentas (el portal intenta recuperar una suscripción real). Para probar portal, cancelaciones o cobros, usar una suscripción creada por checkout real.
 
 **Admin** (entran por `/iniciar-sesion` y son redirigidos a `/admin`):
 
