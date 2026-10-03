@@ -40,6 +40,7 @@ Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABAS
 | `node --env-file=.env scripts/fix-admin.mjs <email> '<password>'` | Promueve admin / fix de acceso |
 | `node --env-file=.env scripts/update-mp-mailclub-price.mjs --amount <ARS> [--real] [--list-emails]` | Actualización trimestral ARS de preaprobaciones MP (dry-run default, aviso 30 días) |
 | `node --env-file=.env scripts/purge-mail-club-retention.mjs [--real] [--days 60]` | Retención postal: purga snapshots y direcciones vencidas (dry-run default) |
+| `node --env-file=.env scripts/send-mailclub-preview.mjs --email=<destino> [--dry]` | Preview/envío de la bienvenida Mail Club con la plantilla real de producción |
 | `node scripts/smoke-prod.mjs` | Smoke test de producción (home, Suscribirme, Mail Club, legales y consola) |
 
 ## Accesos de prueba
