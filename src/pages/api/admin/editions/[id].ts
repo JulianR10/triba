@@ -6,6 +6,7 @@ import {
   editionFormToInput,
   validateEditionInput,
   isEmptyVersion,
+  syncFeaturedBadges,
 } from "../../../../lib/admin/editions";
 import { logAdminAction } from "../../../../lib/admin/audit";
 
@@ -118,6 +119,10 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
       }
     }
 
+    // Badge única: se limpia de las demás ediciones y se completa el de la
+    // destacada. No bloquea la edición si falla.
+    await syncFeaturedBadges();
+
     logAdminAction(
       admin.user.id,
       admin.profile.email,
@@ -172,6 +177,9 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       console.error(`[editions.delete:${editionId}] delete error:`, deleteError);
       return error(deleteError.message, 500);
     }
+
+    // Si se borró la destacada, se limpian badges huérfanos.
+    await syncFeaturedBadges();
 
     logAdminAction(
       admin.user.id,

@@ -1,5 +1,5 @@
 import { supabaseAdmin } from "../supabase-admin";
-import type { Edition, EditionKind, EditionLanguage } from "../editions";
+import { EDITION_LANGUAGES, type Edition, type EditionKind, type EditionLanguage } from "../editions";
 import type { Database } from "../database.types";
 
 type EditionLanguageRow = Database["public"]["Tables"]["edition_languages"]["Row"];
@@ -85,6 +85,53 @@ export function isEmptyVersion(v?: EditionVersionInput): boolean {
     v.pdf_url ||
     v.badge
   );
+}
+
+const DEFAULT_BADGES: Record<EditionLanguage, string> = {
+  es: "Última edición",
+  en: "Latest issue",
+};
+
+/**
+ * Regla de badge única (AGENTS.md): la etiqueta de "última edición" vive SOLO
+ * en la edición destacada. Se ejecuta después de cada guardado/borrado del
+ * admin para no dejar badges viejos en ediciones anteriores. Si la edición
+ * destacada tiene el badge vacío en un idioma existente, se completa con el
+ * valor por defecto.
+ */
+export async function syncFeaturedBadges(): Promise<void> {
+  const { data: featured } = await supabaseAdmin
+    .from("editions")
+    .select("id")
+    .eq("featured", true)
+    .maybeSingle();
+  const featuredId = (featured as { id: number } | null)?.id ?? null;
+
+  if (featuredId === null) {
+    const { error } = await supabaseAdmin
+      .from("edition_languages")
+      .update({ badge: null })
+      .not("badge", "is", null);
+    if (error) console.error("[editions.badges] clear-all error:", error);
+    return;
+  }
+
+  const { error: clearError } = await supabaseAdmin
+    .from("edition_languages")
+    .update({ badge: null })
+    .neq("edition_id", featuredId)
+    .not("badge", "is", null);
+  if (clearError) console.error("[editions.badges] clear-others error:", clearError);
+
+  for (const lang of EDITION_LANGUAGES) {
+    const { error } = await supabaseAdmin
+      .from("edition_languages")
+      .update({ badge: DEFAULT_BADGES[lang] })
+      .eq("edition_id", featuredId)
+      .eq("language", lang)
+      .is("badge", null);
+    if (error) console.error(`[editions.badges] default ${lang} error:`, error);
+  }
 }
 
 /**

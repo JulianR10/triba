@@ -234,10 +234,10 @@ const miCuentaMessages = {
           </div>
           <div class="md:col-start-1 md:row-start-3">
             <div class="mt-6 mb-3 flex flex-col items-center md:items-start gap-2">
-              <h2 class="font-heading text-2xl md:text-3xl text-triba-brown">{featured.title}</h2>
               {featured.badge && (
                 <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-white border border-triba-black/10 font-heading text-[10px] uppercase tracking-wider text-triba-brown">{featured.badge}</span>
               )}
+              <h2 class="font-heading text-2xl md:text-3xl text-triba-brown">{featured.title}</h2>
               {lang === "en" && featured.isFallback && (
                 <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-bone font-heading text-[10px] uppercase tracking-wider text-triba-brown/60">{comingSoonLabel}</span>
               )}

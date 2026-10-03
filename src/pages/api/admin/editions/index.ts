@@ -6,6 +6,7 @@ import {
   editionFormToInput,
   validateEditionInput,
   isEmptyVersion,
+  syncFeaturedBadges,
 } from "../../../../lib/admin/editions";
 import { logAdminAction } from "../../../../lib/admin/audit";
 
@@ -87,6 +88,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       console.error("[editions.create] languages insert error:", langError);
       return error(langError.message, 500);
     }
+
+    // Badge única: se limpia de las demás ediciones y se completa el de la
+    // destacada. No bloquea la creación si falla.
+    await syncFeaturedBadges();
 
     logAdminAction(
       admin.user.id,
