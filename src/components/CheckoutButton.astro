@@ -42,7 +42,7 @@ const btnClass = `
 `;
 ---
 
-<button type="button" data-provider={provider} data-currency={currency} data-messages={JSON.stringify(messages)} class={btnClass} data-magnetic>
+<button type="button" data-provider={provider} data-currency={currency} data-messages={JSON.stringify(messages)} data-original-text={displayLabel} class={btnClass} data-magnetic>
   {displayLabel}
 </button>
 <p class="font-sans text-xs text-triba-red text-center mt-1 hidden" data-checkout-error></p>
@@ -52,13 +52,22 @@ const btnClass = `
   import { saveCheckoutIntent } from "../lib/checkout-intent";
   import { onPageCycle } from "../lib/onPageCycle";
 
+function resetCheckoutButtons() {
+    document.querySelectorAll("button[data-provider]").forEach((b) => {
+      const btn = b as HTMLButtonElement;
+      const orig = btn.getAttribute("data-original-text");
+      if (orig) btn.textContent = orig;
+      btn.disabled = false;
+    });
+  }
+
   function attachCheckoutHandlers() {
     document.querySelectorAll("button[data-provider]").forEach((btn) => {
       btn.addEventListener("click", async () => {
-        const provider = btn.getAttribute("data-provider");
-        const currency = btn.getAttribute("data-currency");
-        const originalText = btn.textContent;
-        let messages = { processing: "Procesando...", error: "Error al procesar el pago. Intentalo de nuevo." };
+         const provider = btn.getAttribute("data-provider");
+         const currency = btn.getAttribute("data-currency");
+         const originalText = btn.getAttribute("data-original-text") || btn.textContent;
+         let messages = { processing: "Procesando...", error: "Error al procesar el pago. Intentalo de nuevo." };
         const raw = btn.getAttribute("data-messages");
         if (raw) {
           try { messages = JSON.parse(raw); } catch { /* keep defaults */ }
@@ -106,4 +115,5 @@ const btnClass = `
   }
 
   onPageCycle(attachCheckoutHandlers);
+  window.addEventListener("pageshow", (e) => { if (e.persisted) resetCheckoutButtons(); });
 </script>
