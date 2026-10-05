@@ -46,39 +46,6 @@ export interface SearchMigratedResult {
   totalPages: number;
 }
 
-export async function listSubscribersForAdmin(): Promise<AdminSubscriberRow[]> {
-  const { data: profiles, error } = await supabaseAdmin
-    .from("profiles")
-    .select("*")
-    .order("created_at", { ascending: false });
-  if (error || !profiles) return [];
-
-  const subscriberProfiles = (profiles as Profile[]).filter(
-    (p) => p.role === "subscriber" || p.subscription_id !== null,
-  );
-
-  if (subscriberProfiles.length === 0) return [];
-
-  const subIds = subscriberProfiles
-    .map((p) => p.subscription_id)
-    .filter((id): id is string => !!id);
-
-  const { data: subs } = await supabaseAdmin
-    .from("subscriptions")
-    .select("*")
-    .in("id", subIds);
-
-  const subMap = new Map<string, Subscription>();
-  for (const s of (subs as Subscription[]) || []) {
-    subMap.set(s.id, s);
-  }
-
-  return subscriberProfiles.map((p) => ({
-    profile: p,
-    subscription: p.subscription_id ? subMap.get(p.subscription_id) || null : null,
-  }));
-}
-
 function escapeCSV(val: string): string {
   if (val.includes(",") || val.includes('"') || val.includes("\n")) {
     return `"${val.replace(/"/g, '""')}"`;
@@ -154,62 +121,87 @@ export async function searchMigratedSubscribersForAdmin(
   return { rows, total, page, pageSize, totalPages };
 }
 
+// Estado live de Stripe para migraciones: cache best-effort 60s por instancia.
+// Evita 1 roundtrip a la API de Stripe (~1.4s) en cada click de filtro.
+let stripeStatusCache: { at: number; map: Map<string, string> } = { at: 0, map: new Map() };
+const STRIPE_STATUS_TTL_MS = 60 * 1000;
+
+async function getStripeStatusMap(stripeSubIds: string[]): Promise<Map<string, string>> {
+  const fresh = Date.now() - stripeStatusCache.at < STRIPE_STATUS_TTL_MS;
+  if (fresh) {
+    const hit = new Map<string, string>();
+    for (const id of stripeSubIds) {
+      const s = stripeStatusCache.map.get(id);
+      if (s) hit.set(id, s);
+    }
+    if (hit.size > 0 || stripeStatusCache.map.size > 0) return hit;
+  }
+  const map = new Map<string, string>();
+  if (!stripe) return map;
+  try {
+    const stripeSubs = await stripe.subscriptions.list({ limit: 100 });
+    for (const s of stripeSubs.data) {
+      map.set(s.id, s.status);
+    }
+    stripeStatusCache = { at: Date.now(), map };
+  } catch {
+    // If Stripe query fails, we just won't show real-time status
+  }
+  const out = new Map<string, string>();
+  for (const id of stripeSubIds) {
+    const s = map.get(id);
+    if (s) out.set(id, s);
+  }
+  return out;
+}
+
+// El estado live de Stripe solo se muestra en filas de migración pendiente:
+// para el resto de las pestañas no se consulta (era ~1.4s por request).
+function needsStripeStatus(status: AdminSubscriberStatus): boolean {
+  return status === "all" || status === "pending";
+}
+
 export async function searchSubscribersForAdmin(
   search: string,
   status: AdminSubscriberStatus,
   page: number,
   pageSize: number,
 ): Promise<SearchSubscribersResult> {
-  let query = supabaseAdmin
+  // Lecturas independientes en paralelo (antes eran 3 roundtrips en serie).
+  // Columnas acotadas: la tabla crece y `select *` paga transferencia de más.
+  const profilesBase = supabaseAdmin
     .from("profiles")
-    .select("*", { count: "exact", head: false });
+    .select("id, email, role, subscription_id, created_at");
 
-  if (search) {
-    query = query.ilike("email", `%${search}%`);
-  }
-
-  const { data: allProfiles, error } = await query
-    .order("created_at", { ascending: false });
-
-  const profiles = (error || !allProfiles) ? [] : (allProfiles as Profile[]);
-
-  const { count: totalMigrated } = await supabaseAdmin
-    .from("subscriber_migrations")
-    .select("id", { count: "exact", head: true });
-
-  const profileEmails = new Set(profiles.map((p) => p.email));
+  let profilesQuery = search
+    ? profilesBase.ilike("email", `%${search}%`)
+    : profilesBase;
 
   let migQuery = supabaseAdmin
     .from("subscriber_migrations")
-    .select("id, email, migrated_at, stripe_subscription_id, mp_preapproval_id, mp_plan_currency, old_subscription_data", { count: "exact", head: false });
-
+    .select("id, email, migrated_at, stripe_subscription_id, mp_preapproval_id, mp_plan_currency, old_subscription_data");
   if (search) {
     migQuery = migQuery.ilike("email", `%${search}%`);
   }
 
-  const { data: migs } = await migQuery.order("migrated_at", { ascending: false });
+  const [{ data: allProfiles, error }, { data: migs }, { count: totalMigrated }] = await Promise.all([
+    profilesQuery.order("created_at", { ascending: false }),
+    migQuery.order("migrated_at", { ascending: false }),
+    supabaseAdmin.from("subscriber_migrations").select("id", { count: "exact", head: true }),
+  ]);
 
-  const pendingMigrations = (migs || []).filter((m) => !profileEmails.has(m.email));
+  const profiles = (error || !allProfiles) ? [] : (allProfiles as Profile[]);
+
+  const profileEmails = new Set(profiles.map((p) => p.email));
+
+  const pendingMigrations = ((migs as any[]) || []).filter((m) => !profileEmails.has(m.email));
   const totalPending = pendingMigrations.length;
 
-  // Fetch real-time Stripe status for migrations with stripe_subscription_id
-  const stripeSubIds = pendingMigrations
-    .map((m) => m.stripe_subscription_id)
-    .filter((id): id is string => !!id);
-
-  const stripeStatusMap = new Map<string, string>();
-  if (stripeSubIds.length > 0 && stripe) {
-    try {
-      const stripeSubs = await stripe.subscriptions.list({ limit: 100 });
-      for (const s of stripeSubs.data) {
-        if (stripeSubIds.includes(s.id)) {
-          stripeStatusMap.set(s.id, s.status);
-        }
-      }
-    } catch {
-      // If Stripe query fails, we just won't show real-time status
-    }
-  }
+  // Estado live de Stripe solo donde se muestra (tabs todas/pendientes).
+  const stripeSubIds = needsStripeStatus(status)
+    ? pendingMigrations.map((m) => m.stripe_subscription_id).filter((id): id is string => !!id)
+    : [];
+  const stripeStatusMap = stripeSubIds.length > 0 ? await getStripeStatusMap(stripeSubIds) : new Map<string, string>();
 
   // Count refunded (old_subscription_data has refunded_at, but stripe_subscription_id is null)
   const refundedMigrations = pendingMigrations.filter((m) =>
@@ -225,7 +217,7 @@ export async function searchSubscribersForAdmin(
   if (subIds.length > 0) {
     const { data: subs } = await supabaseAdmin
       .from("subscriptions")
-      .select("*")
+      .select("id, user_id, provider, plan_type, plan_currency, status, current_period_end")
       .in("id", subIds);
     for (const s of (subs as Subscription[]) || []) {
       subMap.set(s.id, s);
@@ -247,7 +239,7 @@ export async function searchSubscribersForAdmin(
   if (unlinkedUserIds.length > 0) {
     const { data: looseSubs } = await supabaseAdmin
       .from("subscriptions")
-      .select("*")
+      .select("id, user_id, provider, plan_type, plan_currency, status, current_period_end")
       .in("user_id", unlinkedUserIds)
       .order("created_at", { ascending: false });
     const firstByUser = new Map<string, Subscription>();

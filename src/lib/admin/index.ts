@@ -10,7 +10,6 @@ export {
 export type { EditionInput } from "./editions";
 
 export {
-  listSubscribersForAdmin,
   searchSubscribersForAdmin,
   exportSubscribersCSV,
 } from "./subscribers";

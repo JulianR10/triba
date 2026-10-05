@@ -135,6 +135,15 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     params.set("pageSize", "20");
     if (currentSearch) params.set("search", currentSearch);
 
+    tbody.innerHTML = [0, 1, 2].map(() => `<tr class="border-b border-triba-black/10 last:border-0 animate-pulse">
+      <td class="px-4 py-3"><div class="h-4 w-40 bg-triba-bone rounded"></div></td>
+      <td class="px-4 py-3"><div class="h-4 w-20 bg-triba-bone rounded"></div></td>
+      <td class="px-4 py-3"><div class="h-4 w-24 bg-triba-bone rounded"></div></td>
+      <td class="px-4 py-3"><div class="h-4 w-16 bg-triba-bone rounded-full"></div></td>
+      <td class="px-4 py-3 hidden md:table-cell"><div class="h-4 w-20 bg-triba-bone rounded"></div></td>
+      <td class="px-4 py-3"></td>
+    </tr>`).join("");
+
     try {
       const res = await fetch(`/api/admin/subscribers?${params}`);
       const data = await res.json();
