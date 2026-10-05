@@ -69,6 +69,119 @@ interface SkippedRow {
   reason: string;
 }
 
+export interface MailClubEligibleRow {
+  user_id: string;
+  subscription_id: string;
+  email: string;
+  plan_currency: "EUR" | "USD" | "ARS";
+  zone: string;
+  founder_number: number | null;
+  address: {
+    recipient_name: string;
+    country_iso: string;
+    region: string;
+    city: string;
+    postal_code: string;
+    street_address: string;
+    address_extra: string;
+  };
+  joined_at: string;
+}
+
+// Elegibles al CORTE (no al momento de generar): plan mail_club, activas,
+// período iniciado en/antes del corte y vigente al corte. Un alta posterior
+// al 15 no entra retroactivamente; sin vencimiento conocido no entra.
+// Solo lectura: la usan tanto la simulación (preview) como la creación.
+export async function listMailClubEligible(
+  cutoff: string,
+): Promise<{ eligible: MailClubEligibleRow[]; skipped: SkippedRow[] }> {
+  const { data: subs } = await supabaseAdmin
+    .from("subscriptions")
+    .select("id, user_id, plan_currency, status")
+    .eq("plan_type", "mail_club")
+    .eq("status", "active")
+    .or(`current_period_start.is.null,current_period_start.lte.${cutoff}`)
+    .gte("current_period_end", cutoff);
+
+  const eligible: MailClubEligibleRow[] = [];
+  const skipped: SkippedRow[] = [];
+
+  for (const s of (subs as any[]) || []) {
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("email")
+      .eq("id", s.user_id)
+      .maybeSingle();
+    const email = (profile as any)?.email || "";
+    const { data: addr } = await supabaseAdmin
+      .from("mailing_addresses")
+      .select("recipient_name, country_iso, region, city, postal_code, street_address, address_extra")
+      .eq("user_id", s.user_id)
+      .maybeSingle();
+    if (!addr) {
+      skipped.push({ email, reason: "sin dirección postal" });
+      continue;
+    }
+    const { data: founder } = await supabaseAdmin
+      .from("mail_club_founders")
+      .select("founder_number")
+      .eq("user_id", s.user_id)
+      .maybeSingle();
+
+    const zone = resolveMailClubZone((addr as any).country_iso).zone;
+    const joinedAt = await resolveMailClubJoinedAt(s.user_id, s.id);
+    eligible.push({
+      user_id: s.user_id,
+      subscription_id: s.id,
+      email,
+      plan_currency: s.plan_currency,
+      zone,
+      founder_number: (founder as any)?.founder_number ?? null,
+      address: {
+        recipient_name: (addr as any).recipient_name,
+        country_iso: (addr as any).country_iso,
+        region: (addr as any).region,
+        city: (addr as any).city,
+        postal_code: (addr as any).postal_code,
+        street_address: (addr as any).street_address,
+        address_extra: (addr as any).address_extra,
+      },
+      joined_at: joinedAt || "",
+    });
+  }
+
+  return { eligible, skipped };
+}
+
+// Activas Mail Club sin dirección: quedarían fuera del lote en silencio.
+// Es el reclamo más caro ("pagué y no me llegó"), va a superficie en el panel.
+export async function listMailClubWithoutAddress(): Promise<{ user_id: string; email: string; since: string }[]> {
+  const { data: subs } = await supabaseAdmin
+    .from("subscriptions")
+    .select("user_id, created_at")
+    .eq("plan_type", "mail_club")
+    .eq("status", "active");
+  if (!subs || (subs as any[]).length === 0) return [];
+  const userIds = [...new Set((subs as any[]).map((s) => s.user_id as string))];
+  const sinceByUser = new Map<string, string>();
+  for (const s of subs as any[]) {
+    if (!sinceByUser.has(s.user_id)) sinceByUser.set(s.user_id, s.created_at);
+  }
+  const { data: addrs } = await supabaseAdmin
+    .from("mailing_addresses")
+    .select("user_id")
+    .in("user_id", userIds);
+  const withAddr = new Set(((addrs as any[]) || []).map((a) => a.user_id as string));
+  const missing = userIds.filter((u) => !withAddr.has(u));
+  if (missing.length === 0) return [];
+  const { data: profiles } = await supabaseAdmin
+    .from("profiles")
+    .select("id, email")
+    .in("id", missing);
+  const emailById = new Map(((profiles as any[]) || []).map((p) => [p.id as string, p.email as string]));
+  return missing.map((u) => ({ user_id: u, email: emailById.get(u) || "", since: sinceByUser.get(u) || "" }));
+}
+
 // Crea (o reutiliza) el lote del mes con snapshot inmutable. Idempotente:
 // re-ejecutar no duplica ni sobrescribe etiquetas ya congeladas.
 export async function createMailClubBatch(
@@ -107,75 +220,33 @@ export async function createMailClubBatch(
   const batchId = (batch as any).id as string;
   const reused = !!existingBatch;
 
-  // Elegibles al CORTE (no al momento de generar): plan mail_club, activas,
-  // período iniciado en/antes del corte y vigente al corte. Un alta posterior
-  // al 15 no entra retroactivamente; sin vencimiento conocido no entra.
-  const { data: subs } = await supabaseAdmin
-    .from("subscriptions")
-    .select("id, user_id, plan_currency, status")
-    .eq("plan_type", "mail_club")
-    .eq("status", "active")
-    .or(`current_period_start.is.null,current_period_start.lte.${cutoff}`)
-    .gte("current_period_end", cutoff);
+  // Elegibles al CORTE vía función compartida (misma que el preview).
+  const { eligible, skipped } = await listMailClubEligible(cutoff);
 
-  const skipped: SkippedRow[] = [];
-
-  for (const s of (subs as any[]) || []) {
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email")
-      .eq("id", s.user_id)
-      .maybeSingle();
-    const email = (profile as any)?.email || "";
-    const { data: addr } = await supabaseAdmin
-      .from("mailing_addresses")
-      .select("recipient_name, country_iso, region, city, postal_code, street_address, address_extra")
-      .eq("user_id", s.user_id)
-      .maybeSingle();
-    if (!addr) {
-      skipped.push({ email, reason: "sin dirección postal" });
-      continue;
-    }
-    const { data: founder } = await supabaseAdmin
-      .from("mail_club_founders")
-      .select("founder_number")
-      .eq("user_id", s.user_id)
-      .maybeSingle();
-
-    const snapshot = {
-      recipient_name: (addr as any).recipient_name,
-      country_iso: (addr as any).country_iso,
-      region: (addr as any).region,
-      city: (addr as any).city,
-      postal_code: (addr as any).postal_code,
-      street_address: (addr as any).street_address,
-      address_extra: (addr as any).address_extra,
-    };
-    const zone = resolveMailClubZone((addr as any).country_iso).zone;
+  for (const e of eligible) {
     // Snapshot completo: además de la dirección, fecha de alta y estado de la
     // suscripción quedan congelados al crear el item (el CSV ya no cambia en
     // vivo si la suscripción se cancela después del corte).
-    const joinedAt = await resolveMailClubJoinedAt(s.user_id, s.id);
     // ignoreDuplicates: un reintento no pisa el snapshot ya congelado.
     const { error: itemError } = await supabaseAdmin.from("mail_club_batch_items").upsert(
       {
         batch_id: batchId,
-        user_id: s.user_id,
-        subscription_id: s.id,
-        address_snapshot: snapshot,
-        email: email.toLowerCase().trim(),
-        zone,
-        plan_currency: s.plan_currency,
-        founder_number: (founder as any)?.founder_number ?? null,
+        user_id: e.user_id,
+        subscription_id: e.subscription_id,
+        address_snapshot: e.address,
+        email: e.email.toLowerCase().trim(),
+        zone: e.zone,
+        plan_currency: e.plan_currency,
+        founder_number: e.founder_number,
         status: "included",
-        joined_at: joinedAt || null,
-        sub_status: s.status || "active",
+        joined_at: e.joined_at || null,
+        sub_status: "active",
       },
       { onConflict: "batch_id, user_id", ignoreDuplicates: true },
     );
     if (itemError) {
-      logger.error({ err: itemError, userId: s.user_id, batchId }, "batch item upsert error");
-      skipped.push({ email, reason: "error al guardar" });
+      logger.error({ err: itemError, userId: e.user_id, batchId }, "batch item upsert error");
+      skipped.push({ email: e.email, reason: "error al guardar" });
       continue;
     }
   }

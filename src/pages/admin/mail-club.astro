@@ -3,13 +3,15 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
 ---
 
 <AdminLayout title="Mail Club" active="mail-club">
-  <p class="font-sans text-sm text-triba-brown/70 mb-6">
+  <div id="mc-ops" class="bg-triba-white rounded-xl border-2 border-triba-black p-4 mb-4"></div>
+  <div id="mc-attention"></div>
+  <p class="font-sans text-xs text-triba-brown/70 mb-4">
     Origen: Madrid · Corte día 15 inclusive (hora España) · Despacho día 20.
     El lote congela las direcciones al corte; los cambios posteriores van al mes siguiente.
   </p>
 
-  <div class="bg-triba-white rounded-xl border-2 border-triba-black p-5 mb-6">
-    <h2 class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-4">Crear / cargar lote mensual</h2>
+  <div class="bg-triba-white rounded-xl border-2 border-triba-black p-4 mb-4">
+    <h2 class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-3">Crear / cargar lote mensual</h2>
     <div class="flex flex-col sm:flex-row gap-3 items-stretch sm:items-end">
       <label class="block">
         <span class="font-sans text-xs text-triba-brown/70">Año</span>
@@ -22,6 +24,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
           class="mt-1 w-full sm:w-28 px-4 py-2.5 rounded-button border-2 border-triba-black/20 bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors" />
       </label>
       <button id="mc-create" type="button" class="rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shrink-0">Crear lote</button>
+      <button id="mc-preview" type="button" class="rounded-button bg-triba-bone text-triba-brown border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shrink-0">Simular</button>
     </div>
     <p id="mc-create-msg" class="font-sans text-sm hidden mt-3"></p>
   </div>
@@ -65,6 +68,59 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     box.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
+  function madridToday(): { year: number; month: number; day: number } {
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit",
+    }).formatToParts(new Date());
+    const get = (t: string) => Number(parts.find((p) => p.type === t)?.value || 0);
+    return { year: get("year"), month: get("month"), day: get("day") };
+  }
+
+  function renderOps(batches: any[]) {
+    const box = document.getElementById("mc-ops")!;
+    const now = madridToday();
+    const period = `${now.year}-${String(now.month).padStart(2, "0")}`;
+    const batch = batches.find((b: any) => b.period_year === now.year && b.period_month === now.month);
+    const step = (done: boolean, label: string) =>
+      `<li class="flex items-center gap-2 font-sans text-xs ${done ? "text-triba-brown" : "text-triba-brown/50"}">
+         <span class="inline-flex items-center justify-center w-5 h-5 rounded-full border-2 ${done ? "bg-triba-green border-triba-black" : "border-triba-black/20"} text-[10px]">${done ? "✓" : "·"}</span>${label}</li>`;
+    let timing: string;
+    if (now.day <= 15) {
+      timing = `Corte en <strong>${15 - now.day}</strong> día(s) — las altas hasta el 15 entran al sobre de ${period}.`;
+    } else if (now.day <= 20) {
+      timing = `Corte cerrado — despacho el 20 (en <strong>${20 - now.day}</strong> día(s)). Los cambios de dirección ya van al mes siguiente.`;
+    } else {
+      timing = `Despacho en curso — las altas nuevas entran al sobre del mes siguiente.`;
+    }
+    box.innerHTML = `
+      <p class="font-sans text-xs text-triba-brown/80 mb-2">${timing}</p>
+      <ul class="space-y-1">
+        ${step(!!batch, `Lote ${period} ${batch ? `creado (${batch.item_count} destinataria(s))` : "sin crear"}`)}
+        ${step(batch?.status === "dispatched", `Despacho avisado ${batch?.status === "dispatched" ? "" : "(pendiente)"}`)}
+      </ul>`;
+  }
+
+  async function loadAttention() {
+    const box = document.getElementById("mc-attention")!;
+    try {
+      const res = await fetch("/api/admin/mail-club/attention");
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      const rows = data.withoutAddress || [];
+      if (rows.length === 0) { box.innerHTML = ""; return; }
+      box.innerHTML = `
+        <div class="mb-4 p-4 bg-triba-red/10 border-2 border-triba-red rounded-xl">
+          <p class="font-heading text-xs uppercase tracking-wider text-triba-red mb-1">Activas sin dirección (${rows.length})</p>
+          <p class="font-sans text-xs text-triba-brown/80 mb-2">Pagan Mail Club pero quedarían fuera del lote en silencio. Avisales antes del corte.</p>
+          <ul class="font-sans text-xs space-y-1">` +
+            rows.map((r: any) => `<li><a class="hover:text-triba-red hover:underline" href="/admin/suscriptoras/${r.user_id}">${escapeHtml(r.email || "sin email")}</a></li>`).join("") +
+          `</ul>
+        </div>`;
+    } catch {
+      box.innerHTML = "";
+    }
+  }
+
   async function loadBatches() {
     const tbody = document.getElementById("mc-tbody")!;
     try {
@@ -72,6 +128,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
       const batches = data.batches || [];
+      renderOps(batches);
       if (batches.length === 0) {
         tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-triba-brown/50 font-sans text-sm">Todavía no hay lotes. Creá el primero arriba.</td></tr>`;
         return;
@@ -101,6 +158,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       bindRowButtons();
     } catch {
       tbody.innerHTML = `<tr><td colspan="5" class="px-4 py-8 text-center text-triba-red/70 font-sans text-sm">Error al cargar</td></tr>`;
+      renderOps([]);
     }
   }
 
@@ -158,7 +216,45 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
               } else {
                 (window as any).adminToast?.(`Reintento: ${d2.sent} enviados, ${((d2.failed || []) as unknown[]).length} fallidos`, "success");
               }
-              loadBatches();
+    document.getElementById("mc-preview")!.addEventListener("click", async () => {
+      const year = Number((document.getElementById("mc-year") as HTMLInputElement).value);
+      const month = Number((document.getElementById("mc-month") as HTMLInputElement).value);
+      const btn = document.getElementById("mc-preview") as HTMLButtonElement;
+      btn.disabled = true;
+      btn.textContent = "Simulando...";
+      try {
+        const res = await fetch("/api/admin/mail-club/batches/preview", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ year, month }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          (window as any).adminToast?.(data.error || "Error simulando", "error");
+          return;
+        }
+        const skipped = (data.skipped || []) as { email: string; reason: string }[];
+        const eligible = (data.eligible || []) as { email: string; zone: string; plan_currency: string; founder_number: number | null }[];
+        let html = `<p class="font-sans text-sm text-triba-brown mb-1">Simulación (no se creó nada): <strong>${data.included}</strong> entrarían al lote.</p>`;
+        if (eligible.length > 0) {
+          html += `<ul class="font-sans text-xs text-triba-brown/70 space-y-1 mb-2 max-h-48 overflow-y-auto">` +
+            eligible.map((e) => `<li>${escapeHtml(e.email)} · ${escapeHtml(e.zone)} · ${escapeHtml(e.plan_currency)}${e.founder_number ? ` · ✦ #${e.founder_number}` : ""}</li>`).join("") + `</ul>`;
+        }
+        if (skipped.length > 0) {
+          html += `<p class="font-sans text-xs text-triba-red mb-1">Quedarían fuera (${skipped.length}):</p><ul class="font-sans text-xs text-triba-brown/70 space-y-1">` +
+            skipped.map((s) => `<li>${escapeHtml(s.email || "sin email")} — ${escapeHtml(s.reason)}</li>`).join("") + `</ul>`;
+        }
+        showResult(html);
+      } catch {
+        (window as any).adminToast?.("Error de conexión", "error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Simular";
+      }
+    });
+
+    loadBatches();
+    loadAttention();
             });
           }
           loadBatches();
