@@ -1,0 +1,259 @@
+---
+import AdminLayout from "../../../components/admin/AdminLayout.astro";
+---
+
+<AdminLayout title="Suscriptora" active="suscriptoras">
+  <a href="/admin/suscriptoras" class="inline-block font-sans text-xs text-triba-brown/70 hover:text-triba-red hover:underline mb-4 min-h-[44px] py-3">← Volver a suscriptoras</a>
+  <div id="detail-loading" class="bg-triba-white rounded-xl border-2 border-triba-black p-8 text-center">
+    <p class="font-sans text-sm text-triba-brown/50">Cargando ficha…</p>
+  </div>
+  <div id="detail-error" class="hidden bg-triba-red/10 rounded-xl border-2 border-triba-red p-8 text-center">
+    <p class="font-sans text-sm text-triba-red" id="detail-error-msg">No se encontró la suscriptora.</p>
+  </div>
+  <div id="detail" class="hidden"></div>
+</AdminLayout>
+
+<script>
+  import { escapeHtml } from "../../../lib/escape";
+  import { onPageCycle } from "../../../lib/onPageCycle";
+
+  const STATUS_LABELS: Record<string, string> = {
+    active: "Activa",
+    trialing: "Prueba",
+    past_due: "Pago fallido",
+    incomplete: "Pendiente de pago",
+    canceled: "Cancelada",
+    migrated: "Migrada",
+  };
+  const STATUS_CLASSES: Record<string, string> = {
+    active: "bg-triba-green text-triba-brown",
+    trialing: "bg-triba-green/60 text-triba-brown",
+    past_due: "bg-triba-red/20 text-triba-red",
+    incomplete: "bg-triba-cream text-triba-brown",
+    canceled: "bg-triba-bone text-triba-brown/60",
+    migrated: "bg-triba-pink text-triba-brown",
+  };
+  const pill = (status?: string | null) => {
+    const label = (status && STATUS_LABELS[status]) || "—";
+    const cls = (status && STATUS_CLASSES[status]) || "bg-triba-bone text-triba-brown/60";
+    return `<span class="inline-block px-2 py-0.5 rounded-full ${cls} font-heading text-[10px] uppercase tracking-wider">${label}</span>`;
+  };
+  const planName = (s: any) =>
+    s?.plan_type === "mail_club" ? "Mail Club" : s?.plan_type === "digital" ? "Digital" : "—";
+  const fmtDate = (iso?: string | null) => {
+    if (!iso) return "—";
+    const d = new Date(iso);
+    return isNaN(d.getTime()) ? "—" : d.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" });
+  };
+  const fmtAddress = (a: any) => {
+    if (!a) return "—";
+    const line1 = [a.street_address, a.address_extra].filter(Boolean).join(", ");
+    const line2 = [a.postal_code, a.city, a.region].filter(Boolean).join(" ");
+    const line3 = a.country_iso || "";
+    return [a.recipient_name, line1, line2, line3].filter(Boolean).map(escapeHtml).join("<br />");
+  };
+
+  async function initDetail() {
+    const id = window.location.pathname.split("/").filter(Boolean).pop() || "";
+    const loading = document.getElementById("detail-loading")!;
+    const errBox = document.getElementById("detail-error")!;
+    const errMsg = document.getElementById("detail-error-msg")!;
+    const box = document.getElementById("detail")!;
+    try {
+      const res = await fetch(`/api/admin/subscribers/${encodeURIComponent(id)}`);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Error");
+      loading.classList.add("hidden");
+      box.classList.remove("hidden");
+      render(box, data);
+    } catch (err: any) {
+      loading.classList.add("hidden");
+      errMsg.textContent = err.message || "Error al cargar";
+      errBox.classList.remove("hidden");
+    }
+  }
+
+  function render(box: HTMLElement, d: any) {
+    const p = d.profile;
+    const subs: any[] = d.subscriptions || [];
+    const active = subs.find((s) => s.status === "active");
+    const pending = subs.filter((s) => s.status === "incomplete");
+    const mainStatus = active?.status || pending[0]?.status || subs[0]?.status || null;
+    const plans = [...new Set(subs.map((s) => planName(s)).filter((x) => x !== "—"))].join(" + ") || "Sin plan";
+
+    const subCards = subs.length === 0
+      ? `<p class="font-sans text-sm text-triba-brown/50">Sin suscripciones registradas.</p>`
+      : subs.map((s) => `
+        <div class="border-2 border-triba-black/10 rounded-xl p-4">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <p class="font-heading text-sm uppercase tracking-wider">${planName(s)} · ${escapeHtml(s.plan_currency || "—")}</p>
+            ${pill(s.status)}
+          </div>
+          <dl class="font-sans text-xs text-triba-brown/70 space-y-1">
+            <div class="flex gap-2"><dt class="shrink-0 w-24">Proveedor</dt><dd class="capitalize">${escapeHtml(s.provider || "—")}</dd></div>
+            <div class="flex gap-2"><dt class="shrink-0 w-24">Vence</dt><dd>${fmtDate(s.current_period_end)}</dd></div>
+            <div class="flex gap-2"><dt class="shrink-0 w-24">Alta</dt><dd>${fmtDate(s.created_at)}</dd></div>
+            ${s.cancel_at_period_end ? `<div class="flex gap-2"><dt class="shrink-0 w-24">Baja</dt><dd>al fin del período</dd></div>` : ""}
+            <div class="flex gap-2"><dt class="shrink-0 w-24">Bienvenida</dt><dd>${s.welcome_sent_at ? "enviada " + fmtDate(s.welcome_sent_at) : "no enviada"}</dd></div>
+          </dl>
+        </div>`).join("");
+
+    const batchCards = (d.batches || []).length === 0
+      ? `<p class="font-sans text-sm text-triba-brown/50">Todavía no entró a ningún lote.</p>`
+      : (d.batches || []).map((b: any) => `
+        <div class="border-2 border-triba-black/10 rounded-xl p-4">
+          <div class="flex flex-wrap items-center gap-2 mb-2">
+            <p class="font-heading text-sm">${b.batch ? `${b.batch.period_year}-${String(b.batch.period_month).padStart(2, "0")}` : "—"}</p>
+            ${pill(b.sub_status || b.status)}
+            ${b.notice_sent ? `<span class="font-sans text-[11px] text-triba-brown/60">aviso enviado ✓</span>` : `<span class="font-sans text-[11px] text-triba-red">aviso pendiente</span>`}
+          </div>
+          <div class="font-sans text-xs text-triba-brown/70 leading-relaxed">${fmtAddress(b.address_snapshot)}</div>
+        </div>`).join("");
+
+    const upgradeCards = (d.upgrades || []).length === 0
+      ? ""
+      : `<section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
+          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Upgrades a Mail Club</h2>
+          <div class="space-y-2">${(d.upgrades || []).map((u: any) => `
+            <div class="font-sans text-xs text-triba-brown/70 border-2 border-triba-black/10 rounded-xl p-3">
+              ${escapeHtml(u.from_plan || "")} → ${escapeHtml(u.to_plan || "")} · ${escapeHtml(u.provider || "")} · <strong>${escapeHtml(u.status || "")}</strong>
+              ${u.error ? `<br /><span class="text-triba-red">${escapeHtml(u.error)}</span>` : ""}
+              <br /><span class="text-triba-brown/50">${fmtDate(u.updated_at || u.created_at)}</span>
+            </div>`).join("")}</div>
+        </section>`;
+
+    const timeline = (d.timeline || []).length === 0
+      ? `<p class="font-sans text-sm text-triba-brown/50">Sin actividad registrada.</p>`
+      : `<ul class="space-y-2">${(d.timeline || []).map((t: any) => `
+        <li class="font-sans text-xs text-triba-brown/70 border-b border-triba-black/10 pb-2">
+          <span class="text-triba-brown/50">${fmtDate(t.created_at)}</span> ·
+          <strong>${escapeHtml(String(t.action || "").replace("subscriber.", ""))}</strong>
+          <span class="text-triba-brown/50">por ${escapeHtml(t.admin_email || "")}</span>
+        </li>`).join("")}</ul>`;
+
+    const cancelable = subs.find((s) => ["active", "trialing", "past_due", "incomplete"].includes(s.status));
+    const canCancel = !!cancelable;
+    const canRefund = !!active && (active.provider === "stripe" || active.provider === "mercadopago");
+    const actions = (!canCancel && pending.length === 0)
+      ? `<p class="font-sans text-xs text-triba-brown/50">Sin acciones disponibles.</p>`
+      : `<div class="flex flex-wrap gap-2">
+          ${pending.map((s: any) => `<button class="act-reconcile rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider min-h-[44px]" data-sub="${s.id}">Activar pago</button>`).join("")}
+          ${canCancel ? `<button id="act-cancel" class="rounded-button bg-triba-white text-triba-red border-2 border-triba-red px-4 py-2 font-heading text-xs uppercase tracking-wider min-h-[44px]">Cancelar</button>` : ""}
+          ${canRefund ? `<button id="act-refund" class="rounded-button bg-triba-white text-triba-red border-2 border-triba-red px-4 py-2 font-heading text-xs uppercase tracking-wider min-h-[44px]">Reembolsar</button>` : ""}
+        </div>`;
+
+    box.innerHTML = `
+      <div class="bg-triba-white rounded-xl border-2 border-triba-black p-5 mb-4">
+        <div class="flex flex-wrap items-center gap-2 mb-1">
+          <h1 class="font-heading text-lg break-all">${escapeHtml(p.email)}</h1>
+          <button id="copy-email" class="font-sans text-xs text-triba-brown/60 hover:text-triba-red underline min-h-[44px] px-2">copiar</button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 mb-2">
+          <span class="font-heading text-xs uppercase tracking-wider text-triba-red">${escapeHtml(plans)}</span>
+          ${pill(mainStatus)}
+          <span class="font-sans text-xs text-triba-brown/60">${escapeHtml(p.role || "")} · alta ${fmtDate(p.created_at)}</span>
+        </div>
+        ${d.founder ? `<p class="font-heading text-xs text-triba-red">✦ Fundadora #${d.founder.founder_number}</p>` : ""}
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
+          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Suscripciones (${subs.length})</h2>
+          <div class="space-y-3">${subCards}</div>
+        </section>
+
+        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
+          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Dirección postal</h2>
+          <div class="font-sans text-sm text-triba-brown/80 leading-relaxed">${fmtAddress(d.address)}</div>
+        </section>
+
+        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
+          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Sobres (${(d.batches || []).length})</h2>
+          <div class="space-y-3">${batchCards}</div>
+        </section>
+
+        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
+          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Actividad</h2>
+          ${timeline}
+        </section>
+      </div>
+
+      ${upgradeCards ? `<div class="mt-4">${upgradeCards}</div>` : ""}
+
+      <section class="mt-4 bg-triba-cream rounded-xl border-2 border-triba-black p-5">
+        <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Acciones</h2>
+        ${actions}
+        <p id="act-msg" class="font-sans text-sm hidden mt-3"></p>
+      </section>`;
+
+    document.getElementById("copy-email")?.addEventListener("click", async () => {
+      try { await navigator.clipboard.writeText(p.email); (window as any).adminToast?.("Email copiado", "success"); } catch { /* portapapeles no disponible */ }
+    });
+
+    const msg = document.getElementById("act-msg")!;
+    const say = (text: string, isErr: boolean) => {
+      msg.textContent = text;
+      msg.className = "font-sans text-sm mt-3 " + (isErr ? "text-triba-red" : "text-triba-brown");
+      msg.classList.remove("hidden");
+    };
+
+    box.querySelectorAll<HTMLButtonElement>(".act-reconcile").forEach((b) => {
+      b.addEventListener("click", async () => {
+        b.disabled = true;
+        b.textContent = "Activando...";
+        try {
+          const res = await fetch("/api/admin/subscribers/reconcile", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ subscriptionIds: [b.dataset.sub] }),
+          });
+          const out = await res.json().catch(() => ({}));
+          if (!res.ok || (out.failed && out.failed.length > 0)) {
+            say(out.error || out.failed?.[0]?.error || "No se pudo activar (¿el pago está aprobado?)", true);
+          } else {
+            say("Suscripción activada.", false);
+            (window as any).adminToast?.("Suscripción activada", "success");
+            setTimeout(() => window.location.reload(), 800);
+          }
+        } catch {
+          say("Error de conexión", true);
+        } finally {
+          b.disabled = false;
+          b.textContent = "Activar pago";
+        }
+      });
+    });
+
+    document.getElementById("act-cancel")?.addEventListener("click", async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const confirmed = await (window as any).adminConfirm?.("Cancelar suscripción", `¿Cancelar la suscripción de ${p.email}?`);
+      if (!confirmed) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/subscribers/${encodeURIComponent(p.id)}/cancel`, { method: "POST" });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok) { say(out.error || "Error cancelando", true); return; }
+        say("Suscripción cancelada.", false);
+        setTimeout(() => window.location.reload(), 800);
+      } catch { say("Error de conexión", true); }
+      finally { btn.disabled = false; }
+    });
+
+    document.getElementById("act-refund")?.addEventListener("click", async (e) => {
+      const btn = e.currentTarget as HTMLButtonElement;
+      const confirmed = await (window as any).adminConfirm?.("Reembolsar y Cancelar", `¿Reembolsar el último cobro de ${p.email} y cancelar? No se puede deshacer.`);
+      if (!confirmed) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/subscribers/${encodeURIComponent(p.id)}/refund`, { method: "POST" });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok) { say(out.error || "Error al reembolsar", true); return; }
+        say("Reembolso procesado.", false);
+        setTimeout(() => window.location.reload(), 800);
+      } catch { say("Error de conexión", true); }
+      finally { btn.disabled = false; }
+    });
+  }
+
+  onPageCycle(initDetail);
+</script>
