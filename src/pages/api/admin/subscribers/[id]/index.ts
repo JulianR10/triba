@@ -21,8 +21,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
     .maybeSingle();
   if (!profile) return error("Suscriptora no encontrada", 404);
 
-  const email = (profile as any).email as string;
-
   const [
     { data: subscriptions },
     { data: address },
@@ -69,32 +67,6 @@ export const GET: APIRoute = async ({ params, locals }) => {
     batches = ((batchItems as any[]) || []).map((i) => ({ ...i, batch: byId.get(i.batch_id) || null }));
   }
 
-  // Timeline: acciones admin sobre esta usuaria (por entity_id o por email en details).
-  const { data: logsById } = await supabaseAdmin
-    .from("admin_audit_log")
-    .select("id, admin_email, action, entity_type, created_at, details")
-    .eq("entity_id", id)
-    .order("created_at", { ascending: false })
-    .limit(30);
-  const { data: logsByEmail } = await supabaseAdmin
-    .from("admin_audit_log")
-    .select("id, admin_email, action, entity_type, created_at, details")
-    .eq("entity_type", "subscriber")
-    .order("created_at", { ascending: false })
-    .limit(100);
-  const seen = new Set<string>();
-  const timeline: any[] = [];
-  for (const log of [...((logsById as any[]) || []), ...((logsByEmail as any[]) || [])]) {
-    if (seen.has(log.id)) continue;
-    seen.add(log.id);
-    const details = (log.details as any) || {};
-    const mentions =
-      log.entity_id === id ||
-      Object.values(details).some((v) => typeof v === "string" && v.toLowerCase() === email.toLowerCase());
-    if (mentions) timeline.push(log);
-    if (timeline.length >= 30) break;
-  }
-
   return ok({
     profile,
     subscriptions: subscriptions || [],
@@ -102,6 +74,5 @@ export const GET: APIRoute = async ({ params, locals }) => {
     founder: founder || null,
     upgrades: upgrades || [],
     batches,
-    timeline,
   });
 };

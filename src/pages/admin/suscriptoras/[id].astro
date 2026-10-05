@@ -84,9 +84,9 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
     const subCards = subs.length === 0
       ? `<p class="font-sans text-sm text-triba-brown/50">Sin suscripciones registradas.</p>`
       : subs.map((s) => `
-        <div class="border-2 border-triba-black/10 rounded-xl p-4">
-          <div class="flex flex-wrap items-center gap-2 mb-2">
-            <p class="font-heading text-sm uppercase tracking-wider">${planName(s)} · ${escapeHtml(s.plan_currency || "—")}</p>
+        <div class="border-2 border-triba-black/10 rounded-xl p-3">
+          <div class="flex flex-wrap items-center gap-2 mb-1">
+            <p class="font-heading text-xs uppercase tracking-wider">${planName(s)} · ${escapeHtml(s.plan_currency || "—")}</p>
             ${pill(s.status)}
           </div>
           <dl class="font-sans text-xs text-triba-brown/70 space-y-1">
@@ -101,9 +101,9 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
     const batchCards = (d.batches || []).length === 0
       ? `<p class="font-sans text-sm text-triba-brown/50">Todavía no entró a ningún lote.</p>`
       : (d.batches || []).map((b: any) => `
-        <div class="border-2 border-triba-black/10 rounded-xl p-4">
-          <div class="flex flex-wrap items-center gap-2 mb-2">
-            <p class="font-heading text-sm">${b.batch ? `${b.batch.period_year}-${String(b.batch.period_month).padStart(2, "0")}` : "—"}</p>
+        <div class="border-2 border-triba-black/10 rounded-xl p-3">
+          <div class="flex flex-wrap items-center gap-2 mb-1">
+            <p class="font-heading text-xs">${b.batch ? `${b.batch.period_year}-${String(b.batch.period_month).padStart(2, "0")}` : "—"}</p>
             ${pill(b.sub_status || b.status)}
             ${b.notice_sent ? `<span class="font-sans text-[11px] text-triba-brown/60">aviso enviado ✓</span>` : `<span class="font-sans text-[11px] text-triba-red">aviso pendiente</span>`}
           </div>
@@ -112,8 +112,8 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
 
     const upgradeCards = (d.upgrades || []).length === 0
       ? ""
-      : `<section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
-          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Upgrades a Mail Club</h2>
+      : `<section class="bg-triba-white rounded-xl border-2 border-triba-black p-4">
+          <h2 class="font-heading text-xs uppercase tracking-wider mb-2">Upgrades a Mail Club</h2>
           <div class="space-y-2">${(d.upgrades || []).map((u: any) => `
             <div class="font-sans text-xs text-triba-brown/70 border-2 border-triba-black/10 rounded-xl p-3">
               ${escapeHtml(u.from_plan || "")} → ${escapeHtml(u.to_plan || "")} · ${escapeHtml(u.provider || "")} · <strong>${escapeHtml(u.status || "")}</strong>
@@ -121,15 +121,6 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
               <br /><span class="text-triba-brown/50">${fmtDate(u.updated_at || u.created_at)}</span>
             </div>`).join("")}</div>
         </section>`;
-
-    const timeline = (d.timeline || []).length === 0
-      ? `<p class="font-sans text-sm text-triba-brown/50">Sin actividad registrada.</p>`
-      : `<ul class="space-y-2">${(d.timeline || []).map((t: any) => `
-        <li class="font-sans text-xs text-triba-brown/70 border-b border-triba-black/10 pb-2">
-          <span class="text-triba-brown/50">${fmtDate(t.created_at)}</span> ·
-          <strong>${escapeHtml(String(t.action || "").replace("subscriber.", ""))}</strong>
-          <span class="text-triba-brown/50">por ${escapeHtml(t.admin_email || "")}</span>
-        </li>`).join("")}</ul>`;
 
     const cancelable = subs.find((s) => ["active", "trialing", "past_due", "incomplete"].includes(s.status));
     const canCancel = !!cancelable;
@@ -143,12 +134,12 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
         </div>`;
 
     box.innerHTML = `
-      <div class="bg-triba-white rounded-xl border-2 border-triba-black p-5 mb-4">
+      <div class="bg-triba-white rounded-xl border-2 border-triba-black p-4 mb-3">
         <div class="flex flex-wrap items-center gap-2 mb-1">
-          <h1 class="font-heading text-lg break-all">${escapeHtml(p.email)}</h1>
+          <h1 class="font-heading text-base break-all">${escapeHtml(p.email)}</h1>
           <button id="copy-email" class="font-sans text-xs text-triba-brown/60 hover:text-triba-red underline min-h-[44px] px-2">copiar</button>
         </div>
-        <div class="flex flex-wrap items-center gap-2 mb-2">
+        <div class="flex flex-wrap items-center gap-2 mb-1">
           <span class="font-heading text-xs uppercase tracking-wider text-triba-red">${escapeHtml(plans)}</span>
           ${pill(mainStatus)}
           <span class="font-sans text-xs text-triba-brown/60">${escapeHtml(p.role || "")} · alta ${fmtDate(p.created_at)}</span>
@@ -156,32 +147,27 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
         ${d.founder ? `<p class="font-heading text-xs text-triba-red">✦ Fundadora #${d.founder.founder_number}</p>` : ""}
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
-          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Suscripciones (${subs.length})</h2>
-          <div class="space-y-3">${subCards}</div>
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-4">
+          <h2 class="font-heading text-xs uppercase tracking-wider mb-2">Suscripciones (${subs.length})</h2>
+          <div class="space-y-2">${subCards}</div>
         </section>
 
-        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
-          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Dirección postal</h2>
+        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-4">
+          <h2 class="font-heading text-xs uppercase tracking-wider mb-2">Dirección postal</h2>
           <div class="font-sans text-sm text-triba-brown/80 leading-relaxed">${fmtAddress(d.address)}</div>
         </section>
 
-        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
-          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Sobres (${(d.batches || []).length})</h2>
-          <div class="space-y-3">${batchCards}</div>
-        </section>
-
-        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-5">
-          <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Actividad</h2>
-          ${timeline}
+        <section class="bg-triba-white rounded-xl border-2 border-triba-black p-4">
+          <h2 class="font-heading text-xs uppercase tracking-wider mb-2">Sobres (${(d.batches || []).length})</h2>
+          <div class="space-y-2">${batchCards}</div>
         </section>
       </div>
 
-      ${upgradeCards ? `<div class="mt-4">${upgradeCards}</div>` : ""}
+      ${upgradeCards ? `<div class="mt-3">${upgradeCards}</div>` : ""}
 
-      <section class="mt-4 bg-triba-cream rounded-xl border-2 border-triba-black p-5">
-        <h2 class="font-heading text-sm uppercase tracking-wider mb-3">Acciones</h2>
+      <section class="mt-3 bg-triba-cream rounded-xl border-2 border-triba-black p-4">
+        <h2 class="font-heading text-xs uppercase tracking-wider mb-2">Acciones</h2>
         ${actions}
         <p id="act-msg" class="font-sans text-sm hidden mt-3"></p>
       </section>`;

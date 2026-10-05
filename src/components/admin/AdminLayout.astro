@@ -4,7 +4,7 @@ import "../../styles/admin.css";
 
 interface Props {
   title: string;
-  active: "dashboard" | "ediciones" | "suscriptoras" | "mail-club" | "feedback" | "creators" | "audit-log";
+  active: "dashboard" | "ediciones" | "suscriptoras" | "mail-club" | "feedback" | "creators";
 }
 
 const { title, active } = Astro.props;
@@ -17,7 +17,6 @@ const items = [
   { key: "mail-club", href: "/admin/mail-club", label: "Mail Club" },
   { key: "feedback", href: "/admin/feedback", label: "Feedback" },
   { key: "creators", href: "/admin/creators", label: "Creators" },
-  { key: "audit-log", href: "/admin/audit-log", label: "Actividad" },
 ] as const;
 ---
 

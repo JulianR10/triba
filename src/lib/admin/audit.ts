@@ -1,17 +1,7 @@
 import { supabaseAdmin } from "../supabase-admin";
 import type { Json } from "../database.types";
 
-export interface AdminLogRow {
-  id: string;
-  admin_id: string;
-  admin_email: string;
-  action: string;
-  entity_type: string;
-  entity_id: string | null;
-  details: Record<string, unknown> | null;
-  created_at: string;
-}
-
+// Registro de acciones admin (solo escritura: ya no hay vista de actividad).
 export async function logAdminAction(
   adminId: string,
   adminEmail: string,
@@ -28,23 +18,4 @@ export async function logAdminAction(
     entity_id: entityId || null,
     details: (details || null) as unknown as Json,
   });
-}
-
-export async function getAdminAuditLog(
-  limit = 100,
-  offset = 0,
-): Promise<AdminLogRow[]> {
-  const { data } = await supabaseAdmin
-    .from("admin_audit_log")
-    .select("*")
-    .order("created_at", { ascending: false })
-    .range(offset, offset + limit - 1);
-  return (data as AdminLogRow[]) || [];
-}
-
-export async function getAdminAuditLogCount(): Promise<number> {
-  const { count } = await supabaseAdmin
-    .from("admin_audit_log")
-    .select("*", { count: "exact", head: true });
-  return count || 0;
 }
