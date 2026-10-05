@@ -485,13 +485,29 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     btn.addEventListener("click", check);
   }
 
+  const FILTER_ACTIVE = ["bg-triba-red", "text-triba-white", "border-triba-black"];
+  const FILTER_IDLE = ["bg-triba-white", "text-triba-brown", "border-triba-black/20"];
+
+  function paintFilter() {
+    document.querySelectorAll<HTMLButtonElement>(".sub-filter-btn").forEach((b) => {
+      const on = b.dataset.filter === currentFilter;
+      b.classList.remove(...FILTER_ACTIVE, ...FILTER_IDLE);
+      b.classList.add(...(on ? FILTER_ACTIVE : FILTER_IDLE));
+    });
+  }
+
   function initSubscribers() {
     setupMigrate();
     setupReconcile();
-    const urlSearch = new URLSearchParams(window.location.search).get("search") || "";
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlSearch = urlParams.get("search") || "";
     if (urlSearch) {
       searchInput.value = urlSearch;
       currentSearch = urlSearch;
+    }
+    const urlStatus = urlParams.get("status") || "";
+    if (urlStatus && document.querySelector(`.sub-filter-btn[data-filter="${urlStatus}"]`)) {
+      currentFilter = urlStatus;
     }
     searchInput.addEventListener("input", () => {
       if (searchTimer) clearTimeout(searchTimer);
@@ -504,12 +520,9 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
 
     document.querySelectorAll<HTMLButtonElement>(".sub-filter-btn").forEach((btn) => {
       btn.addEventListener("click", () => {
-        document.querySelectorAll(".sub-filter-btn").forEach((b) => {
-          b.className = b.className.replace(/bg-triba-red text-triba-white border-triba-black/g, "bg-triba-white text-triba-brown border-triba-black/20");
-        });
-        btn.className = btn.className.replace(/bg-triba-white text-triba-brown border-triba-black\/20/g, "bg-triba-red text-triba-white border-triba-black");
         currentFilter = btn.dataset.filter!;
         currentPage = 1;
+        paintFilter();
         loadSubscribers();
       });
     });
@@ -528,7 +541,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       if (currentPage < currentTotalPages) { currentPage++; loadSubscribers(); }
     });
 
-    document.querySelector<HTMLButtonElement>('.sub-filter-btn[data-filter="all"]')?.classList.add("bg-triba-red", "text-triba-white", "border-triba-black");
+    paintFilter();
 
     loadSubscribers();
   }
