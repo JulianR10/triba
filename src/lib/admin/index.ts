@@ -33,6 +33,9 @@ import { supabaseAdmin } from "../supabase-admin";
 
 export interface AdminDashboardStats {
   active_subscribers: number;
+  active_digital: number;
+  active_mail_club: number;
+  pending_payment: number;
   canceled_subscribers: number;
   migrated_subscribers: number;
   editions_total: number;
@@ -47,6 +50,9 @@ export interface AdminDashboardStats {
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
   const [
     { count: activeSubs },
+    { count: activeDigital },
+    { count: activeMailClub },
+    { count: pendingPayment },
     { count: canceledSubs },
     { count: migratedSubs },
     { count: editionsTotal },
@@ -61,6 +67,20 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
       .from("subscriptions")
       .select("*", { count: "exact", head: true })
       .eq("status", "active"),
+    supabaseAdmin
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active")
+      .eq("plan_type", "digital"),
+    supabaseAdmin
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "active")
+      .eq("plan_type", "mail_club"),
+    supabaseAdmin
+      .from("subscriptions")
+      .select("*", { count: "exact", head: true })
+      .eq("status", "incomplete"),
     supabaseAdmin
       .from("subscriptions")
       .select("*", { count: "exact", head: true })
@@ -96,6 +116,9 @@ export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
 
   return {
     active_subscribers: activeSubs || 0,
+    active_digital: activeDigital || 0,
+    active_mail_club: activeMailClub || 0,
+    pending_payment: pendingPayment || 0,
     canceled_subscribers: canceledSubs || 0,
     migrated_subscribers: migratedSubs || 0,
     editions_total: editionsTotal || 0,

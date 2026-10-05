@@ -40,6 +40,14 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     <p id="migrate-msg" class="font-sans text-sm hidden mt-3"></p>
   </details>
 
+  <details class="mb-6 bg-triba-cream rounded-xl border-2 border-triba-black p-4">
+    <summary class="font-heading text-xs uppercase tracking-wider text-triba-brown cursor-pointer select-none">Reconciliar pagos pendientes</summary>
+    <div class="mt-4 flex flex-col sm:flex-row gap-3">
+      <button id="reconcile-check" type="button" class="rounded-button bg-triba-bone text-triba-brown border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shrink-0">Revisar</button>
+    </div>
+    <div id="reconcile-result" class="mt-3 font-sans text-sm"></div>
+  </details>
+
   <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
     <div class="flex gap-2 flex-wrap">
       {[
@@ -209,12 +217,20 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
           }
 
           const s = row.subscription;
-          const statusClass = s?.status === "active"
-            ? "bg-triba-green text-triba-brown"
-            : s?.status === "canceled"
-              ? "bg-triba-bone text-triba-brown/60"
-              : "";
-          const statusLabel = s?.status === "active" ? "Activa" : s?.status === "canceled" ? "Cancelada" : "—";
+          const STATUS_META: Record<string, { label: string; cls: string }> = {
+            active: { label: "Activa", cls: "bg-triba-green text-triba-brown" },
+            trialing: { label: "Prueba", cls: "bg-triba-green/60 text-triba-brown" },
+            past_due: { label: "Pago fallido", cls: "bg-triba-red/20 text-triba-red" },
+            incomplete: { label: "Pendiente de pago", cls: "bg-triba-cream text-triba-brown" },
+            canceled: { label: "Cancelada", cls: "bg-triba-bone text-triba-brown/60" },
+            migrated: { label: "Migrada", cls: "bg-triba-pink text-triba-brown" },
+          };
+          const meta = (s?.status && STATUS_META[s.status]) || null;
+          const statusClass = meta?.cls || "";
+          const statusLabel = meta?.label || "—";
+          const planLabel = s?.plan_type
+            ? `${s.plan_type === "mail_club" ? "Mail Club" : "Digital"}${s?.plan_currency ? ` · ${s.plan_currency}` : ""}`
+            : "—";
           const periodEnd = s?.current_period_end
             ? new Date(s.current_period_end).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
             : "—";
@@ -230,7 +246,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
           return `<tr class="border-b border-triba-black/10 last:border-0 hover:bg-triba-bone/50">
             <td class="px-4 py-3"><p class="font-sans">${escapeHtml(row.profile.email)}</p><p class="font-sans text-xs text-triba-brown/60">${row.profile.role}</p></td>
             <td class="px-4 py-3 capitalize">${s?.provider || "—"}</td>
-            <td class="px-4 py-3">${s?.plan_currency || "—"}</td>
+            <td class="px-4 py-3">${planLabel}</td>
             <td class="px-4 py-3">${statusLabel !== "—" ? `<span class="inline-block px-2 py-0.5 rounded-full ${statusClass} font-heading text-[10px] uppercase tracking-wider">${statusLabel}</span>` : statusLabel}</td>
             <td class="px-4 py-3 text-triba-brown/70 hidden md:table-cell">${periodEnd}</td>
             <td class="px-4 py-3 text-right">
@@ -393,8 +409,83 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     });
   }
 
+  function setupReconcile() {
+    const btn = document.getElementById("reconcile-check") as HTMLButtonElement | null;
+    const box = document.getElementById("reconcile-result");
+    if (!btn || !box) return;
+
+    const render = (candidates: any[], skipped: any[]) => {
+      if (candidates.length === 0 && skipped.length === 0) {
+        box.innerHTML = `<p class="text-triba-brown/60">Sin suscripciones pendientes de pago.</p>`;
+        return;
+      }
+      box.innerHTML =
+        (candidates.length > 0
+          ? `<p class="text-triba-brown mb-2 font-medium">${candidates.length} pago(s) confirmado(s) en el proveedor sin activar:</p>
+             <ul class="space-y-2 mb-3">` +
+            candidates.map((c: any) => `<li class="flex flex-wrap items-center gap-2 bg-triba-white border border-triba-black/10 rounded-lg px-3 py-2">
+                <span>${escapeHtml(c.email)}</span>
+                <span class="text-triba-brown/60 text-xs">${escapeHtml(c.provider)} · ${escapeHtml(c.plan_type)} · ${escapeHtml(c.evidence)}</span>
+                <button class="reconcile-one font-sans text-xs text-triba-red hover:underline ml-auto min-h-[44px] px-2" data-id="${c.subscription_id}" data-email="${escapeHtml(c.email)}">Activar</button>
+              </li>`).join("") + `</ul>`
+          : `<p class="text-triba-brown/60 mb-2">Sin pagos confirmados pendientes de activar.</p>`) +
+        (skipped.length > 0
+          ? `<p class="text-triba-brown/60 text-xs mb-1">Aún sin cobrar (${skipped.length}):</p><ul class="text-triba-brown/60 text-xs space-y-1">` +
+            skipped.map((s: any) => `<li>${escapeHtml(s.email || s.subscription_id)} — ${escapeHtml(s.reason)}</li>`).join("") + `</ul>`
+          : "");
+      box.querySelectorAll<HTMLButtonElement>(".reconcile-one").forEach((b) => {
+        b.addEventListener("click", async () => {
+          const confirmed = await (window as any).adminConfirm?.(
+            "Activar suscripción",
+            `¿Activar ${b.dataset.email}? El pago ya figura aprobado en el proveedor.`,
+          );
+          if (!confirmed) return;
+          b.disabled = true;
+          b.textContent = "Activando...";
+          try {
+            const res = await fetch("/api/admin/subscribers/reconcile", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ subscriptionIds: [b.dataset.id] }),
+            });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok || (data.failed && data.failed.length > 0)) {
+              (window as any).adminToast?.(data.error || data.failed?.[0]?.error || "Error activando", "error");
+            } else {
+              (window as any).adminToast?.("Suscripción activada", "success");
+            }
+            check();
+            loadSubscribers();
+          } catch {
+            (window as any).adminToast?.("Error de conexión", "error");
+          }
+        });
+      });
+    };
+
+    const check = async () => {
+      btn.disabled = true;
+      btn.textContent = "Revisando...";
+      box.innerHTML = `<p class="text-triba-brown/60">Consultando proveedores…</p>`;
+      try {
+        const res = await fetch("/api/admin/subscribers/reconcile");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Error");
+        render(data.candidates || [], data.skipped || []);
+      } catch {
+        box.innerHTML = `<p class="text-triba-red/70">Error al revisar</p>`;
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Revisar";
+      }
+    };
+
+    btn.addEventListener("click", check);
+  }
+
   function initSubscribers() {
     setupMigrate();
+    setupReconcile();
     searchInput.addEventListener("input", () => {
       if (searchTimer) clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {

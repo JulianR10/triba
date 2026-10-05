@@ -14,6 +14,20 @@ const cards = [
     color: "bg-triba-green/30",
   },
   {
+    label: "Mail Club activas",
+    value: stats.active_mail_club,
+    sub: `${stats.active_digital} digital`,
+    href: "/admin/suscriptoras",
+    color: "bg-triba-pink",
+  },
+  {
+    label: "Pagos pendientes",
+    value: stats.pending_payment,
+    sub: stats.pending_payment > 0 ? "revisar en reconcile" : undefined,
+    href: "/admin/suscriptoras",
+    color: stats.pending_payment > 0 ? "bg-triba-red/10" : "bg-triba-bone",
+  },
+  {
     label: "Suscriptoras migradas",
     value: stats.migrated_subscribers,
     href: "/admin/suscriptoras",

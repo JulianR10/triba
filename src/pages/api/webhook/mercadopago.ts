@@ -1,31 +1,18 @@
 import type { APIRoute } from "astro";
 import { WebhookSignatureValidator } from "mercadopago";
-import type { Database } from "../../../lib/database.types";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { ok, error } from "../../../lib/response";
 import { logger } from "../../../lib/logger";
-import { syncPaidSubscriber } from "../../../lib/sender";
-import { sendWelcomeEmail } from "../../../lib/email";
-import { getPreferredLocale } from "../../../lib/locale-pref";
-import { sendMailClubActivation } from "../../../lib/mail-club-activation";
 import { applyUpgrade } from "../../../lib/upgrade-apply";
+import {
+  activateSubscription,
+  mpGet,
+  resolveAuthorizedPayment,
+  type MpPreapproval,
+} from "../../../lib/mercadopago-activation";
+import { isActivePreapproval } from "../../../lib/mercadopago-status";
 
 const isSignatureVerificationEnabled = import.meta.env.VERIFY_MP_SIGNATURES !== "false";
-const MP_API_BASE = "https://api.mercadopago.com";
-
-interface MpPreapproval {
-  id?: string;
-  status?: string;
-  reason?: string;
-  external_reference?: string;
-  payer_email?: string;
-  next_payment_date?: string;
-  auto_recurring?: { currency_id?: string };
-}
-
-function planFromPreapproval(preapproval: MpPreapproval): "digital" | "mail_club" {
-  return preapproval.reason?.includes("Mail Club") ? "mail_club" : "digital";
-}
 
 interface MpPayment {
   id?: string;
@@ -59,24 +46,6 @@ function verifyMercadoPagoSignature(request: Request, body: any): boolean {
     );
     return false;
   }
-}
-
-async function mpGet<T>(path: string): Promise<T | null> {
-  const res = await fetch(`${MP_API_BASE}${path}`, {
-    headers: { Authorization: `Bearer ${import.meta.env.MP_ACCESS_TOKEN}` },
-  });
-  if (!res.ok) {
-    logger.error(
-      { status: res.status, path, body: (await res.text().catch(() => "")).slice(0, 200) },
-      "[MP webhook] API error",
-    );
-    return null;
-  }
-  return res.json();
-}
-
-function isActivePreapproval(status?: string): boolean {
-  return status === "authorized" || status === "active";
 }
 
 // MP does not expose payer_email on the preapproval; resolve it via the
@@ -115,146 +84,6 @@ async function lookUpUserIdByEmail(email: string): Promise<string | null> {
     logger.error({ err, email }, "[MP webhook] lookUpUserIdByEmail error");
   }
   return null;
-}
-
-// Single source of truth to create/refresh a Mercado Pago subscription and bind
-// it to the user's profile. Idempotent: the upsert keys on
-// (provider, provider_subscription_id), so double events never duplicate.
-async function activateSubscription({
-  preapproval,
-  userId,
-  email,
-  providerSubscriptionId,
-  confirmedPayment,
-}: {
-  preapproval: MpPreapproval;
-  userId: string;
-  email?: string;
-  providerSubscriptionId: string;
-  // true solo cuando viene de un subscription_authorized_payment aprobado.
-  confirmedPayment: boolean;
-}): Promise<void> {
-  const plan = planFromPreapproval(preapproval);
-  if (!isActivePreapproval(preapproval.status)) return;
-
-  const now = new Date().toISOString();
-  // Mercado Pago solo procesa ARS en esta app: el fallback correcto es ARS,
-  // no USD (un currency_id ausente clasificaba mal el plan/precio).
-  const currency = (preapproval.auto_recurring?.currency_id || "ARS") as "EUR" | "USD" | "ARS";
-  const periodEnd = preapproval.next_payment_date
-    ? new Date(preapproval.next_payment_date).toISOString()
-    : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-
-  const { data: existingSub } = await supabaseAdmin
-    .from("subscriptions")
-    .select("id, status")
-    .eq("provider", "mercadopago")
-    .eq("provider_subscription_id", providerSubscriptionId)
-    .maybeSingle();
-
-  // Mail Club sin pago aprobado todavía: registrar pendiente sin dar acceso
-  // ni bienvenida. La activación real llega con el primer pago aprobado.
-  if (plan === "mail_club" && !confirmedPayment) {
-    if ((existingSub as any)?.id) return;
-    const { error: pendingError } = await supabaseAdmin.from("subscriptions").upsert(
-      {
-        user_id: userId,
-        provider: "mercadopago",
-        provider_subscription_id: providerSubscriptionId,
-        status: "incomplete",
-        plan_currency: currency,
-        plan_type: plan,
-        current_period_start: now,
-        current_period_end: periodEnd,
-      },
-      { onConflict: "provider, provider_subscription_id" },
-    );
-    if (pendingError) {
-      logger.error({ err: pendingError, userId, providerSubscriptionId }, "[MP webhook] mail club pending upsert failed");
-    }
-    return;
-  }
-
-  const { data: sub } = await supabaseAdmin
-    .from("subscriptions")
-    .upsert(
-      {
-        user_id: userId,
-        provider: "mercadopago",
-        provider_subscription_id: providerSubscriptionId,
-        status: "active",
-        plan_currency: currency,
-        plan_type: plan,
-        current_period_start: now,
-        current_period_end: periodEnd,
-      },
-      { onConflict: "provider, provider_subscription_id" },
-    )
-    .select("id")
-    .single();
-
-  if (!sub?.id) {
-    logger.error({ userId, providerSubscriptionId }, "[MP webhook] activateSubscription upsert failed");
-    return;
-  }
-
-  // Separar UPDATE desde el upsert: el on_conflict de upsert no garantiza
-  // que role/subscription_id se actualicen si la fila ya existe (race condition
-  // con handle_new_user que crea el profile en "free" antes del webhook).
-  // UPDATE explícito fuerza el linkeo.
-  await supabaseAdmin
-    .from("profiles")
-    .update({
-      role: "subscriber",
-      subscription_id: sub.id,
-      updated_at: now,
-    })
-    .eq("id", userId);
-
-  if (email) {
-    const { error: emailErr } = await supabaseAdmin
-      .from("profiles")
-      .update({ email })
-      .eq("id", userId)
-      .is("email", null);
-    if (emailErr) {
-      logger.warn({ err: emailErr, userId, email }, "[MP webhook] failed updating null email");
-    }
-  }
-
-  await supabaseAdmin
-    .from("subscriptions")
-    .update({ status: "canceled", updated_at: now })
-    .eq("user_id", userId)
-    .eq("provider", "migrated");
-
-  // Only notify on the first activation; MP can resend events (retries up to 96h).
-  // Digital keeps its original rule (notify only brand-new rows). A mail_club
-  // row in 'incomplete' means this approved payment is the first
-  // confirmation, so it still counts as first activation.
-  const isFirstActivation =
-    !(existingSub as any)?.id ||
-    (plan === "mail_club" && (existingSub as any)?.status === "incomplete");
-  if (!isFirstActivation) return;
-
-  if (email) {
-    syncPaidSubscriber(email).catch((err) =>
-      logger.error({ err, email }, "Sender sync error (mercadopago)"),
-    );
-    if (plan === "mail_club") {
-      try {
-        await sendMailClubActivation(userId, email);
-      } catch (err) {
-        logger.error({ err, email }, "Mail Club welcome email error (mercadopago)");
-      }
-    } else {
-      getPreferredLocale(userId).then((locale) =>
-        sendWelcomeEmail(email, false, locale),
-      ).catch((err) =>
-        logger.error({ err, email }, "Welcome email error (mercadopago)"),
-      );
-    }
-  }
 }
 
 async function handlePreApprovalEvent(preapprovalId: string): Promise<void> {
@@ -311,12 +140,18 @@ async function handlePreApprovalEvent(preapprovalId: string): Promise<void> {
   });
 }
 
-async function handleAuthorizedPaymentEvent(paymentId: string): Promise<void> {
-  const payment = await mpGet<MpPayment>(`/v1/payments/${paymentId}`);
-  if (!payment || payment.status !== "approved") return;
-
-  const preapprovalId = payment.preapproval_id;
-  if (!preapprovalId) return;
+async function handleAuthorizedPaymentEvent(dataId: string): Promise<void> {
+  // dataId puede ser un pago o un authorized_payment, y el pago puede no
+  // traer preapproval_id: el resolvedor cubre todos los casos.
+  const link = await resolveAuthorizedPayment(dataId);
+  if (!link) {
+    logger.info(
+      { dataId },
+      "[MP webhook] authorized payment not resolvable to an approved charge — no-op",
+    );
+    return;
+  }
+  const { preapprovalId, paymentId } = link;
 
   const { data: existing } = await supabaseAdmin
     .from("subscriptions")
@@ -368,16 +203,20 @@ async function handleAuthorizedPaymentEvent(paymentId: string): Promise<void> {
   // Self-heal: an approved charge with no linked subscription means the preapproval
   // event never activated access — create it from the preapproval itself.
   const preapproval = await mpGet<MpPreapproval>(`/preapproval/${preapprovalId}`);
-  if (!preapproval) return;
-  // NOTE: do NOT gate on isActivePreapproval(preapproval.status) here. MP's
-  // preapproval status is eventually consistent — when the first approved
-  // payment arrives it may still report "pending". An APPROVED payment is the
-  // source of truth that the user paid, so activate regardless. The status
-  // check stays ONLY in handlePreApprovalEvent (fires before payment auth).
+  if (!preapproval) {
+    logger.error({ preapprovalId, paymentId }, "[MP webhook] approved payment with unfetchable preapproval — needs reconcile");
+    return;
+  }
+  // NOTE: no gatear por isActivePreapproval(preapproval.status) acá. MP es
+  // eventualmente consistente: cuando llega el primer pago aprobado la
+  // preaprobación puede reportar "pending". Un pago APPROVED es fuente de
+  // verdad, así que se activa igual (activateSubscription saltea el gate
+  // cuando confirmedPayment=true). El gate de estado queda SOLO en
+  // handlePreApprovalEvent (dispara antes de la autorización del pago).
   // See AGENTS.md: webhook must activate from subscription_authorized_payment approved.
 
-  let userId = preapproval.external_reference || null;
-  const email = payment.payer?.email || preapproval.payer_email || null;
+  let userId = preapproval.external_reference || link.userId;
+  const email = link.payerEmail || preapproval.payer_email || null;
   if (!userId) {
     userId = await lookUpUserIdByEmail(email || "");
   }

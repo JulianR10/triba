@@ -14,6 +14,11 @@ import {
 } from "../src/lib/mail-club";
 import { COUNTRIES, SUPPORTED_COUNTRY_ISO } from "../src/lib/countries";
 import { csvCell } from "../src/lib/csv";
+import {
+  isActivationBlocked,
+  isActivePreapproval,
+  planFromPreapproval,
+} from "../src/lib/mercadopago-status";
 import { validateMailClubAddress } from "../src/lib/mail-club-address";
 import {
   buildUpgradePaymentIntentParams,
@@ -206,5 +211,36 @@ describe("upgrade con tarjeta guardada", () => {
     expect(isAuthenticationRequiredError({ code: "card_declined" })).toBe(false);
     expect(isCardError({ type: "StripeCardError" })).toBe(true);
     expect(isCardError({ type: "StripeInvalidRequestError" })).toBe(false);
+  });
+});
+
+describe("activación Mercado Pago", () => {
+  it("preaprobación activa: authorized/active", () => {
+    expect(isActivePreapproval("authorized")).toBe(true);
+    expect(isActivePreapproval("active")).toBe(true);
+    expect(isActivePreapproval("pending")).toBe(false);
+    expect(isActivePreapproval("cancelled")).toBe(false);
+    expect(isActivePreapproval(undefined)).toBe(false);
+  });
+
+  it("plan por reason de la preaprobación", () => {
+    expect(planFromPreapproval({ reason: "Suscripción Triba Mail Club (ARS)" })).toBe("mail_club");
+    expect(planFromPreapproval({ reason: "Suscripción Triba" })).toBe("digital");
+    expect(planFromPreapproval({})).toBe("digital");
+  });
+
+  it("pago aprobado nunca bloquea (regresión 03-oct-2026)", () => {
+    // El cobro acreditado activa aunque la preaprobación reporte pending.
+    expect(isActivationBlocked(true, "pending")).toBe(false);
+    expect(isActivationBlocked(true, undefined)).toBe(false);
+    expect(isActivationBlocked(true, "authorized")).toBe(false);
+  });
+
+  it("evento preapproval sí respeta el estado", () => {
+    expect(isActivationBlocked(false, "authorized")).toBe(false);
+    expect(isActivationBlocked(false, "active")).toBe(false);
+    expect(isActivationBlocked(false, "pending")).toBe(true);
+    expect(isActivationBlocked(false, undefined)).toBe(true);
+    expect(isActivationBlocked(false, "cancelled")).toBe(true);
   });
 });

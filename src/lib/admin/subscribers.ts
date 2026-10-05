@@ -99,6 +99,7 @@ export async function exportSubscribersCSV(
     const email = escapeCSV(r.profile?.email || r.migrationId || "");
     const role = r.profile?.role || "migrated";
     const provider = s?.provider || (r.migrationId ? (r.migrationMpPreapprovalId ? "mercadopago" : r.migrationStripeSubId ? "stripe" : "migrado") : "");
+    const plan = (s as any)?.plan_type || "";
     const currency = s?.plan_currency || "";
     const statusVal = s?.status || (r.migrationId ? "pending" : "none");
     const periodEnd = s?.current_period_end
@@ -107,7 +108,7 @@ export async function exportSubscribersCSV(
     const createdAt = r.profile?.created_at
       ? new Date(r.profile.created_at).toISOString()
       : "";
-    return `${email},${role},${provider},,${currency},${statusVal},${periodEnd},${createdAt}`;
+    return `${email},${role},${provider},${plan},${currency},${statusVal},${periodEnd},${createdAt}`;
   });
 
   return [header, ...lines].join("\n");
@@ -235,6 +236,34 @@ export async function searchSubscribersForAdmin(
     profile: p,
     subscription: p.subscription_id ? subMap.get(p.subscription_id) || null : null,
   }));
+
+  // Fallback por user_id: una sub 'incomplete' (pago aún no confirmado) nunca
+  // se linkea a profiles.subscription_id por diseño, pero igual debe verse en
+  // el panel en vez de figurar como "sin sub". Solo aplica cuando el perfil
+  // no apunta a ninguna suscripción.
+  const unlinkedUserIds = profileRows
+    .filter((r) => r.profile && !r.subscription)
+    .map((r) => (r.profile as Profile).id);
+  if (unlinkedUserIds.length > 0) {
+    const { data: looseSubs } = await supabaseAdmin
+      .from("subscriptions")
+      .select("*")
+      .in("user_id", unlinkedUserIds)
+      .order("created_at", { ascending: false });
+    const firstByUser = new Map<string, Subscription>();
+    for (const s of (looseSubs as Subscription[]) || []) {
+      if (!firstByUser.has(s.user_id)) firstByUser.set(s.user_id, s);
+    }
+    for (const r of profileRows) {
+      if (r.profile && !r.subscription) {
+        const found = firstByUser.get(r.profile.id);
+        if (found) {
+          r.subscription = found;
+          subMap.set(found.id, found);
+        }
+      }
+    }
+  }
 
   const pendingRows: AdminSubscriberRow[] = pendingMigrations.map((m) => {
     const refunded = !m.stripe_subscription_id && !!(m.old_subscription_data as any)?.refunded_at;
