@@ -1,7 +1,7 @@
 # Triba Mail Club — bases y plan de trabajo
 
 **Estado (03-oct-2026):** Mail Club está publicado en `main`/producción. Esta actualización incorpora el teaser plegable del upgrade en Mi Cuenta, la separación superior de las tarjetas de upgrade/dirección y el retiro visual de la invitación al downgrade en el panel Mail Club.
-**Última verificación local:** `astro check` 0 errores · `npm test` 21/21 · `npm run build` OK. Migración `025` aplicada a producción (columnas `welcome_sent_at`, `joined_at`, `sub_status` + `cancel_subscription` para dunning).
+**Última verificación local:** `astro check` 0 errores · `npm test` 25/25 · `npm run build` OK. Migración `025` aplicada a producción (columnas `welcome_sent_at`, `joined_at`, `sub_status` + `cancel_subscription` para dunning).
 **Ramas:** `main` = trabajo + sitio live; cada push a `main` despliega producción. `mail-club` = rama histórica ya integrada.
 **Preview Vercel (rama):** `https://triba-gqpgwguo2-julianrecarte.vercel.app` — referencia histórica de la matriz previa al lanzamiento.
 **Regla:** validar `astro check`, tests y build antes de cada push a `main`; no commitear secretos ni datos personales.
@@ -57,7 +57,7 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 - [x] **`past_due` no degrada de inmediato.** Stripe `past_due` mantiene rol y mensaje de “actualizá tu medio de pago”; solo `canceled` libera el perfil.
 - [x] **Renovación MP más estable.** El período se extiende desde el vencimiento vigente (no desde “ahora”) y los webhooks repetidos no vuelven a extenderlo.
 - [x] **Retención 60 días operativa.** `scripts/purge-mail-club-retention.mjs` (dry-run por defecto, `--real`, `--days N`) purga snapshots despachados y direcciones sin suscripción activa.
-- [x] **Nueva API pública.** `isBeforeCutoffThisMonth()` en `src/lib/mail-club.ts`, con test (suite 21/21).
+- [x] **Nueva API pública.** `isBeforeCutoffThisMonth()` en `src/lib/mail-club.ts`, con test (suite 25/25).
 
 ### Cierre 03-oct-2026 (noche)
 
@@ -65,6 +65,12 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 - [x] **Badge única en el panel.** El hero de Mi Cuenta muestra el badge antes del título; se limpió el badge heredado de la edición #4 en producción y `syncFeaturedBadges()` lo evita al crear/editar/borrar desde admin.
 - [x] **Cuentas de prueba al día.** `suscriptora-digital@triba.test` (digital EUR) y `suscriptora-mailclub@triba.test` (Mail Club EUR), activas y con login verificado; `create-test-subscriber.mjs` acepta plan/moneda y reutiliza la suscripción. Documentadas en `README.md §Accesos de prueba`.
 - [x] **Docs.** `AGENTS.md`, `README.md` y `PASOSPAGOS.md` actualizados al estado live.
+
+### Conciliación automática y panel admin (05-oct-2026)
+
+- [x] **Pagos aprobados que no activaban (caso real).** Una suscriptora Mail Club MP pagó ARS 16.000 y quedó en `incomplete` con perfil `free`: dos bugs encadenados — (1) gate de estado incondicional en `activateSubscription` (bloqueaba aunque el pago estuviera aprobado), (2) `/v1/payments` no devuelve `preapproval_id` y el handler lo exigía. Fix: `isActivationBlocked` (pago aprobado siempre activa) + `resolveAuthorizedPayment()` (cubre `data.id` = pago o authorized_payment; link por `external_reference` a la única `incomplete`, con 0 o 2+ va a reconcile) + tests de regresión (suite 25/25). Curada vía replay del evento contra el código deployado: sub `active`, fundadora #7, bienvenida enviada.
+- [x] **Reconciliación automática diaria.** `GET /api/cron/reconcile` (`vercel.json` 07:00 UTC, `CRON_SECRET` obligatorio en Vercel) activa `incomplete` con pago aprobado (MP + Stripe, `past_due` excluido) vía `src/lib/reconcile.ts` — la misma fn del endpoint admin, el botón de la ficha y el aviso pre-lote. "Crear lote" avisa si hay candidatos (activar-y-continuar / crear-igual).
+- [x] **Admin para propietarias.** Ficha 360° mobile-first (`/admin/suscriptoras/[id]`, link desde el email de la tabla); suscriptoras con plan real (Digital/Mail Club), estados (`Pendiente de pago`, `Pago fallido`), filtros por plan, buscador global en header y skeleton de carga; Mail Club con alerta de activas sin dirección, simulación de lote (dry-run), checklist + countdown al corte/despacho (Madrid), avisos de despacho con reintento, purga de retención 60 días con dry-run, y dashboard con alertas accionables. Retirados: vista Actividad (queda solo el registro) y migración manual WooCommerce (quedan los datos históricos).
 
 ### Pendiente actual
 

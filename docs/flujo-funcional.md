@@ -294,13 +294,14 @@ MP POST (WebhookSignatureValidator, sin toleranceSeconds; no secret → 500; mal
   │   → userId = external_reference
   │     └─ si no → email = payer_email ?? resolvePayerEmail(chain authorized_payments/search → v1/payments/:id)
   │         └─ si no → lookUpUserIdByEmail (listUsers paginado, loop guard 60)
-  │   → sin userId → warn + skip (acceso perdido hasta reconcile manual)
-  │   → activateSubscription (ver abajo)
-  ├─ subscription_authorized_payment → handleAuthorizedPaymentEvent(paymentId)
-  │   → GET /v1/payments/:id ; gate status==="approved"
+  │   → sin userId → warn + skip (lo cubre el cron diario / reconcile; ver §6)
+  │   → activateSubscription (ver abajo, gate solo para preapproval: isActivationBlocked)
+  ├─ subscription_authorized_payment → handleAuthorizedPaymentEvent(dataId)
+  │   → resolveAuthorizedPayment (src/lib/mercadopago-activation.ts): dataId = pago (/v1/payments, puede NO traer preapproval_id → link por external_reference a la única incomplete) o authorized_payment id (barrido de incompletes vía search)
+  │   → sin link resoluble → info + no-op (lo cubre el cron diario / reconcile admin)
   │   → preapproval existente → solo EXTENDER current_period_end +30d (renovación)
-  │   └─ sin sub linkeada → self-heal: fetch preapproval + resolver userId + activateSubscription
-  │        (NOTA: NO gatea por status de preapproval acá — un payment APPROVED es la verdad)
+  │   └─ sin sub linkeada → self-heal: activateSubscription confirmedPayment=true (gate de estado SALTEADO: isActivationBlocked — un payment APPROVED es la verdad)
+  │        (NOTA: el gate por status de preapproval vive SOLO en handlePreApprovalEvent)
   │
   activateSubscription():
   │   upsert subscriptions(provider,provider_subscription_id) status=active
@@ -464,7 +465,7 @@ PAGE-13 filtros por ?status= (links SSR) · botones Aprobar/Rechazar en pending
 ## 4. PROBLEMAS POTENCIALES DETECTADOS
 
 **Complejidad**
-- **P1 (FLOW-09 webhook MP)**: 3 cadenas de resolución de usuario (external_reference → payer_email → authorized_payments → listUsers paginado), cada una con no-op silencioso. Es el flujo más frágil del sistema; por algo existe el reconcile script.
+- **P1 (FLOW-09 webhook MP)**: 3 cadenas de resolución de usuario (external_reference → payer_email → authorized_payments → listUsers paginado), cada una con no-op silencioso. Es el flujo más frágil del sistema. *(endurecido 2026-10-05: `resolveAuthorizedPayment` cubre ambos formatos de data.id y pagos sin `preapproval_id`; `isActivationBlocked` limita el gate al evento preapproval; red de seguridad en `src/lib/reconcile.ts` con cron diario + endpoint admin + aviso pre-lote)*
 - **P2 (COMP-18 Suscriptoras)**: dos modelos (profile+subscription y migration sin cuenta) en una sola tabla con stats parciales por página → difícil de leer y de mantener. La lógica de render se construye con strings en el front. *(resuelto 2026-08-22: stats movidas al server `totalActive/totalCanceled/totalNone` globales, `updateStats(rows)` eliminado)*
 - **P3 (FLOW-15 EditionForm)**: secuencia sign → PUT → POST con 3 estados intermedios y sin rollback. *(mitigado 2026-08-22: rollback del submit actual con cleanup; sin transacción global)*
 - **P4 (FLOW-10 polling)**: timeout sin feedback de red; el único mensaje llega ~60s. *(resuelto 2026-08-22: 3 fallos consecutivos → onNetworkError)*

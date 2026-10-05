@@ -39,6 +39,7 @@ Hecho (además de lo anterior):
 - Las cuentas manuales de prueba con IDs de Stripe inventados no pueden abrir el portal: `POST /api/portal` intenta recuperar una suscripción inexistente y responde 500. El portal debe validarse con suscripciones creadas por checkout real.
 - **Recuperación 03-oct (tarde):** upgrades `pending` expiran a los 60 min (`upgrade-recovery.ts`); el portal y la cancelación aceptan `past_due`/`incomplete`; la cancelación devuelve error 502 si el proveedor falla; la bienvenida usa reclamo `welcome_sent_at` (at-most-once con reintento); el retorno MP distingue approved/pending/rejected; el lote congela `joined_at`/`sub_status`; `scripts/purge-mail-club-retention.mjs` implementa la retención de 60 días.
 - **Precios live verificados por API (03-oct):** EUR 10,50 y USD 12,50, live, activos, mensuales, mismo producto, sin duplicados. Vercel Production y `MAIL_CLUB_PRICE_CENTS` coinciden.
+- **Conciliación automática (05-oct):** un pago MP aprobado podía quedar en `incomplete` sin activar (gate de estado + `preapproval_id` ausente en `/v1/payments`) — corregido con `isActivationBlocked` + `resolveAuthorizedPayment()` y tests. Red de seguridad en 3 capas con la misma `src/lib/reconcile.ts`: cron diario `GET /api/cron/reconcile` (requiere `CRON_SECRET` en Vercel), botón manual en admin/ficha, y aviso pre-lote (activar-y-continuar / crear-igual). Orden operativo: crear el lote alcanza; el cron cubre eventos perdidos.
 
 Pendiente (uno a la vez, en orden):
 

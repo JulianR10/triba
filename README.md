@@ -18,7 +18,7 @@ Migraciones SQL en `supabase/migrations/` (ejecutar en orden).
 
 ## Variables de entorno
 
-Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`), Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*`), MP (`MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`), Sender (`SENDER_API_KEY`, `SENDER_FROM_EMAIL`, `SENDER_FROM_NAME`). Sin `*_WEBHOOK_SECRET` los webhooks fallan.
+Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`), Stripe (`STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `STRIPE_PRICE_*`), MP (`MP_ACCESS_TOKEN`, `MP_WEBHOOK_SECRET`), Sender (`SENDER_API_KEY`, `SENDER_FROM_EMAIL`, `SENDER_FROM_NAME`), cron (`CRON_SECRET`, cualquier string aleatorio). Sin `*_WEBHOOK_SECRET` los webhooks fallan; sin `CRON_SECRET` la reconciliación automática responde 500.
 
 ## Scripts
 
@@ -34,7 +34,7 @@ Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABAS
 |---|---|
 | `node --env-file=.env scripts/cleanup-orphan-storage.mjs [--real]` | Barrido de archivos huérfanos en Storage (dry-run default) |
 | `node --env-file=.env scripts/resync-newsletters.mjs [--all\|--email=x]` | Re-sincroniza newsletters con `sender_synced=false` a Sender |
-| `node --env-file=.env scripts/reconcile-mp-subscribers.mjs [--real]` | Activa retroactivamente pagadores MP sin acceso |
+| `node --env-file=.env scripts/reconcile-mp-subscribers.mjs [--real]` | Activa retroactivamente pagadores MP sin acceso (histórico; hoy lo cubren el cron diario `/api/cron/reconcile` y el botón admin) |
 | `node --env-file=.env scripts/recreate-migrated-billing.mjs [--dry-run]` | Recrea el cobro automático de las migradas (idempotente) |
 | `node --env-file=.env scripts/import-wp-subscribers.mjs <csv>` | Importa suscriptores de WooCommerce a `subscriber_migrations` + Sender |
 | `node --env-file=.env scripts/fix-admin.mjs <email> '<password>'` | Promueve admin / fix de acceso |

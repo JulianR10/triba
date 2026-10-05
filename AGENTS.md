@@ -44,8 +44,9 @@ Suscripción digital + Triba Mail Club (sobre postal mensual), escrita por y par
 - **PDFViewer:** `client:only="react"` obligatorio (DOMMatrix en Node). Import ESTÁTICO `react-pdf` + `workerUrl` de `pdfjs-dist/build/pdf.worker.min.mjs?url`. No `client:visible`, no `import("react-pdf")` dinámico, no `vite.optimizeDeps` excluyendo react-pdf. Lazy `useIsVisible`. Carga: watchdog 25s + `isExpiredError(msg, age)` → `expired` muestra `Recargar página` (`location.reload()` regenera 30m) vs `Reintentar` (`retryKey`) para transitorios. `lang` prop ES/EN. Agrandar = SIEMPRE overlay portal `fixed inset-0 z-[80]` (NO Fullscreen API nativa: mover el nodo al portal sale de fullscreen y el botón parece no hacer nada). Cierre por botón/Escape vía `collapse()` (+`resetInline`).
 - Rate limiting: tabla `rate_limits`.
 - MP sin portal: `/api/portal` devuelve `{note}` → `alert()`.
-- **Webhook MP:** siempre `WebhookSignatureValidator` del SDK, sin `toleranceSeconds`. Self-healing: activar también desde `subscription_authorized_payment` aprobado (`external_reference` → userId, fallback email vía `authorized_payments/search` → `v1/payments/{id}`). `activateSubscription()` = upsert `onConflict:provider,provider_subscription_id` + `profiles` explícito + cancela `migrated`. Welcome/Sender solo si sub nueva. URL: `https://www.universotriba.com/api/webhook/mercadopago`.
+- **Webhook MP:** siempre `WebhookSignatureValidator` del SDK, sin `toleranceSeconds`. Self-healing: activar también desde `subscription_authorized_payment` aprobado (`external_reference` → userId, fallback email vía `authorized_payments/search` → `v1/payments/{id}`). `activateSubscription()` = upsert `onConflict:provider,provider_subscription_id` + `profiles` explícito + cancela `migrated`. Welcome/Sender solo si sub nueva. URL: `https://www.universotriba.com/api/webhook/mercadopago`. Resolución en `resolveAuthorizedPayment()` (`src/lib/mercadopago-activation.ts`): cubre `data.id` = pago o authorized_payment y pagos aprobados SIN `preapproval_id` (link por `external_reference` a la única `incomplete` del user; con 0 o 2+ no adivina → reconcile). Gate de estado SOLO para evento preapproval (`isActivationBlocked`, pago aprobado siempre activa).
 - **Webhook Stripe:** URL debe ser `https://www.universotriba.com/api/webhook/stripe` (`www`, no apex 308). Sin `current_period_start/end` → `periodRange()` fallback `start_date ?? created` +30d.
+- **Reconciliación automática:** cron diario `GET /api/cron/reconcile` (`vercel.json`, `CRON_SECRET` obligatorio en Vercel) activa `incomplete` con pago aprobado vía `src/lib/reconcile.ts` (misma fn que el endpoint admin y el botón de la ficha; `past_due` excluido). "Crear lote" avisa si hay candidatos pendientes (activar-y-continuar / crear-igual).
 - **Sin ISR:** todo SSR on-demand. `security.checkOrigin: false` en `astro.config.mjs` (Astro 5 + Vercel → 403 en POST `multipart/form-data`; la app usa JSON vía fetch).
 
 ## Auth
@@ -95,7 +96,7 @@ triba/
 - Admin queda ES.
 
 ## Deuda de tipos
-`npx astro check` → 0 errores · `npm test` → 21/21 · `npm run build` OK (03-Oct-2026: Mail Club live, migraciones `021–025` aplicadas, precios Stripe EUR/USD verificados por API). Smoke público: `node scripts/smoke-prod.mjs` (12/12). Ver `docs/flujo-funcional.md §6`.
+`npx astro check` → 0 errores · `npm test` → 25/25 · `npm run build` OK (05-Oct-2026: activación MP con pago aprobado aunque preapproval reporte pending + cron reconcile diario + admin con ficha 360°/alertas/simular-lote; migraciones `021–025` aplicadas, precios Stripe EUR/USD verificados por API). Smoke público: `node scripts/smoke-prod.mjs` (12/12). Ver `docs/flujo-funcional.md §6`.
 
 ⚠️ `src/lib/database.types.ts` canónico, sincronizado con `supabase/migrations/` (última: `025_recovery_cancel_snapshot.sql`).
 
