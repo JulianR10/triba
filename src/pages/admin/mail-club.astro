@@ -438,6 +438,46 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     });
 
     document.getElementById("mc-create")!.addEventListener("click", async () => {
+      // Guarda pre-lote: si hay pagos aprobados sin activar, ofrecer
+      // activarlos antes de crear (si no, quedarían fuera del lote).
+      try {
+        const chk = await fetch("/api/admin/subscribers/reconcile");
+        const chkData = await chk.json().catch(() => ({}));
+        const cands = (chkData.candidates || []) as { email: string }[];
+        if (chk.ok && cands.length > 0) {
+          showResult(`
+            <p class="font-sans text-sm text-triba-brown mb-1">Hay <strong>${cands.length}</strong> pago(s) aprobado(s) sin activar — quedarían fuera del lote:</p>
+            <ul class="font-sans text-xs text-triba-brown/70 space-y-1 mb-3">` +
+              cands.map((c) => `<li>${escapeHtml(c.email)}</li>`).join("") + `</ul>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <button id="mc-create-after" type="button" class="rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider">Activar y crear lote</button>
+              <button id="mc-create-anyway" type="button" class="rounded-button bg-triba-white text-triba-brown border-2 border-triba-black/20 px-4 py-2 font-heading text-xs uppercase tracking-wider">Crear igual</button>
+            </div>`);
+          document.getElementById("mc-create-after")!.addEventListener("click", async () => {
+            const btn2 = document.getElementById("mc-create-after") as HTMLButtonElement;
+            btn2.disabled = true;
+            btn2.textContent = "Activando...";
+            try {
+              const r2 = await fetch("/api/admin/subscribers/reconcile", { method: "POST" });
+              const d2 = await r2.json().catch(() => ({}));
+              if (!r2.ok) {
+                (window as any).adminToast?.(d2.error || "Error activando", "error");
+                return;
+              }
+              (window as any).adminToast?.(`${(d2.activated || []).length} activada(s), creando lote…`, "success");
+              doCreateBatch();
+            } catch {
+              (window as any).adminToast?.("Error de conexión", "error");
+            }
+          });
+          document.getElementById("mc-create-anyway")!.addEventListener("click", () => doCreateBatch());
+          return;
+        }
+      } catch { /* si falla el chequeo, crear igual */ }
+      doCreateBatch();
+    });
+
+    async function doCreateBatch() {
       const year = Number((document.getElementById("mc-year") as HTMLInputElement).value);
       const month = Number((document.getElementById("mc-month") as HTMLInputElement).value);
       const msg = document.getElementById("mc-create-msg")!;
@@ -475,7 +515,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
         btn.disabled = false;
         btn.textContent = "Crear lote";
       }
-    });
+    }
 
     loadBatches();
   }
