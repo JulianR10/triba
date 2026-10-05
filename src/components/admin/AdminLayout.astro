@@ -41,6 +41,12 @@ const items = [
           </div>
           <div class="flex items-center gap-4">
             <span class="font-sans text-xs text-triba-bone/80 hidden md:inline">{profile?.email}</span>
+            <input
+              id="admin-global-search"
+              type="search"
+              placeholder="Buscar email… ⏎"
+              class="hidden md:block w-44 px-3 py-1.5 rounded-button border-2 border-triba-white/30 bg-triba-white/10 font-sans text-xs text-triba-white placeholder:text-triba-bone/50 outline-none focus:border-triba-green transition-colors"
+            />
             <a href="/" class="font-heading text-xs uppercase tracking-wider text-triba-white hover:text-triba-green">Ver sitio</a>
             <button id="admin-logout" class="rounded-button bg-triba-red text-triba-white border-2 border-triba-white px-4 py-1.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">Salir</button>
           </div>
@@ -90,6 +96,14 @@ const items = [
       (window as any).adminConfirm = showConfirm;
 
       const btn = document.getElementById("admin-logout");
+      const gs = document.getElementById("admin-global-search") as HTMLInputElement | null;
+      if (gs) {
+        gs.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" && gs.value.trim()) {
+            window.location.href = `/admin/suscriptoras?search=${encodeURIComponent(gs.value.trim())}`;
+          }
+        });
+      }
       if (btn) {
         btn.addEventListener("click", async () => {
           const confirmed = await showConfirm("Cerrar sesión", "¿Estás segura de que querés salir del panel de administración?");

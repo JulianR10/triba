@@ -15,7 +15,7 @@ export interface AdminSubscriberRow {
   migrationRefunded?: boolean;
 }
 
-export type AdminSubscriberStatus = "all" | "active" | "canceled" | "none" | "pending" | "refunded";
+export type AdminSubscriberStatus = "all" | "active" | "canceled" | "none" | "pending" | "refunded" | "digital" | "mail_club";
 
 export interface SearchSubscribersResult {
   rows: AdminSubscriberRow[];
@@ -295,6 +295,10 @@ export async function searchSubscribersForAdmin(
     allRows = allRows.filter((r) => !!r.migrationId && !r.migrationRefunded);
   } else if (status === "refunded") {
     allRows = allRows.filter((r) => !!r.migrationId && !!r.migrationRefunded);
+  } else if (status === "digital") {
+    allRows = allRows.filter((r) => (r.subscription as any)?.plan_type !== "mail_club" && !!r.subscription);
+  } else if (status === "mail_club") {
+    allRows = allRows.filter((r) => (r.subscription as any)?.plan_type === "mail_club");
   }
 
   // Global stats (respect search, ignore status/pagination) — fixes P2

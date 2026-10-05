@@ -53,6 +53,8 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       {[
         { key: "all", label: "Todas" },
         { key: "active", label: "Activas" },
+        { key: "digital", label: "Digital" },
+        { key: "mail_club", label: "Mail Club" },
         { key: "canceled", label: "Canceladas" },
         { key: "none", label: "Sin sub" },
         { key: "pending", label: "Pend. registro" },
@@ -486,6 +488,11 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
   function initSubscribers() {
     setupMigrate();
     setupReconcile();
+    const urlSearch = new URLSearchParams(window.location.search).get("search") || "";
+    if (urlSearch) {
+      searchInput.value = urlSearch;
+      currentSearch = urlSearch;
+    }
     searchInput.addEventListener("input", () => {
       if (searchTimer) clearTimeout(searchTimer);
       searchTimer = setTimeout(() => {

@@ -48,6 +48,16 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
 
   <div id="mc-result" class="hidden mt-6 bg-triba-cream rounded-xl border-2 border-triba-black p-5"></div>
 
+  <details class="mt-6 bg-triba-white rounded-xl border-2 border-triba-black p-4">
+    <summary class="font-heading text-xs uppercase tracking-wider text-triba-brown cursor-pointer select-none">Retención postal (60 días)</summary>
+    <p class="font-sans text-xs text-triba-brown/70 mt-2 mb-3">Purga direcciones congeladas de lotes despachados hace más de 60 días y borra direcciones de usuarias sin Mail Club activo. Primero revisá, después aplicá.</p>
+    <div class="flex flex-col sm:flex-row gap-3">
+      <button id="mc-retention-check" type="button" class="rounded-button bg-triba-bone text-triba-brown border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shrink-0">Revisar</button>
+      <button id="mc-retention-apply" type="button" class="hidden rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-5 py-2.5 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all shrink-0">Aplicar purga</button>
+    </div>
+    <div id="mc-retention-result" class="mt-3 font-sans text-xs text-triba-brown/80"></div>
+  </details>
+
   <div id="mc-detail" class="hidden mt-6 bg-triba-white rounded-xl border-2 border-triba-black overflow-x-auto"></div>
 </AdminLayout>
 
@@ -107,8 +117,11 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error");
       const rows = data.withoutAddress || [];
-      if (rows.length === 0) { box.innerHTML = ""; return; }
-      box.innerHTML = `
+      const notices = data.pendingNotices || [];
+      if (rows.length === 0 && notices.length === 0) { box.innerHTML = ""; return; }
+      let html = "";
+      if (rows.length > 0) {
+        html += `
         <div class="mb-4 p-4 bg-triba-red/10 border-2 border-triba-red rounded-xl">
           <p class="font-heading text-xs uppercase tracking-wider text-triba-red mb-1">Activas sin dirección (${rows.length})</p>
           <p class="font-sans text-xs text-triba-brown/80 mb-2">Pagan Mail Club pero quedarían fuera del lote en silencio. Avisales antes del corte.</p>
@@ -116,6 +129,49 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             rows.map((r: any) => `<li><a class="hover:text-triba-red hover:underline" href="/admin/suscriptoras/${r.user_id}">${escapeHtml(r.email || "sin email")}</a></li>`).join("") +
           `</ul>
         </div>`;
+      }
+      if (notices.length > 0) {
+        html += `
+        <div class="mb-4 p-4 bg-triba-cream border-2 border-triba-black rounded-xl">
+          <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-1">Avisos de despacho pendientes</p>
+          <ul class="space-y-2">` +
+            notices.map((n: any) => `
+              <li class="flex flex-wrap items-center gap-2 font-sans text-xs text-triba-brown/80">
+                <span>Lote ${n.period_year}-${String(n.period_month).padStart(2, "0")}: <strong>${n.pending_emails.length}</strong> sin avisar</span>
+                <button class="mc-retry-notice rounded-button bg-triba-bone text-triba-brown border-2 border-triba-black px-3 py-1.5 font-heading text-[11px] uppercase tracking-wider min-h-[44px]" data-batch="${n.batch_id}" data-emails="${escapeHtml((n.pending_emails || []).join(","))}">Reintentar</button>
+              </li>`).join("") +
+          `</ul>
+        </div>`;
+      }
+      box.innerHTML = html;
+      box.querySelectorAll<HTMLButtonElement>(".mc-retry-notice").forEach((b) => {
+        b.addEventListener("click", async () => {
+          const emails = (b.dataset.emails || "").split(",").map((e) => e.trim()).filter(Boolean);
+          if (emails.length === 0) return;
+          b.disabled = true;
+          b.textContent = "Avisando...";
+          try {
+            const r2 = await fetch(`/api/admin/mail-club/batches/${b.dataset.batch}/dispatch`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ emails }),
+            });
+            const d2 = await r2.json().catch(() => ({}));
+            if (!r2.ok) {
+              (window as any).adminToast?.(d2.error || "Error reintentando", "error");
+            } else {
+              (window as any).adminToast?.(`${d2.sent} avisos enviados`, "success");
+              loadAttention();
+              loadBatches();
+            }
+          } catch {
+            (window as any).adminToast?.("Error de conexión", "error");
+          } finally {
+            b.disabled = false;
+            b.textContent = "Reintentar";
+          }
+        });
+      });
     } catch {
       box.innerHTML = "";
     }
@@ -331,6 +387,55 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     const now = new Date();
     (document.getElementById("mc-year") as HTMLInputElement).value = String(now.getFullYear());
     (document.getElementById("mc-month") as HTMLInputElement).value = String(now.getMonth() + 1);
+
+    const retCheck = document.getElementById("mc-retention-check") as HTMLButtonElement;
+    const retApply = document.getElementById("mc-retention-apply") as HTMLButtonElement;
+    const retBox = document.getElementById("mc-retention-result")!;
+    const renderRetention = (r: any, applied: boolean) => {
+      retBox.innerHTML = `<p>Lotes vencidos: <strong>${r.oldBatches}</strong> · snapshots a purgar: <strong>${r.snapshotsToPurge}</strong> · direcciones a borrar: <strong>${r.addressesToDelete}</strong>${applied ? `<br />Aplicado: ${r.snapshotsPurged} purgados · ${r.addressesDeleted} borradas.` : ""}</p>`;
+      retApply.classList.toggle("hidden", applied || (r.snapshotsToPurge === 0 && r.addressesToDelete === 0));
+    };
+    retCheck.addEventListener("click", async () => {
+      retCheck.disabled = true;
+      retCheck.textContent = "Revisando...";
+      try {
+        const res = await fetch("/api/admin/mail-club/retention?days=60");
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.error || "Error");
+        renderRetention(data, false);
+      } catch {
+        retBox.innerHTML = `<p class="text-triba-red">Error al revisar</p>`;
+      } finally {
+        retCheck.disabled = false;
+        retCheck.textContent = "Revisar";
+      }
+    });
+    retApply.addEventListener("click", async () => {
+      const confirmed = await (window as any).adminConfirm?.(
+        "Aplicar purga",
+        "¿Purgar snapshots vencidos y borrar direcciones sin Mail Club activo? No se puede deshacer.",
+      );
+      if (!confirmed) return;
+      retApply.disabled = true;
+      try {
+        const res = await fetch("/api/admin/mail-club/retention", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ days: 60 }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+          (window as any).adminToast?.(data.error || "Error aplicando", "error");
+          return;
+        }
+        renderRetention(data, true);
+        (window as any).adminToast?.("Purga aplicada", "success");
+      } catch {
+        (window as any).adminToast?.("Error de conexión", "error");
+      } finally {
+        retApply.disabled = false;
+      }
+    });
 
     document.getElementById("mc-create")!.addEventListener("click", async () => {
       const year = Number((document.getElementById("mc-year") as HTMLInputElement).value);

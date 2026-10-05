@@ -8,7 +8,7 @@ import {
 
 export const prerender = false;
 
-const VALID_STATUSES: AdminSubscriberStatus[] = ["all", "active", "canceled", "none", "pending", "refunded"];
+const VALID_STATUSES: AdminSubscriberStatus[] = ["all", "active", "canceled", "none", "pending", "refunded", "digital", "mail_club"];
 
 export const GET: APIRoute = async ({ request, locals }) => {
   const admin = requireAdmin(locals);

@@ -153,6 +153,128 @@ export async function listMailClubEligible(
   return { eligible, skipped };
 }
 
+// Avisos de despacho pendientes: lotes despachados con items sin avisar.
+// Para reintentar en un click desde el panel sin entrar al detalle.
+export interface MailClubPendingNotice {
+  batch_id: string;
+  period_year: number;
+  period_month: number;
+  pending_emails: string[];
+}
+
+export async function listMailClubPendingNotices(limitBatches = 6): Promise<MailClubPendingNotice[]> {
+  const { data: batches } = await supabaseAdmin
+    .from("mail_club_batches")
+    .select("id, period_year, period_month")
+    .eq("status", "dispatched")
+    .order("period_year", { ascending: false })
+    .order("period_month", { ascending: false })
+    .limit(limitBatches);
+  const out: MailClubPendingNotice[] = [];
+  for (const b of (batches as any[]) || []) {
+    const { data: items } = await supabaseAdmin
+      .from("mail_club_batch_items")
+      .select("email")
+      .eq("batch_id", b.id)
+      .eq("notice_sent", false)
+      .limit(200);
+    const emails = [...new Set(((items as any[]) || []).map((i) => i.email).filter(Boolean))];
+    if (emails.length > 0) {
+      out.push({ batch_id: b.id, period_year: b.period_year, period_month: b.period_month, pending_emails: emails });
+    }
+  }
+  return out;
+}
+
+// Retención postal 60 días (misma lógica que scripts/purge-mail-club-retention.mjs):
+// purga snapshots de lotes despachados hace >days días y borra direcciones
+// de usuarias sin Mail Club activo. dry-run por defecto.
+export interface MailClubRetentionReport {
+  days: number;
+  cutoff: string;
+  oldBatches: number;
+  itemsInOldBatches: number;
+  snapshotsToPurge: number;
+  addressesToDelete: number;
+  snapshotsPurged?: number;
+  addressesDeleted?: number;
+}
+
+export async function purgeMailClubRetention(days = 60, real = false): Promise<MailClubRetentionReport> {
+  const d = Math.max(1, Math.floor(days) || 60);
+  const cutoff = new Date(Date.now() - d * 24 * 60 * 60 * 1000).toISOString();
+
+  const { data: batches } = await supabaseAdmin
+    .from("mail_club_batches")
+    .select("id")
+    .eq("status", "dispatched")
+    .lt("dispatched_at", cutoff);
+  const batchIds = ((batches as any[]) || []).map((b) => b.id as string);
+  if (batchIds.length === 0) {
+    return { days: d, cutoff, oldBatches: 0, itemsInOldBatches: 0, snapshotsToPurge: 0, addressesToDelete: 0 };
+  }
+
+  const { data: items } = await supabaseAdmin
+    .from("mail_club_batch_items")
+    .select("id, user_id, address_snapshot")
+    .in("batch_id", batchIds);
+  const withSnapshot = ((items as any[]) || []).filter((it) => {
+    const snap = it.address_snapshot;
+    return snap && typeof snap === "object" && Object.keys(snap).length > 0 && !snap.purged;
+  });
+
+  const userIds = [...new Set(withSnapshot.map((it) => it.user_id as string))];
+  const keepAddress = new Set<string>();
+  for (const userId of userIds) {
+    const { data: active } = await supabaseAdmin
+      .from("subscriptions")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("plan_type", "mail_club")
+      .eq("status", "active")
+      .gt("current_period_end", new Date().toISOString())
+      .limit(1)
+      .maybeSingle();
+    if (active) keepAddress.add(userId);
+  }
+  const addressesToDelete = userIds.filter((id) => !keepAddress.has(id));
+
+  const report: MailClubRetentionReport = {
+    days: d,
+    cutoff,
+    oldBatches: batchIds.length,
+    itemsInOldBatches: (items as any[])?.length || 0,
+    snapshotsToPurge: withSnapshot.length,
+    addressesToDelete: addressesToDelete.length,
+  };
+  if (!real) return report;
+
+  let purged = 0;
+  for (const it of withSnapshot) {
+    const { error } = await supabaseAdmin
+      .from("mail_club_batch_items")
+      .update({ address_snapshot: { purged: true, purged_at: new Date().toISOString() } })
+      .eq("id", it.id);
+    if (error) {
+      logger.error({ err: error, itemId: it.id }, "retention purge item error");
+    } else {
+      purged++;
+    }
+  }
+  let deleted = 0;
+  for (const userId of addressesToDelete) {
+    const { error } = await supabaseAdmin.from("mailing_addresses").delete().eq("user_id", userId);
+    if (error) {
+      logger.error({ err: error, userId }, "retention delete address error");
+    } else {
+      deleted++;
+    }
+  }
+  report.snapshotsPurged = purged;
+  report.addressesDeleted = deleted;
+  return report;
+}
+
 // Activas Mail Club sin dirección: quedarían fuera del lote en silencio.
 // Es el reclamo más caro ("pagué y no me llegó"), va a superficie en el panel.
 export async function listMailClubWithoutAddress(): Promise<{ user_id: string; email: string; since: string }[]> {
