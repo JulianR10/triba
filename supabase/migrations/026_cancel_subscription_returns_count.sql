@@ -5,7 +5,11 @@
 -- Con el conteo, las APIs distinguen marcado real (n > 0) de no-op (0)
 -- y responden el mensaje correcto. Aditiva e idempotente: misma firma de
 -- entrada, mismos estados, mismo WHERE; solo cambia el retorno.
-create or replace function public.cancel_subscription(p_user_id uuid)
+-- El DROP previo es obligatorio: Postgres (42P13) no permite cambiar el
+-- tipo de retorno de void a integer con CREATE OR REPLACE.
+drop function if exists public.cancel_subscription(uuid);
+
+create function public.cancel_subscription(p_user_id uuid)
 returns integer
 language plpgsql
 security definer
