@@ -217,7 +217,7 @@ export async function searchSubscribersForAdmin(
   if (subIds.length > 0) {
     const { data: subs } = await supabaseAdmin
       .from("subscriptions")
-      .select("id, user_id, provider, plan_type, plan_currency, status, current_period_end")
+      .select("id, user_id, provider, plan_type, plan_currency, status, cancel_at_period_end, current_period_end")
       .in("id", subIds);
     for (const s of (subs as Subscription[]) || []) {
       subMap.set(s.id, s);
@@ -239,7 +239,7 @@ export async function searchSubscribersForAdmin(
   if (unlinkedUserIds.length > 0) {
     const { data: looseSubs } = await supabaseAdmin
       .from("subscriptions")
-      .select("id, user_id, provider, plan_type, plan_currency, status, current_period_end")
+      .select("id, user_id, provider, plan_type, plan_currency, status, cancel_at_period_end, current_period_end")
       .in("user_id", unlinkedUserIds)
       .order("created_at", { ascending: false });
     const firstByUser = new Map<string, Subscription>();

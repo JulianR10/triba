@@ -4,8 +4,21 @@ import { ok, error } from "../../../../../lib/response";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { getPaymentProvider } from "../../../../../lib/payment-provider";
 import { logAdminAction } from "../../../../../lib/admin/audit";
+import { logger } from "../../../../../lib/logger";
 
 export const prerender = false;
+
+// Misma semántica que POST /api/cancel-subscription (provider-first):
+// si el proveedor falla con un error real, NO se marca localmente.
+// La RPC 026 devuelve filas marcadas: 0 = no-op y se verifica antes de
+// responder, para no mostrar "cancelada" + reload sin que nada cambie.
+const CANCELABLE_STATUSES = ["active", "trialing", "past_due", "incomplete"] as const;
+
+function isAlreadyCanceledProviderError(message: string): boolean {
+  return /no such (subscription|preapproval)|already\s*cancel+ed|has been cancel+ed|resource\s+(not\s+found|missing)|not found/i.test(
+    message,
+  );
+}
 
 export const POST: APIRoute = async ({ params, locals }) => {
   const admin = requireAdmin(locals);
@@ -19,67 +32,110 @@ export const POST: APIRoute = async ({ params, locals }) => {
     .from("profiles")
     .select("id, email, subscription_id")
     .eq("id", id)
-    .single();
+    .maybeSingle();
 
-  if (profile?.subscription_id) {
-    // Also get provider from subscriptions table
-    const { data: subscription, error: subError } = await supabaseAdmin
+  if (profile) {
+    // Última cancelable (una usuaria puede tener varias filas; el puntero
+    // profiles.subscription_id puede estar desactualizado).
+    const { data: subscription } = await supabaseAdmin
       .from("subscriptions")
-      .select("provider, provider_subscription_id")
-      .eq("user_id", id)
-      .single();
+      .select("id, provider, provider_subscription_id, status, cancel_at_period_end")
+      .eq("user_id", profile.id)
+      .in("status", CANCELABLE_STATUSES)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
 
-    if (subError || !subscription) {
-      return error("No active subscription found", 404);
+    if (!subscription) {
+      const { data: scheduled } = await supabaseAdmin
+        .from("subscriptions")
+        .select("id")
+        .eq("user_id", profile.id)
+        .in("status", CANCELABLE_STATUSES)
+        .eq("cancel_at_period_end", true)
+        .limit(1)
+        .maybeSingle();
+      if (scheduled) {
+        return ok({ message: "La baja ya estaba programada al fin del período.", alreadyScheduled: true });
+      }
+      return error("No se encontró una suscripción cancelable para esta usuaria.", 404);
     }
 
+    if (subscription.cancel_at_period_end) {
+      return ok({ message: "La baja ya estaba programada al fin del período.", alreadyScheduled: true });
+    }
+
+    const providerWarnings: string[] = [];
     const provider = getPaymentProvider(subscription.provider as "stripe" | "mercadopago");
 
-    // 1. Probar RPC primero
-    const { error: rpcErr } = await supabaseAdmin.rpc("cancel_subscription", { p_user_id: profile.id });
-
-    if (rpcErr) {
-      // RPC falló → intentar cancelar en proveedor como compensación
-      if (provider && subscription.provider_subscription_id) {
-        try {
-          await provider.cancelSubscription(subscription.provider_subscription_id);
-          // RPC falló pero provider cancel succeeded: avisamos al usuario
-          return ok({
-            message: "No se pudo actualizar la BD, pero la suscripción se canceló en el proveedor",
-            providerWarnings: [rpcErr.message || "RPC failed"],
-          });
-        } catch (err: any) {
-          // Ambos fallaron: error crítico
-          return error(`Error en ambos lados: ${err.message || "Provider cancel failed"}`, 500);
-        }
-      }
-      // Sin proveedor externo (migrada) ni fallback: devolver el error del RPC
-      return error(rpcErr.message || "Error actualizando la suscripción", 500);
-    }
-
-    // RPC éxito (diferida: conserva acceso hasta el vencimiento) → frenar
-    // la recurrencia en el proveedor y log. Sin esto, Stripe seguiría
-    // cobrando cada mes aunque el acceso expire.
-    let providerWarning: string | undefined;
-    if (
-      provider &&
-      subscription.provider_subscription_id &&
-      subscription.provider !== "migrated"
-    ) {
+    if (provider && subscription.provider_subscription_id && subscription.provider !== "migrated") {
       try {
         await provider.scheduleCancel(subscription.provider_subscription_id);
       } catch (err: any) {
-        providerWarning = err.message || "Provider scheduleCancel failed";
+        const providerMessage = err?.message || String(err);
+        if (isAlreadyCanceledProviderError(providerMessage)) {
+          logger.warn(
+            { targetUserId: profile.id, providerMessage },
+            "admin cancel already canceled at provider",
+          );
+          providerWarnings.push(
+            "La renovación ya figuraba frenada en el proveedor; se registró la baja en Triba.",
+          );
+        } else {
+          logger.error({ err, targetUserId: profile.id }, "admin cancel provider error");
+          return error(
+            `No se pudo frenar la recurrencia en el proveedor (${providerMessage}). No se cambió nada en la base.`,
+            502,
+          );
+        }
       }
     }
 
-    logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", profile.id, {
-      canceled_email: profile.email,
+    const { data: marked, error: rpcErr } = await supabaseAdmin.rpc("cancel_subscription", {
+      p_user_id: profile.id,
     });
 
-    return ok(
-      providerWarning ? { providerWarnings: [providerWarning] } : {},
+    if (rpcErr) {
+      logger.error({ err: rpcErr, targetUserId: profile.id }, "admin cancel rpc error");
+      return error(
+        "Se frenó la recurrencia en el proveedor, pero no se pudo registrar en la base. Reintentá.",
+        500,
+      );
+    }
+
+    if (typeof marked === "number" && marked > 0) {
+      logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", profile.id, {
+        canceled_email: profile.email,
+      });
+      return ok({
+        message: "Suscripción cancelada al fin del período.",
+        providerWarnings: providerWarnings.length > 0 ? providerWarnings : undefined,
+      });
+    }
+
+    // RPC no-op: verificar antes de responder (nunca falso ok).
+    const { data: current } = await supabaseAdmin
+      .from("subscriptions")
+      .select("cancel_at_period_end, status")
+      .eq("id", subscription.id)
+      .maybeSingle();
+
+    if (current?.cancel_at_period_end) {
+      logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", profile.id, {
+        canceled_email: profile.email,
+      });
+      return ok({
+        message: "La baja ya estaba programada al fin del período.",
+        alreadyScheduled: true,
+        providerWarnings: providerWarnings.length > 0 ? providerWarnings : undefined,
+      });
+    }
+
+    logger.warn(
+      { targetUserId: profile.id, status: current?.status },
+      "admin cancel rpc no-op",
     );
+    return error("La suscripción cambió de estado y no se pudo marcar la baja. Revisá la ficha.", 409);
   }
 
   // Try migration (migrated user without account)
@@ -109,5 +165,5 @@ export const POST: APIRoute = async ({ params, locals }) => {
     canceled_email: migration.email,
   });
 
-  return ok();
+  return ok({ message: "Suscripción migrada cancelada." });
 };

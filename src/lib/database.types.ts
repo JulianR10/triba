@@ -585,7 +585,7 @@ export interface Database {
     Functions: {
       cancel_subscription: {
         Args: { p_user_id: string };
-        Returns: undefined;
+        Returns: number;
       };
       cleanup_rate_limits: {
         Args: Record<PropertyKey, never>;

@@ -31,7 +31,7 @@ export const POST: APIRoute = async ({ request }) => {
       .select("id, provider_subscription_id, current_period_end")
       .eq("id", current.id)
       .maybeSingle();
-    if (!full) return error("No active subscription found", 404);
+    if (!full) return error("No encontramos tu suscripción para gestionar.", 404);
 
     const provider = getPaymentProvider(current.provider as "stripe" | "mercadopago");
     let effectiveAt: string | undefined;

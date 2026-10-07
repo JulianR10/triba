@@ -330,11 +330,17 @@ Gatillo: PAGE-06 SSR con outcome success|pending + panel "Procesando..." (sin su
 ```
 Dropdown → "Cancelar suscripción" → showConfirm ("perderás el acceso al final del período")
  → POST /api/cancel-subscription
-   → requireUser · busca sub status=active del user (404 si no)
-   → provider.cancelSubscription (Stripe sub.cancel / MP preapproval status=cancelled)
-       └─ error del gateway → providerWarnings (no falla el flujo)
-   → RPC cancel_subscription (BD local; si falla → 500 y NO revierte el cancel del gateway ★)
- → {ok} → toast "Suscripción cancelada" + si warnings → alert() con detalle + reload
+    → requireUser · última sub cancelable (active/trialing/past_due/incomplete) del user (404 si no)
+    → ya programada → 200 {ok:true, alreadyScheduled} (idempotente, sin error)
+    → provider.scheduleCancel (Stripe cancel_at_period_end / MP frena recurrencia)
+        ├─ error real del gateway → 502 y NO se marca local (nunca falso ok)
+        └─ gateway informa baja ya hecha allí → se sigue y se marca local + providerWarnings
+    → RPC cancel_subscription (migración 026: devuelve filas marcadas)
+        ├─ n>0 → 200 {ok:true, message} (+ providerWarnings si aplica)
+        ├─ n=0 + ya programada (relectura) → 200 idempotente
+        └─ n=0 sin marca → 409 "cambió de estado, escribinos"
+  → front: éxito = HTTP res.ok (contrato src/lib/response.ts; data.ok solo defensa)
+  → toast "Suscripción cancelada" + si warnings → alert() con detalle + reload
 DEPENDENCIA: NAVBAR/AccountMenuItems debe estar presente; el toast es `showToast` de `src/lib/ui.ts` (compartido, auto-crea su contenedor)
 ```
 > Resuelto 2026-08-14 (P5/P6): el dropdown importa `showToast` de `src/lib/ui.ts` directo → el éxito se confirma con toast antes del reload.
@@ -426,8 +432,9 @@ PAGE-12 → GET /api/admin/subscribers?page&status&search&pageSize(=20 default)
         → user existe? role ya subscriber → ok sin cambios
         → crea sub migrated 7d + profile role=subscriber
         → mensaje nota diferencial (acceso "cuando se registre" vs "acceso 7 días")
-   · cancelar (sub activa, incl. migradas con stripe o sin) → confirm → POST /:id/cancel
-        → RPC cancel_subscription (profile) · o cancela Stripe + vacía stripe_subscription_id (migration)
+    · cancelar (última cancelable active/trialing/past_due/incomplete, no solo active; botón oculto si baja ya programada) → confirm → POST /:id/cancel
+         → provider-first igual que la usuaria (502 sin marcar local si el gateway falla; si el gateway informa baja ya hecha → marca local + warnings)
+         → RPC cancel_subscription (026: devuelve filas; 0 = se verifica antes de responder, nunca falso ok) · o cancela Stripe + vacía stripe_subscription_id (migration)
    · reembolsar (sub active stripe/mp) → confirm → POST /:id/refund
         Stripe: invoices→invoicePayments→refunds.create + sub.cancel
         MP: authorized_payments/search → refunds + PreApproval.update(status=cancelled)

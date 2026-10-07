@@ -122,14 +122,19 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
             </div>`).join("")}</div>
         </section>`;
 
-    const cancelable = subs.find((s) => ["active", "trialing", "past_due", "incomplete"].includes(s.status));
+    const CANCELABLE = ["active", "trialing", "past_due", "incomplete"];
+    const cancelable = subs.find((s) => CANCELABLE.includes(s.status) && !s.cancel_at_period_end);
+    const scheduledOff = subs.some((s) => CANCELABLE.includes(s.status) && s.cancel_at_period_end);
     const canCancel = !!cancelable;
     const canRefund = !!active && (active.provider === "stripe" || active.provider === "mercadopago");
     const actions = (!canCancel && pending.length === 0)
-      ? `<p class="font-sans text-xs text-triba-brown/50">Sin acciones disponibles.</p>`
+      ? (scheduledOff
+        ? `<p class="font-sans text-xs text-triba-brown/70">Baja programada al fin del período pagado. Sin acciones pendientes.</p>`
+        : `<p class="font-sans text-xs text-triba-brown/50">Sin acciones disponibles.</p>`)
       : `<div class="flex flex-wrap gap-2">
           ${pending.map((s: any) => `<button class="act-reconcile rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider min-h-[44px]" data-sub="${s.id}">Activar pago</button>`).join("")}
           ${canCancel ? `<button id="act-cancel" class="rounded-button bg-triba-white text-triba-red border-2 border-triba-red px-4 py-2 font-heading text-xs uppercase tracking-wider min-h-[44px]">Cancelar</button>` : ""}
+          ${scheduledOff && !canCancel ? `<span class="font-sans text-xs text-triba-brown/70 self-center">Baja ya programada al fin del período.</span>` : ""}
           ${canRefund ? `<button id="act-refund" class="rounded-button bg-triba-white text-triba-red border-2 border-triba-red px-4 py-2 font-heading text-xs uppercase tracking-wider min-h-[44px]">Reembolsar</button>` : ""}
         </div>`;
 
@@ -219,8 +224,14 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
         const res = await fetch(`/api/admin/subscribers/${encodeURIComponent(p.id)}/cancel`, { method: "POST" });
         const out = await res.json().catch(() => ({}));
         if (!res.ok) { say(out.error || "Error cancelando", true); return; }
-        say("Suscripción cancelada.", false);
-        setTimeout(() => window.location.reload(), 800);
+        const warns = Array.isArray(out.providerWarnings) ? out.providerWarnings : [];
+        say(
+          [out.message || "Suscripción cancelada.", ...warns].join(" "),
+          false,
+        );
+        (window as any).adminToast?.(out.message || "Suscripción cancelada", "success");
+        if (warns.length > 0) (window as any).adminToast?.(warns.join(". "), "warning");
+        setTimeout(() => window.location.reload(), warns.length > 0 ? 1600 : 800);
       } catch { say("Error de conexión", true); }
       finally { btn.disabled = false; }
     });

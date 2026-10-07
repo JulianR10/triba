@@ -450,8 +450,10 @@ const enHref = switchPath(currentPath, "en");
           Authorization: "Bearer " + session.access_token,
         },
       });
-      var data = await res.json();
-      if (data.ok) {
+      var data = await res.json().catch(function () { return {}; });
+      // Contrato src/lib/response.ts: el éxito lo define el HTTP status,
+      // nunca un flag del cuerpo (data.ok no existe en todos los payloads).
+      if (res.ok) {
         showToast(data.message || "Suscripción cancelada", "success");
         if (data.providerWarnings && data.providerWarnings.length > 0) {
           var warnMsg = "Cancelada en Triba, pero hubo un problema con el proveedor de pago: " + data.providerWarnings.join(". ");

@@ -27,6 +27,7 @@ Suscripción digital + Triba Mail Club (sobre postal mensual), escrita por y par
 - Naming: kebab archivos, PascalCase componentes, camelCase vars
 - Astro scripts SIEMPRE vía `onPageCycle(fn)` de `src/lib/onPageCycle.ts` (`fn()` + `astro:page-load`). No usar solo `addEventListener("astro:page-load")` sin View Transitions nunca dispara → forms sin `preventDefault`.
 - Server routes: `APIRoute`, auth `requireUser`/`requireAdmin`
+- Contrato API `src/lib/response.ts`: éxito = HTTP status (`res.ok` en fronts, nunca flag del cuerpo); `ok(obj)` inyecta `ok:true`; error = `{error}` + status. RPCs que mutan devuelven filas afectadas y el caller verifica (nunca falso `ok`).
 - UI español rioplatense, código/logs inglés
 - Migraciones SQL en `supabase/migrations/`, secuenciales, idempotentes
 - `SITE_URL` única fuente `astro.config.mjs site` → `src/lib/site-url.ts`. Nunca derivar de `request.url` (Vercel = `localhost`).
@@ -37,7 +38,7 @@ Suscripción digital + Triba Mail Club (sobre postal mensual), escrita por y par
 - **Badge única:** `edition_languages.badge` solo en `max(edition_number)`/`featured=true` (hoy #5). Duplicarla causa pill doble. Guard: `syncFeaturedBadges()` (`src/lib/admin/editions.ts`) limpia badges de no-destacadas y completa el default al crear/editar/borrar desde admin.
 - **Upgrades pending:** TTL 60 min (`src/lib/upgrade-recovery.ts`) expira a `failed` antes de insertar; `failed` se re-aplica si el pago confirma (Stripe y MP). Un `pending` solo bloquea mientras dure.
 - **Bienvenida Mail Club:** claim condicional `subscriptions.welcome_sent_at` = at-most-once; si Sender falla se revierte el claim para reintento.
-- **Cancelación/portal:** aceptan `active`/`trialing`/`past_due`/`incomplete`; si el proveedor falla la cancelación responde 502 y NO marca local. Preaprobación MP `cancelled/expired/paused` → `cancel_at_period_end` conservando acceso.
+- **Cancelación/portal:** aceptan `active`/`trialing`/`past_due`/`incomplete`; provider-first en usuaria y admin (si el proveedor falla con error real → 502 y NO marca local; si informa baja ya hecha → marca local + `providerWarnings`). RPC `026` devuelve filas marcadas: 0 = no-op verificado antes de responder (nunca falso `ok`). Preaprobación MP `cancelled/expired/paused` → `cancel_at_period_end` conservando acceso.
 - **`past_due`:** no degrada a `free` (solo `canceled`); el gate corta por estado/fecha y la UI ofrece actualizar medio de pago.
 - **Retención postal 60 días:** `scripts/purge-mail-club-retention.mjs [--real] [--days N]` (dry-run default). Purga snapshots despachados y direcciones sin sub activa.
 - **Dedup 24h:** triggers `015`/`016` (`creator_applications` 1/24h por email; `feedback` mismo user+mensaje/24h) con `pg_advisory_xact_lock(hashtext(...))`. Cuidado `coalesce(col::text,'')` no `coalesce(col,'')` (22P02).
@@ -96,9 +97,9 @@ triba/
 - Admin queda ES.
 
 ## Deuda de tipos
-`npx astro check` → 0 errores · `npm test` → 25/25 · `npm run build` OK (05-Oct-2026: activación MP con pago aprobado aunque preapproval reporte pending + cron reconcile diario + admin con ficha 360°/alertas/simular-lote; migraciones `021–025` aplicadas, precios Stripe EUR/USD verificados por API). Smoke público: `node scripts/smoke-prod.mjs` (12/12). Ver `docs/flujo-funcional.md §6`.
+`npx astro check` → 0 errores · `npm test` → 31/31 · `npm run build` OK (05-Oct-2026: activación MP con pago aprobado aunque preapproval reporte pending + cron reconcile diario + admin con ficha 360°/alertas/simular-lote; migraciones `021–025` aplicadas, precios Stripe EUR/USD verificados por API). Smoke público: `node scripts/smoke-prod.mjs` (12/12). Ver `docs/flujo-funcional.md §6`.
 
-⚠️ `src/lib/database.types.ts` canónico, sincronizado con `supabase/migrations/` (última: `025_recovery_cancel_snapshot.sql`).
+⚠️ `src/lib/database.types.ts` canónico, sincronizado con `supabase/migrations/` (última: `026_cancel_subscription_returns_count.sql`).
 
 Cuentas de prueba: ver `README.md §Accesos de prueba` (digital y Mail Club; no sirven para el portal porque no existen en Stripe).
 

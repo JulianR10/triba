@@ -224,7 +224,8 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
           };
           const meta = (s?.status && STATUS_META[s.status]) || null;
           const statusClass = meta?.cls || "";
-          const statusLabel = meta?.label || "—";
+          const scheduledOff = !!s?.cancel_at_period_end && ["active", "trialing", "past_due", "incomplete"].includes(s?.status);
+          const statusLabel = (meta?.label || "—") + (scheduledOff ? " · baja programada" : "");
           const planLabel = s?.plan_type
             ? `${s.plan_type === "mail_club" ? "Mail Club" : "Digital"}${s?.plan_currency ? ` · ${s.plan_currency}` : ""}`
             : "—";
@@ -232,7 +233,9 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             ? new Date(s.current_period_end).toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
             : "—";
           const canRefund = s?.status === "active" && (s?.provider === "stripe" || s?.provider === "mercadopago");
-          const canCancel = s?.status === "active";
+          // Mismo conjunto cancelable que la API (migración 025 + RPC 026):
+          // ocultar el botón si la baja ya está programada evita no-ops.
+          const canCancel = !!s && ["active", "trialing", "past_due", "incomplete"].includes(s.status) && !s.cancel_at_period_end;
           const cancelBtn = canCancel
             ? `<button class="cancel-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-email="${row.profile.email}">Cancelar</button>`
             : "";
@@ -292,7 +295,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             btn.textContent = original;
             return;
           }
-          (window as any).adminToast?.("Suscripción cancelada", "success");
+          (window as any).adminToast?.(data.message || "Suscripción cancelada", "success");
           if (data.providerWarnings && data.providerWarnings.length > 0) {
             const warnMsg = "Cancelada en la app, pero hubo un problema con el proveedor de pago: " + data.providerWarnings.join(". ");
             (window as any).adminToast?.(warnMsg, "warning");
