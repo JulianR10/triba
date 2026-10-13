@@ -145,7 +145,7 @@ async function activateStripeCandidate(c: ReconcileCandidate): Promise<void> {
 
   if (c.email) {
     syncPaidSubscriber(c.email).catch((err) =>
-      logger.error({ err, email: c.email }, "Sender sync error (reconcile stripe)"),
+      logger.error({ err, userId: c.user_id, subscriptionId: c.subscription_id }, "Sender sync error (reconcile stripe)"),
     );
     try {
       if (c.plan_type === "mail_club") {
@@ -155,7 +155,7 @@ async function activateStripeCandidate(c: ReconcileCandidate): Promise<void> {
         await sendWelcomeEmail(c.email, false, locale);
       }
     } catch (err) {
-      logger.error({ err, email: c.email }, "Welcome email error (reconcile stripe)");
+      logger.error({ err, userId: c.user_id, subscriptionId: c.subscription_id }, "Welcome email error (reconcile stripe)");
     }
   }
 }

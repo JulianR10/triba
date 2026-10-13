@@ -36,6 +36,8 @@ const planLabel = dict.accountMenu.planVia
   .replace("{currency}", sub?.plan_currency ?? "")
   .replace("{provider}", sub?.provider ?? "");
 const expiresLabel = dict.accountMenu.expires.replace("{date}", periodEndLabel);
+const mercadoPagoAccountUrl = "https://www.mercadopago.com.ar/";
+const externalAccountLinkClass = "block w-full text-left font-sans text-xs text-triba-brown hover:text-triba-red hover:underline py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded";
 
 ---
 {
@@ -62,29 +64,41 @@ const expiresLabel = dict.accountMenu.expires.replace("{date}", periodEndLabel);
       </div>
       {
         sub?.provider === "stripe"
-          ? <button type="button" class="manage-sub-btn block w-full text-left font-sans text-xs text-triba-brown hover:text-triba-red hover:underline py-1.5 transition-colors">{dict.accountMenu.manageSubscription}</button>
-          : <p class="font-sans text-[10px] text-triba-brown/50 mb-1">{dict.accountMenu.manageFromMp}</p>
+          ? <button type="button" class="manage-sub-btn block w-full text-left font-sans text-xs text-triba-brown hover:text-triba-red hover:underline py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded">{dict.accountMenu.manageSubscription}</button>
+          : sub?.provider === "mercadopago"
+            ? <div class="mt-2">
+                <p class="font-sans text-[10px] text-triba-brown/70 mb-1">{dict.accountMenu.mpNoPortal}</p>
+                <a href={mercadoPagoAccountUrl} target="_blank" rel="noopener noreferrer" class={externalAccountLinkClass}>{dict.accountMenu.manageFromMp}<span class="sr-only"> ({dict.accountMenu.opensNewTab})</span></a>
+              </div>
+            : <p class="font-sans text-[10px] text-triba-brown/50 mb-1">{dict.accountMenu.manageMigrated}</p>
       }
-      <button type="button" class="cancel-sub-btn block w-full text-left font-sans text-xs text-triba-red hover:underline py-1.5 transition-colors">{dict.accountMenu.cancelSubscription}</button>
+      <button type="button" class="cancel-sub-btn block w-full text-left font-sans text-xs text-triba-red hover:underline py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded">{dict.accountMenu.cancelSubscription}</button>
       <hr class="border-triba-black/10 my-2" />
-      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">{dict.accountMenu.signOut}</button>
+      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded">{dict.accountMenu.signOut}</button>
     </>
   ) : (
     <>
       <p class="font-sans text-xs text-triba-brown/70 mb-2">
         {label}
       </p>
-      {action ? (
-        <button type="button" class="manage-sub-btn block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
+      {action && sub?.provider === "mercadopago" ? (
+        <div>
+          <p class="font-sans text-xs text-triba-brown/70 mb-2">{dict.accountMenu.mpNoPortal}</p>
+          <a href={mercadoPagoAccountUrl} target="_blank" rel="noopener noreferrer" class={externalAccountLinkClass}>
+            {dict.accountMenu.manageFromMp}<span class="sr-only"> ({dict.accountMenu.opensNewTab})</span>
+          </a>
+        </div>
+      ) : action ? (
+        <button type="button" class="manage-sub-btn block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2">
           {action}
         </button>
       ) : (
-        <a href={localizePath("/suscribirme", lang)} class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
+        <a href={localizePath("/suscribirme", lang)} class="block w-full text-center rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-4 py-2 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2">
           {dict.accountMenu.subscribe}
         </a>
       )}
       <hr class="border-triba-black/10 my-2" />
-      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors">{dict.accountMenu.signOut}</button>
+      <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded">{dict.accountMenu.signOut}</button>
     </>
   )
 }

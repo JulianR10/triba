@@ -526,12 +526,29 @@ const miCuentaMessages = {
                   <>
                     <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">{subscriptionInfo.label}</h2>
                     {subscriptionInfo.action ? (
-                      <>
-                        <p class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">{dict.miCuenta.updatePaymentBody}</p>
-                        <button type="button" class="manage-sub-btn rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-8 py-3 font-heading text-base uppercase tracking-wider hover:scale-[1.02] transition-all">
-                          {subscriptionInfo.action}
-                        </button>
-                      </>
+                      subscription?.provider === "mercadopago" ? (
+                        <div class="text-left">
+                          <p class="font-sans text-base text-triba-brown/70 mb-3 leading-relaxed">{dict.miCuenta.updatePaymentBody}</p>
+                          <h3 class="font-heading text-sm uppercase tracking-wider text-triba-brown mb-2">{dict.miCuenta.mpManageTitle}</h3>
+                          <p class="font-sans text-sm text-triba-brown/70 mb-5 leading-relaxed">{dict.miCuenta.mpManageBody}</p>
+                          <a
+                            href="https://www.mercadopago.com.ar/"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            class="inline-flex rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-6 py-3 font-heading text-sm uppercase tracking-wider hover:scale-[1.02] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2"
+                          >
+                            {dict.accountMenu.manageFromMp}
+                            <span class="sr-only"> ({dict.accountMenu.opensNewTab})</span>
+                          </a>
+                        </div>
+                      ) : (
+                        <>
+                          <p class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">{dict.miCuenta.updatePaymentBody}</p>
+                          <button type="button" class="manage-sub-btn rounded-button bg-triba-red text-triba-white border-2 border-triba-black px-8 py-3 font-heading text-base uppercase tracking-wider hover:scale-[1.02] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2">
+                            {subscriptionInfo.action}
+                          </button>
+                        </>
+                      )
                     ) : (
                       <>
                         <p class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">{dict.miCuenta.noSubBody}</p>

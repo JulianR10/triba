@@ -43,6 +43,39 @@ export interface AdminDashboardStats {
 }
 
 export async function getAdminDashboardStats(): Promise<AdminDashboardStats> {
+  // Vista agregada 029: 12 counts en una sola fila (antes: 12 roundtrips).
+  // Sin tipar en database.types a propósito: la vista puede no existir aún
+  // en Supabase y el fallback legacy cubre ese caso.
+  try {
+    const { data, error } = await (supabaseAdmin as any)
+      .from("admin_dashboard_stats")
+      .select("*")
+      .maybeSingle();
+    if (!error && data) {
+      const row = data as any;
+      const num = (v: unknown) => (typeof v === "number" ? v : Number(v) || 0);
+      return {
+        active_subscribers: num(row.active_subscribers),
+        active_digital: num(row.active_digital),
+        active_mail_club: num(row.active_mail_club),
+        pending_payment: num(row.pending_payment),
+        canceled_subscribers: num(row.canceled_subscribers),
+        migrated_subscribers: num(row.migrated_subscribers),
+        editions_total: num(row.editions_total),
+        editions_featured: num(row.editions_featured),
+        feedback_count: num(row.feedback_count),
+        creators_pending: num(row.creators_pending),
+        newsletter_count: num(row.newsletter_count),
+        newsletter_pending_sync: num(row.newsletter_pending_sync),
+      };
+    }
+  } catch {
+    // Vista aún no aplicada en Supabase: usar el cálculo anterior.
+  }
+  return getAdminDashboardStatsLegacy();
+}
+
+async function getAdminDashboardStatsLegacy(): Promise<AdminDashboardStats> {
   const [
     { count: activeSubs },
     { count: activeDigital },

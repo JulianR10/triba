@@ -8,6 +8,9 @@ export function showToast(message: string, type: "success" | "error" | "info" = 
 
   const toast = document.createElement("div");
   toast.className = `triba-toast triba-toast-${type}`;
+  toast.setAttribute("role", type === "error" ? "alert" : "status");
+  toast.setAttribute("aria-live", type === "error" ? "assertive" : "polite");
+  toast.setAttribute("aria-atomic", "true");
   toast.textContent = message;
   container.appendChild(toast);
 

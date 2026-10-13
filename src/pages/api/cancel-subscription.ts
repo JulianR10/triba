@@ -4,6 +4,7 @@ import { ok, error } from "../../lib/response";
 import { supabaseAdmin } from "../../lib/supabase-admin";
 import { getPaymentProvider } from "../../lib/payment-provider";
 import { logger } from "../../lib/logger";
+import { enforceRateLimit } from "../../lib/rate-limit";
 
 // Cancelación diferida: frena la recurrencia en el proveedor y marca el fin
 // del período en la base. Si el proveedor falla con un error real, NO se
@@ -27,6 +28,12 @@ function isAlreadyCanceledProviderError(message: string): boolean {
 }
 
 export const POST: APIRoute = async ({ request }) => {
+  const limited = await enforceRateLimit(request, "cancel-subscription", {
+    maxRequests: 20,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const auth = await requireUser(request, { useAdmin: true });
   if (auth instanceof Response) return auth;
   const user = auth.user;

@@ -5,6 +5,7 @@ import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { getPaymentProvider } from "../../../../../lib/payment-provider";
 import { logAdminAction } from "../../../../../lib/admin/audit";
 import { logger } from "../../../../../lib/logger";
+import { enforceRateLimit } from "../../../../../lib/rate-limit";
 
 export const prerender = false;
 
@@ -20,9 +21,14 @@ function isAlreadyCanceledProviderError(message: string): boolean {
   );
 }
 
-export const POST: APIRoute = async ({ params, locals }) => {
+export const POST: APIRoute = async ({ params, locals, request }) => {
   const admin = requireAdmin(locals);
   if (admin instanceof Response) return admin;
+  const limited = await enforceRateLimit(request, "admin-subscribers", {
+    maxRequests: 60,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
 
   const id = params.id;
   if (!id) return error("ID inválido", 400);

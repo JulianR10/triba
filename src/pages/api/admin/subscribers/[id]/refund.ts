@@ -6,6 +6,7 @@ import { logAdminAction } from "../../../../../lib/admin/audit";
 import { stripe } from "../../../../../lib/stripe";
 import { mpClient } from "../../../../../lib/mercadopago";
 import { PreApproval } from "mercadopago";
+import { enforceRateLimit } from "../../../../../lib/rate-limit";
 
 export const prerender = false;
 
@@ -86,9 +87,14 @@ async function refundMercadoPago(preapprovalId: string): Promise<{ warnings: str
   return { warnings };
 }
 
-export const POST: APIRoute = async ({ params, locals }) => {
+export const POST: APIRoute = async ({ params, locals, request }) => {
   const admin = requireAdmin(locals);
   if (admin instanceof Response) return admin;
+  const limited = await enforceRateLimit(request, "admin-subscribers", {
+    maxRequests: 60,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
 
   const id = params.id;
   if (!id) return error("ID inválido", 400);

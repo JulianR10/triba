@@ -5,6 +5,7 @@ import { supabase } from "../../lib/supabase";
 import { getPaymentProvider } from "../../lib/payment-provider";
 import { logger } from "../../lib/logger";
 import { getSiteOrigin } from "../../lib/site-url";
+import { enforceRateLimit } from "../../lib/rate-limit";
 
 // Estados que pueden llegar al portal: además de active, una suscriptora en
 // dunning (past_due) o con un primer cobro pendiente (incomplete) necesita
@@ -12,6 +13,12 @@ import { getSiteOrigin } from "../../lib/site-url";
 const PORTAL_STATUSES = ["active", "trialing", "past_due", "incomplete"] as const;
 
 export const POST: APIRoute = async ({ request }) => {
+  const limited = await enforceRateLimit(request, "portal", {
+    maxRequests: 20,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;
   const user = auth.user;

@@ -19,7 +19,42 @@ type StripeSubWithPeriod = Stripe.Subscription & {
   current_period_end: number;
 };
 
-function periodRange(sub: Stripe.Subscription) {
+export type LocalSubscriptionStatus =
+  | "active"
+  | "canceled"
+  | "past_due"
+  | "trialing"
+  | "incomplete"
+  | "migrated";
+
+// Mapeo explícito Stripe -> estado local. Los estados que no tienen
+// equivalente se devuelven como "unknown" y el caller los omite con un
+// warn (200, sin reintento): escribir el string crudo rompía el check y
+// generaba tormentas de retry.
+export function mapStripeSubscriptionStatus(status: string): LocalSubscriptionStatus | "unknown" {
+  switch (status) {
+    case "active":
+      return "active";
+    case "trialing":
+      return "trialing";
+    case "past_due":
+      return "past_due";
+    case "incomplete":
+      return "incomplete";
+    case "canceled":
+      return "canceled";
+    case "unpaid":
+      // Cobro vencido sin recupero: equivale a dunning local.
+      return "past_due";
+    case "incomplete_expired":
+      // El pago inicial nunca se completó: la sub no da acceso.
+      return "canceled";
+    default:
+      return "unknown";
+  }
+}
+
+export function periodRange(sub: Stripe.Subscription) {
   // This Stripe account (new billing model) does NOT expose current_period_start/end
   // on the subscription object, so fall back to start_date/created.
   const startSec = (sub as any).current_period_start ?? (sub as any).start_date ?? sub.created;
@@ -196,7 +231,7 @@ export const POST: APIRoute = async ({ request }) => {
 
           if (email) {
             syncPaidSubscriber(email).catch((err) =>
-              logger.error({ err, email }, "Sender sync error (stripe)"),
+              logger.error({ err, userId, subscriptionId: stripeSub.id }, "Sender sync error (stripe)"),
             );
             if (plan === "mail_club") {
               // Solo la primera activación: una fila previa 'incomplete' que
@@ -206,14 +241,14 @@ export const POST: APIRoute = async ({ request }) => {
                 try {
                   await sendMailClubActivation(userId, email);
                 } catch (err) {
-                  logger.error({ err, email }, "Mail Club welcome email error (stripe)");
+                  logger.error({ err, userId, subscriptionId: stripeSub.id }, "Mail Club welcome email error (stripe)");
                 }
               }
             } else {
               getPreferredLocale(userId).then((locale) =>
                 sendWelcomeEmail(email, false, locale),
               ).catch((err) =>
-                logger.error({ err, email }, "Welcome email error (stripe)"),
+                logger.error({ err, userId, subscriptionId: stripeSub.id }, "Welcome email error (stripe)"),
               );
             }
           }
@@ -290,12 +325,12 @@ export const POST: APIRoute = async ({ request }) => {
         }
         if (email) {
           syncPaidSubscriber(email).catch((err) =>
-            logger.error({ err, email }, "Sender sync error (stripe invoice)"),
+            logger.error({ err, userId, subscriptionId: (row as any).id }, "Sender sync error (stripe invoice)"),
           );
           try {
             await sendMailClubActivation(userId, email);
           } catch (err) {
-            logger.error({ err, email }, "Mail Club welcome email error (stripe invoice)");
+            logger.error({ err, userId, subscriptionId: (row as any).id }, "Mail Club welcome email error (stripe invoice)");
           }
         }
         break;
@@ -304,6 +339,13 @@ export const POST: APIRoute = async ({ request }) => {
       case "customer.subscription.updated":
       case "customer.subscription.deleted": {
         const sub = event.data.object as StripeSubWithPeriod;
+        const mappedStatus = mapStripeSubscriptionStatus(sub.status);
+        if (mappedStatus === "unknown") {
+          // Sin equivalente local (p. ej. "paused"): no se escribe nada para
+          // no corromper la fila; 200 para no reintentar en loop.
+          logger.warn({ status: sub.status, providerSubscriptionId: sub.id }, "stripe unknown subscription status — skipping");
+          break;
+        }
         const period = periodRange(sub);
 
         // Sincroniza el plan desde el precio vigente: al completarse un
@@ -321,7 +363,7 @@ export const POST: APIRoute = async ({ request }) => {
         // El downgrade programado se completa cuando el precio pasa a digital;
         // con precio Mail Club vigente NO se tocan los flags programados.
         await supabaseAdmin.from("subscriptions").update({
-          status: sub.status as "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated",
+          status: mappedStatus,
           cancel_at_period_end: !!(sub as any).cancel_at_period_end,
           ...(planFromPrice ? { plan_type: planFromPrice } : {}),
           ...(planFromPrice === "digital"
@@ -334,8 +376,9 @@ export const POST: APIRoute = async ({ request }) => {
 
         // past_due NO revoca el acceso ni el rol: Stripe reintenta el cobro y
         // el gate ya corta por estado/fecha. Solo la cancelación definitiva
-        // (deleted) libera el perfil.
-        if (sub.status === "canceled") {
+        // libera el perfil, y únicamente si no queda otra suscripción con
+        // acceso (una usuaria puede tener varias filas).
+        if (mappedStatus === "canceled") {
           const { data: existing } = await supabaseAdmin
             .from("subscriptions")
             .select("user_id")
@@ -344,11 +387,30 @@ export const POST: APIRoute = async ({ request }) => {
             .maybeSingle();
 
           if (existing) {
-        await supabaseAdmin.from("profiles").update({
-            role: "free",
-            subscription_id: null,
-            updated_at: new Date().toISOString(),
-          }).eq("id", existing.user_id);
+            const userId = (existing as any).user_id as string;
+            const { data: fallback } = await supabaseAdmin
+              .from("subscriptions")
+              .select("id, status")
+              .eq("user_id", userId)
+              .neq("provider_subscription_id", sub.id)
+              .in("status", ["active", "migrated"])
+              .order("created_at", { ascending: false })
+              .limit(1)
+              .maybeSingle();
+
+            if (fallback) {
+              await supabaseAdmin.from("profiles").update({
+                role: "subscriber",
+                subscription_id: (fallback as any).id,
+                updated_at: new Date().toISOString(),
+              }).eq("id", userId);
+            } else {
+              await supabaseAdmin.from("profiles").update({
+                role: "free",
+                subscription_id: null,
+                updated_at: new Date().toISOString(),
+              }).eq("id", userId);
+            }
           }
         }
 

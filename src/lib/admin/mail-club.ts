@@ -54,15 +54,20 @@ export async function listMailClubBatches(): Promise<MailClubBatchSummary[]> {
     .select("id, period_year, period_month, cutoff_at, dispatched_at, status")
     .order("period_year", { ascending: false })
     .order("period_month", { ascending: false });
-  const out: MailClubBatchSummary[] = [];
-  for (const b of (batches as any[]) || []) {
-    const { count } = await supabaseAdmin
-      .from("mail_club_batch_items")
-      .select("id", { count: "exact", head: true })
-      .eq("batch_id", b.id);
-    out.push({ ...b, item_count: count || 0 });
+  const rows = (batches as any[]) || [];
+  if (rows.length === 0) return [];
+  // Un solo query para todos los conteos (antes: un count por lote).
+  const batchIds = rows.map((b) => b.id as string);
+  const { data: items } = await supabaseAdmin
+    .from("mail_club_batch_items")
+    .select("batch_id")
+    .in("batch_id", batchIds);
+  const counts = new Map<string, number>();
+  for (const it of (items as any[]) || []) {
+    const id = it.batch_id as string;
+    counts.set(id, (counts.get(id) || 0) + 1);
   }
-  return out;
+  return rows.map((b) => ({ ...b, item_count: counts.get(b.id as string) || 0 }));
 }
 
 interface SkippedRow {
@@ -98,39 +103,66 @@ export async function listMailClubEligible(
 ): Promise<{ eligible: MailClubEligibleRow[]; skipped: SkippedRow[] }> {
   const { data: subs } = await supabaseAdmin
     .from("subscriptions")
-    .select("id, user_id, plan_currency, status")
+    .select("id, user_id, plan_currency, status, created_at")
     .eq("plan_type", "mail_club")
     .eq("status", "active")
     .or(`current_period_start.is.null,current_period_start.lte.${cutoff}`)
     .gte("current_period_end", cutoff);
 
+  const rows = (subs as any[]) || [];
+  if (rows.length === 0) return { eligible: [], skipped: [] };
+
+  // Loteo de lecturas por usuario (antes: 3-4 queries por suscripción + 3 por fecha de alta).
+  const userIds = [...new Set(rows.map((s) => s.user_id as string))];
+  const [{ data: profiles }, { data: addrs }, { data: founders }, { data: upgrades }] =
+    await Promise.all([
+      supabaseAdmin.from("profiles").select("id, email").in("id", userIds),
+      supabaseAdmin
+        .from("mailing_addresses")
+        .select("user_id, recipient_name, country_iso, region, city, postal_code, street_address, address_extra")
+        .in("user_id", userIds),
+      supabaseAdmin
+        .from("mail_club_founders")
+        .select("user_id, founder_number, first_confirmed_at")
+        .in("user_id", userIds),
+      supabaseAdmin
+        .from("mail_club_upgrades")
+        .select("user_id, updated_at")
+        .in("user_id", userIds)
+        .eq("status", "recurrence_updated")
+        .order("updated_at", { ascending: true }),
+    ]);
+
+  const emailByUser = new Map(((profiles as any[]) || []).map((p) => [p.id as string, (p as any).email as string]));
+  const addrByUser = new Map(((addrs as any[]) || []).map((a) => [(a as any).user_id as string, a]));
+  const founderByUser = new Map(
+    ((founders as any[]) || []).map((f) => [(f as any).user_id as string, f]),
+  );
+  const firstUpgradeByUser = new Map<string, string>();
+  for (const up of (upgrades as any[]) || []) {
+    const uid = (up as any).user_id as string;
+    if (!firstUpgradeByUser.has(uid)) firstUpgradeByUser.set(uid, (up as any).updated_at as string);
+  }
+  const createdBySub = new Map(rows.map((s) => [s.id as string, (s as any).created_at as string]));
+
   const eligible: MailClubEligibleRow[] = [];
   const skipped: SkippedRow[] = [];
 
-  for (const s of (subs as any[]) || []) {
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email")
-      .eq("id", s.user_id)
-      .maybeSingle();
-    const email = (profile as any)?.email || "";
-    const { data: addr } = await supabaseAdmin
-      .from("mailing_addresses")
-      .select("recipient_name, country_iso, region, city, postal_code, street_address, address_extra")
-      .eq("user_id", s.user_id)
-      .maybeSingle();
+  for (const s of rows) {
+    const email = emailByUser.get(s.user_id as string) || "";
+    const addr = addrByUser.get(s.user_id as string);
     if (!addr) {
       skipped.push({ email, reason: "sin dirección postal" });
       continue;
     }
-    const { data: founder } = await supabaseAdmin
-      .from("mail_club_founders")
-      .select("founder_number")
-      .eq("user_id", s.user_id)
-      .maybeSingle();
+    const founder = founderByUser.get(s.user_id as string);
 
     const zone = resolveMailClubZone((addr as any).country_iso).zone;
-    const joinedAt = await resolveMailClubJoinedAt(s.user_id, s.id);
+    const joinedAt =
+      (founder as any)?.first_confirmed_at ||
+      firstUpgradeByUser.get(s.user_id as string) ||
+      createdBySub.get(s.id as string) ||
+      "";
     eligible.push({
       user_id: s.user_id,
       subscription_id: s.id,
@@ -172,14 +204,25 @@ export async function listMailClubPendingNotices(limitBatches = 6): Promise<Mail
     .order("period_month", { ascending: false })
     .limit(limitBatches);
   const out: MailClubPendingNotice[] = [];
-  for (const b of (batches as any[]) || []) {
-    const { data: items } = await supabaseAdmin
-      .from("mail_club_batch_items")
-      .select("email")
-      .eq("batch_id", b.id)
-      .eq("notice_sent", false)
-      .limit(200);
-    const emails = [...new Set(((items as any[]) || []).map((i) => i.email).filter(Boolean))];
+  const batchRows = (batches as any[]) || [];
+  if (batchRows.length === 0) return out;
+  // Un solo query para todos los pendientes (antes: uno por lote).
+  const batchIds = batchRows.map((b) => b.id as string);
+  const { data: items } = await supabaseAdmin
+    .from("mail_club_batch_items")
+    .select("batch_id, email")
+    .in("batch_id", batchIds)
+    .eq("notice_sent", false)
+    .limit(limitBatches * 200);
+  const emailsByBatch = new Map<string, string[]>();
+  for (const it of (items as any[]) || []) {
+    if (!(it as any).email) continue;
+    const arr = emailsByBatch.get((it as any).batch_id as string) ?? [];
+    arr.push((it as any).email as string);
+    emailsByBatch.set((it as any).batch_id as string, arr);
+  }
+  for (const b of batchRows) {
+    const emails = [...new Set(emailsByBatch.get(b.id as string) ?? [])].slice(0, 200);
     if (emails.length > 0) {
       out.push({ batch_id: b.id, period_year: b.period_year, period_month: b.period_month, pending_emails: emails });
     }
@@ -411,45 +454,65 @@ export interface MailClubBatchItemView {
 }
 
 // Fecha de alta Mail Club: fundación > upgrade confirmado > creación de la sub.
-async function resolveMailClubJoinedAt(userId: string, subscriptionId: string | null): Promise<string> {
-  const { data: founder } = await supabaseAdmin
-    .from("mail_club_founders")
-    .select("first_confirmed_at")
-    .eq("user_id", userId)
-    .maybeSingle();
-  if ((founder as any)?.first_confirmed_at) {
-    return (founder as any).first_confirmed_at as string;
+// Loteo para detalle/CSV de lotes viejos (los actuales ya traen joined_at/sub_status congelados).
+async function resolveMailClubJoinedAtBatch(
+  pairs: { userId: string; subscriptionId: string | null }[],
+): Promise<Map<string, string>> {
+  const out = new Map<string, string>();
+  const userIds = [...new Set(pairs.map((p) => p.userId).filter(Boolean))];
+  const subIds = [...new Set(pairs.map((p) => p.subscriptionId).filter((id): id is string => !!id))];
+  if (userIds.length === 0 && subIds.length === 0) return out;
+  const [{ data: founders }, { data: upgrades }, { data: subs }] = await Promise.all([
+    userIds.length > 0
+      ? supabaseAdmin.from("mail_club_founders").select("user_id, first_confirmed_at").in("user_id", userIds)
+      : Promise.resolve({ data: [] as any[] }),
+    userIds.length > 0
+      ? supabaseAdmin
+          .from("mail_club_upgrades")
+          .select("user_id, updated_at")
+          .in("user_id", userIds)
+          .eq("status", "recurrence_updated")
+          .order("updated_at", { ascending: true })
+      : Promise.resolve({ data: [] as any[] }),
+    subIds.length > 0
+      ? supabaseAdmin.from("subscriptions").select("id, user_id, created_at").in("id", subIds)
+      : Promise.resolve({ data: [] as any[] }),
+  ]);
+  const firstConfirmedByUser = new Map(
+    ((founders as any[]) || []).map((f) => [(f as any).user_id as string, (f as any).first_confirmed_at as string]),
+  );
+  const firstUpgradeByUser = new Map<string, string>();
+  for (const up of (upgrades as any[]) || []) {
+    const uid = (up as any).user_id as string;
+    if (!firstUpgradeByUser.has(uid)) firstUpgradeByUser.set(uid, (up as any).updated_at as string);
   }
-  const { data: up } = await supabaseAdmin
-    .from("mail_club_upgrades")
-    .select("updated_at")
-    .eq("user_id", userId)
-    .eq("status", "recurrence_updated")
-    .order("updated_at", { ascending: true })
-    .limit(1)
-    .maybeSingle();
-  if ((up as any)?.updated_at) {
-    return (up as any).updated_at as string;
+  const createdBySub = new Map(((subs as any[]) || []).map((s) => [(s as any).id as string, (s as any).created_at as string]));
+  const createdByUser = new Map<string, string>();
+  for (const s of (subs as any[]) || []) {
+    const uid = (s as any).user_id as string;
+    if (uid && !createdByUser.has(uid)) createdByUser.set(uid, (s as any).created_at as string);
   }
-  if (subscriptionId) {
-    const { data: sub } = await supabaseAdmin
-      .from("subscriptions")
-      .select("created_at")
-      .eq("id", subscriptionId)
-      .maybeSingle();
-    return (sub as any)?.created_at || "";
+  for (const { userId, subscriptionId } of pairs) {
+    const key = `${userId}|${subscriptionId ?? ""}`;
+    out.set(
+      key,
+      firstConfirmedByUser.get(userId) ||
+        firstUpgradeByUser.get(userId) ||
+        (subscriptionId ? createdBySub.get(subscriptionId) : undefined) ||
+        createdByUser.get(userId) ||
+        "",
+    );
   }
-  return "";
+  return out;
 }
 
-async function resolveLiveStatus(subscriptionId: string | null): Promise<string> {
-  if (!subscriptionId) return "";
-  const { data: sub } = await supabaseAdmin
-    .from("subscriptions")
-    .select("status")
-    .eq("id", subscriptionId)
-    .maybeSingle();
-  return (sub as any)?.status || "";
+async function resolveLiveStatusBatch(subscriptionIds: (string | null)[]): Promise<Map<string, string>> {
+  const ids = [...new Set(subscriptionIds.filter((id): id is string => !!id))];
+  const out = new Map<string, string>();
+  if (ids.length === 0) return out;
+  const { data: subs } = await supabaseAdmin.from("subscriptions").select("id, status").in("id", ids);
+  for (const s of (subs as any[]) || []) out.set((s as any).id as string, (s as any).status || "");
+  return out;
 }
 
 // Detalle de un lote para pantalla: snapshot congelado + fecha de alta.
@@ -461,8 +524,19 @@ export async function listMailClubBatchItems(batchId: string): Promise<MailClubB
     .select("*")
     .eq("batch_id", batchId)
     .order("email", { ascending: true });
+  const rows = (items as any[]) || [];
+  const missingJoined = rows.filter((it) => !it.joined_at);
+  const missingLive = rows.filter((it) => !it.sub_status && it.subscription_id);
+  const [joinedByKey, liveBySub] = await Promise.all([
+    missingJoined.length > 0
+      ? resolveMailClubJoinedAtBatch(missingJoined.map((it) => ({ userId: it.user_id, subscriptionId: it.subscription_id })))
+      : Promise.resolve(new Map<string, string>()),
+    missingLive.length > 0
+      ? resolveLiveStatusBatch(missingLive.map((it) => it.subscription_id))
+      : Promise.resolve(new Map<string, string>()),
+  ]);
   const out: MailClubBatchItemView[] = [];
-  for (const it of (items as any[]) || []) {
+  for (const it of rows) {
     const snap = (it.address_snapshot as any) || {};
     out.push({
       id: it.id,
@@ -481,8 +555,8 @@ export async function listMailClubBatchItems(batchId: string): Promise<MailClubB
         postal_code: snap.postal_code || "",
         country_iso: snap.country_iso || "",
       },
-      joined_at: it.joined_at || (await resolveMailClubJoinedAt(it.user_id, it.subscription_id)),
-      live_status: it.sub_status || (await resolveLiveStatus(it.subscription_id)),
+      joined_at: it.joined_at || joinedByKey.get(`${it.user_id}|${it.subscription_id ?? ""}`) || "",
+      live_status: it.sub_status || liveBySub.get(it.subscription_id) || "",
     });
   }
   return out;
@@ -501,11 +575,22 @@ export async function exportMailClubBatchCSV(batchId: string): Promise<string> {
   ].join(",");
 
   const lines: string[] = [];
-  for (const it of (items as any[]) || []) {
+  const rows = (items as any[]) || [];
+  const missingJoinedCsv = rows.filter((it) => !it.joined_at);
+  const missingLiveCsv = rows.filter((it) => !it.sub_status && it.subscription_id);
+  const [joinedCsvByKey, liveCsvBySub] = await Promise.all([
+    missingJoinedCsv.length > 0
+      ? resolveMailClubJoinedAtBatch(missingJoinedCsv.map((it) => ({ userId: it.user_id, subscriptionId: it.subscription_id })))
+      : Promise.resolve(new Map<string, string>()),
+    missingLiveCsv.length > 0
+      ? resolveLiveStatusBatch(missingLiveCsv.map((it) => it.subscription_id))
+      : Promise.resolve(new Map<string, string>()),
+  ]);
+  for (const it of rows) {
     const snap = (it.address_snapshot as any) || {};
     // Preferir el snapshot congelado; los lotes viejos (pre-025) caen a vivo.
-    const joinedAt = it.joined_at || (await resolveMailClubJoinedAt(it.user_id, it.subscription_id));
-    const liveStatus = it.sub_status || (await resolveLiveStatus(it.subscription_id));
+    const joinedAt = it.joined_at || joinedCsvByKey.get(`${it.user_id}|${it.subscription_id ?? ""}`) || "";
+    const liveStatus = it.sub_status || liveCsvBySub.get(it.subscription_id) || "";
     lines.push(
       [
         snap.recipient_name, snap.street_address, snap.address_extra, snap.city,

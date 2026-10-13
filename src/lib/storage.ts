@@ -1,4 +1,7 @@
 import { supabaseAdmin } from "./supabase-admin";
+import type { EditionFileKind } from "./storage-validation";
+
+export { FILE_RULES, type EditionFileKind } from "./storage-validation";
 
 const BUCKET = "editions";
 const STORAGE_URL_PREFIX = `/storage/v1/object/public/${BUCKET}/`;
@@ -18,23 +21,10 @@ export function getPublicUrl(path: string): string {
   return `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${path}`;
 }
 
-export type EditionFileKind = "cover" | "pdf";
-
 export function fileExt(name: string): string {
   const i = name.lastIndexOf(".");
   return i >= 0 ? name.slice(i + 1).toLowerCase() : "";
 }
-
-export const FILE_RULES: Record<EditionFileKind, { maxBytes: number; mime: RegExp }> = {
-  cover: {
-    maxBytes: 5 * 1024 * 1024,
-    mime: /^image\/(jpeg|png|webp|avif)$/,
-  },
-  pdf: {
-    maxBytes: 50 * 1024 * 1024,
-    mime: /^application\/pdf$/,
-  },
-};
 
 export interface UploadResult {
   url: string;

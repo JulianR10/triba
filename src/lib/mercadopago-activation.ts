@@ -220,7 +220,7 @@ export async function activateSubscription({
       .eq("id", userId)
       .is("email", null);
     if (emailErr) {
-      logger.warn({ err: emailErr, userId, email }, "[MP] failed updating null email");
+      logger.warn({ err: emailErr, userId }, "[MP] failed updating null email");
     }
   }
 
@@ -241,19 +241,19 @@ export async function activateSubscription({
 
   if (email) {
     syncPaidSubscriber(email).catch((err) =>
-      logger.error({ err, email }, "Sender sync error (mercadopago)"),
+      logger.error({ err, userId }, "Sender sync error (mercadopago)"),
     );
     if (plan === "mail_club") {
       try {
         await sendMailClubActivation(userId, email);
       } catch (err) {
-        logger.error({ err, email }, "Mail Club welcome email error (mercadopago)");
+        logger.error({ err, userId }, "Mail Club welcome email error (mercadopago)");
       }
     } else {
       getPreferredLocale(userId).then((locale) =>
         sendWelcomeEmail(email, false, locale),
       ).catch((err) =>
-        logger.error({ err, email }, "Welcome email error (mercadopago)"),
+        logger.error({ err, userId }, "Welcome email error (mercadopago)"),
       );
     }
   }

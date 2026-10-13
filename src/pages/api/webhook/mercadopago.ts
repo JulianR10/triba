@@ -81,7 +81,7 @@ async function lookUpUserIdByEmail(email: string): Promise<string | null> {
       page += 1;
     }
   } catch (err: any) {
-    logger.error({ err, email }, "[MP webhook] lookUpUserIdByEmail error");
+    logger.error({ err, hasEmail: Boolean(email) }, "[MP webhook] lookUpUserIdByEmail error");
   }
   return null;
 }
@@ -127,7 +127,7 @@ async function handlePreApprovalEvent(preapprovalId: string): Promise<void> {
     userId = await lookUpUserIdByEmail(email || "");
   }
   if (!userId) {
-    logger.warn({ preapprovalId, email }, "[MP webhook] subscription without resolvable user — skipping");
+    logger.warn({ preapprovalId, hasEmail: Boolean(email) }, "[MP webhook] subscription without resolvable user — skipping");
     return;
   }
 
@@ -221,7 +221,7 @@ async function handleAuthorizedPaymentEvent(dataId: string): Promise<void> {
     userId = await lookUpUserIdByEmail(email || "");
   }
   if (!userId) {
-    logger.warn({ preapprovalId, email }, "[MP webhook] approved payment without resolvable user — skipping");
+    logger.warn({ preapprovalId, paymentId, hasEmail: Boolean(email) }, "[MP webhook] approved payment without resolvable user — skipping");
     return;
   }
 

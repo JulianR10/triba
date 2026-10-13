@@ -10,12 +10,18 @@ import {
 } from "../../../../lib/admin/editions";
 import { logAdminAction } from "../../../../lib/admin/audit";
 import { logger } from "../../../../lib/logger";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const admin = requireAdmin(locals);
   if (admin instanceof Response) return admin;
+  const limited = await enforceRateLimit(request, "admin-editions", {
+    maxRequests: 60,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
 
   let fd: FormData;
   try {

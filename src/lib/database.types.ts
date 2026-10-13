@@ -161,33 +161,6 @@ export interface Database {
           }
         ];
       };
-      edition_pages: {
-        Row: {
-          id: number;
-          edition_id: number;
-          page_number: number;
-          image_url: string;
-          alt_text: string;
-          created_at: string;
-        };
-        Insert: {
-          id?: number;
-          edition_id: number;
-          page_number: number;
-          image_url: string;
-          alt_text: string;
-          created_at?: string;
-        };
-        Update: {
-          id?: number;
-          edition_id?: number;
-          page_number?: number;
-          image_url?: string;
-          alt_text?: string;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
       newsletters: {
         Row: {
           id: string;

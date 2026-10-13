@@ -3,11 +3,18 @@ import { requireUser } from "../../lib/auth";
 import { ok, error } from "../../lib/response";
 import { supabaseAdmin } from "../../lib/supabase-admin";
 import { logger } from "../../lib/logger";
+import { enforceRateLimit } from "../../lib/rate-limit";
 
 const RATE_LIMIT_MS = 60_000;
 const MAX_MESSAGE_LENGTH = 2000;
 
 export const POST: APIRoute = async ({ request }) => {
+  const limited = await enforceRateLimit(request, "feedback", {
+    maxRequests: 15,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;
   const user = auth.user;

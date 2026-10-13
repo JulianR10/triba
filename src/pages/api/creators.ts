@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { supabaseAdmin } from "../../lib/supabase-admin";
 import { ok, error } from "../../lib/response";
 import { logger } from "../../lib/logger";
-import { checkRateLimit, rateLimitKey } from "../../lib/rate-limit";
+import { enforceRateLimit } from "../../lib/rate-limit";
 
 const MAX_LENGTH = {
   nombre: 120,
@@ -14,17 +14,11 @@ const MAX_LENGTH = {
 const AREAS = ["Escritura", "Producción", "Fotografía", "Diseño gráfico", "Arte", "Otros"];
 
 export const POST: APIRoute = async ({ request }) => {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("cf-connecting-ip") ||
-    "unknown";
-  const rl = await checkRateLimit(rateLimitKey(ip, "creators"), {
+  const limited = await enforceRateLimit(request, "creators", {
     maxRequests: 3,
     windowMs: 60_000,
   });
-  if (!rl.allowed) {
-    return error("Demasiados intentos. Esperá un momento.", 429);
-  }
+  if (limited) return limited;
 
   let body: {
     nombre?: unknown;
@@ -79,7 +73,7 @@ export const POST: APIRoute = async ({ request }) => {
     if (insertError.code === "23505") {
       return error("Ya te postulaste recientemente. Esperá 24 horas para volver a intentar.", 429);
     }
-    logger.error({ err: insertError, email }, "creator application insert error");
+    logger.error({ err: insertError }, "creator application insert error");
     return error("No se pudo enviar la postulación. Intentalo de nuevo.", 500);
   }
 

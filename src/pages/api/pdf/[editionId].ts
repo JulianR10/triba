@@ -5,6 +5,7 @@ import { error } from "../../../lib/response";
 import { extractStoragePath } from "../../../lib/storage";
 import { isActiveSubscription } from "../../../lib/subscription-status";
 import { logger } from "../../../lib/logger";
+import { enforceRateLimit } from "../../../lib/rate-limit";
 
 const BUCKET = "editions";
 
@@ -24,6 +25,12 @@ interface VersionWithIssue {
 }
 
 export const GET: APIRoute = async ({ params, request, url, locals }) => {
+  const limited = await enforceRateLimit(request, "pdf", {
+    maxRequests: 120,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const id = Number(params.editionId);
   if (!Number.isInteger(id)) {
     return error("ID inválido", 400);

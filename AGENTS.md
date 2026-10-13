@@ -1,109 +1,38 @@
-# TRIBA — Revista digital mensual
+# Instrucciones de desarrollo — TRIBA
 
-Suscripción digital + Triba Mail Club (sobre postal mensual), escrita por y para mujeres. Detalle de análisis: `docs/flujo-funcional.md`. Estado operativo y pendientes: `mailClub.md` · Runbook de pagos: `PASOSPAGOS.md`.
+Contexto operativo: [`mailClub.md`](./mailClub.md). Mapa funcional temporal: [`docs/flujo-funcional.md`](./docs/flujo-funcional.md).
 
-## Stack
-| Capa | Tecnología |
-|---|---|
-| Framework | Astro 5 (`@astrojs/vercel`) |
-| Estilos | Tailwind CSS 3, mobile-first |
-| BBDD / Auth / Storage | Supabase |
-| Pagos | Stripe + Mercado Pago (webhooks) |
-| Newsletter + Email | Sender (send.net) API v2 |
-| Visor PDF | `react-pdf` v10, React island `client:only` |
+## Stack y estilo
 
-## Visual
-- Colores: `triba-red #E91A39` · `triba-pink #FFCCE4` · `triba-cream #FFF8EE` · `triba-green #BCE85E` · `triba-brown #35220A` · `triba-bone #f2f1eb` · `triba-white` · `triba-black`
-- Tipos: Bootzy TM (displays) · Montserrat (body) · Times New Roman itálica (cursivas)
-- Fondos: `fondo-cielo.webp`, `fondo-1.png`, `fondo-3.png`
+- Astro 5 SSR en Vercel; Tailwind 3; Supabase; Stripe y Mercado Pago; Sender; visor PDF con React.
+- Naming: archivos kebab-case, componentes PascalCase, variables camelCase. UI en español rioplatense; código y logs en inglés.
+- Colores: `triba-red #E91A39`, `triba-pink #FFCCE4`, `triba-cream #FFF8EE`, `triba-green #BCE85E`, `triba-brown #35220A`.
 
-## Navegación
-| Rol | Items |
-|---|---|
-| Público | INICIO · MAIL CLUB · REVISTA · SUSCRIBIRME · TRIBA CREATORS · INICIAR SESION |
-| Suscriptora | INICIO · MAIL CLUB · REVISTA · TRIBA CREATORS (+ botón "MI CUENTA" → dropdown) |
+## Convenciones obligatorias
 
-## Convenciones
-- Naming: kebab archivos, PascalCase componentes, camelCase vars
-- Astro scripts SIEMPRE vía `onPageCycle(fn)` de `src/lib/onPageCycle.ts` (`fn()` + `astro:page-load`). No usar solo `addEventListener("astro:page-load")` sin View Transitions nunca dispara → forms sin `preventDefault`.
-- Server routes: `APIRoute`, auth `requireUser`/`requireAdmin`
-- Contrato API `src/lib/response.ts`: éxito = HTTP status (`res.ok` en fronts, nunca flag del cuerpo); `ok(obj)` inyecta `ok:true`; error = `{error}` + status. RPCs que mutan devuelven filas afectadas y el caller verifica (nunca falso `ok`).
-- UI español rioplatense, código/logs inglés
-- Migraciones SQL en `supabase/migrations/`, secuenciales, idempotentes
-- `SITE_URL` única fuente `astro.config.mjs site` → `src/lib/site-url.ts`. Nunca derivar de `request.url` (Vercel = `localhost`).
-- En Astro no evaluar `{expr}` en `<script>` (queda literal). Usar `<script type="application/json" set:html={JSON.stringify(...)}>` o `data-*`.
+- Scripts de página Astro se inicializan mediante `onPageCycle(fn)` para funcionar con y sin View Transitions.
+- Endpoints: `APIRoute`; usar `requireUser`/`requireAdmin` y el contrato de `src/lib/response.ts` (éxito por HTTP `res.ok`, error `{error}` + status).
+- Migraciones secuenciales e idempotentes en `supabase/migrations/`; mantener `src/lib/database.types.ts` sincronizado.
+- `SITE_URL` se define desde `astro.config.mjs` y `src/lib/site-url.ts`; no derivarlo de `request.url` en Vercel.
+- No interpolar `{expr}` en scripts HTML de Astro: usar `set:html`, JSON embebido o `data-*`.
+- Si se modifica un flujo de pago, cubrir reintentos/idempotencia y validar `npm run check`, `npm test` y `npm run build`.
 
-## Quirks clave — no reintroducir
-- `--nav-height`: `Navbar` con `ResizeObserver`; secciones `padding-top: max(1rem, var(--nav-height))`. Excepción `MyAccountPage` `pt-0 md:pt-[max(...)]` en mobile.
-- **Badge única:** `edition_languages.badge` solo en `max(edition_number)`/`featured=true` (hoy #5). Duplicarla causa pill doble. Guard: `syncFeaturedBadges()` (`src/lib/admin/editions.ts`) limpia badges de no-destacadas y completa el default al crear/editar/borrar desde admin.
-- **Upgrades pending:** TTL 60 min (`src/lib/upgrade-recovery.ts`) expira a `failed` antes de insertar; `failed` se re-aplica si el pago confirma (Stripe y MP). Un `pending` solo bloquea mientras dure.
-- **Bienvenida Mail Club:** claim condicional `subscriptions.welcome_sent_at` = at-most-once; si Sender falla se revierte el claim para reintento.
-- **Cancelación/portal:** aceptan `active`/`trialing`/`past_due`/`incomplete`; provider-first en usuaria y admin (si el proveedor falla con error real → 502 y NO marca local; si informa baja ya hecha → marca local + `providerWarnings`). RPC `026` devuelve filas marcadas: 0 = no-op verificado antes de responder (nunca falso `ok`). Preaprobación MP `cancelled/expired/paused` → `cancel_at_period_end` conservando acceso.
-- **`past_due`:** no degrada a `free` (solo `canceled`); el gate corta por estado/fecha y la UI ofrece actualizar medio de pago.
-- **Retención postal 60 días:** `scripts/purge-mail-club-retention.mjs [--real] [--days N]` (dry-run default). Purga snapshots despachados y direcciones sin Mail Club activo/vigente ni `past_due` recuperable; ante error al consultar suscripciones conserva la dirección.
-- **Dedup 24h:** triggers `015`/`016` (`creator_applications` 1/24h por email; `feedback` mismo user+mensaje/24h) con `pg_advisory_xact_lock(hashtext(...))`. Cuidado `coalesce(col::text,'')` no `coalesce(col,'')` (22P02).
-- **PDFViewer:** `client:only="react"` obligatorio (DOMMatrix en Node). Import ESTÁTICO `react-pdf` + `workerUrl` de `pdfjs-dist/build/pdf.worker.min.mjs?url`. No `client:visible`, no `import("react-pdf")` dinámico, no `vite.optimizeDeps` excluyendo react-pdf. Lazy `useIsVisible`. Carga: watchdog 25s + `isExpiredError(msg, age)` → `expired` muestra `Recargar página` (`location.reload()` regenera 30m) vs `Reintentar` (`retryKey`) para transitorios. `lang` prop ES/EN. Agrandar = SIEMPRE overlay portal `fixed inset-0 z-[80]` (NO Fullscreen API nativa: mover el nodo al portal sale de fullscreen y el botón parece no hacer nada). Cierre por botón/Escape vía `collapse()` (+`resetInline`).
-- Rate limiting: tabla `rate_limits`.
-- MP sin portal: `/api/portal` devuelve `{note}` → `alert()`.
-- **Webhook MP:** siempre `WebhookSignatureValidator` del SDK, sin `toleranceSeconds`. Self-healing: activar también desde `subscription_authorized_payment` aprobado (`external_reference` → userId, fallback email vía `authorized_payments/search` → `v1/payments/{id}`). `activateSubscription()` = upsert `onConflict:provider,provider_subscription_id` + `profiles` explícito + cancela `migrated`. Welcome/Sender solo si sub nueva. URL: `https://www.universotriba.com/api/webhook/mercadopago`. Resolución en `resolveAuthorizedPayment()` (`src/lib/mercadopago-activation.ts`): cubre `data.id` = pago o authorized_payment y pagos aprobados SIN `preapproval_id` (link por `external_reference` a la única `incomplete` del user; con 0 o 2+ no adivina → reconcile). Gate de estado SOLO para evento preapproval (`isActivationBlocked`, pago aprobado siempre activa).
-- **Webhook Stripe:** URL debe ser `https://www.universotriba.com/api/webhook/stripe` (`www`, no apex 308). Sin `current_period_start/end` → `periodRange()` fallback `start_date ?? created` +30d.
-- **Cron diario:** `GET /api/cron/reconcile` (`vercel.json`, `CRON_SECRET` obligatorio en Vercel) activa pagos aprobados `incomplete` vía `src/lib/reconcile.ts` y envía recordatorios Mail Club el 14 (crear lote) y 19 (despacho), usando `Europe/Madrid` e idempotencia en `mail_club_reminders`. `past_due` queda excluido de reconcile. "Crear lote" avisa si hay candidatos pendientes (activar-y-continuar / crear-igual).
-- **Sin ISR:** todo SSR on-demand. `security.checkOrigin: false` en `astro.config.mjs` (Astro 5 + Vercel → 403 en POST `multipart/form-data`; la app usa JSON vía fetch).
+## Invariantes que no deben romperse
 
-## Auth
-- Página `/iniciar-sesion`; post-login `?redirect` o `role` (admin→`/admin`). Middleware protege `/admin*` y centraliza gate de suscripción (`src/middleware.ts` → `App.Locals` `profile+subscription+hasActiveSub` vía `isActiveSubscription(status, current_period_end)`; `Navbar`/`MyAccountPage`/`MagazinePage`/`/api/pdf` prefieren `locals` con fallback — ver `src/env.d.ts`).
-- Email confirm OFF; duplicado → `identities:0` → "Ya existe una cuenta".
-- SMTP Supabase = Sender (solo reset, límite 2/h).
-- Checkout sin sesión: `checkout-intent` TTL 24h (`src/lib/checkout-intent.ts`) → `flushPendingCheckout` en `SubscribePage`.
-- **Gate = `isActiveSubscription(status, current_period_end)`** de `src/lib/subscription-status.ts` (`active` o `migrated` vigente). Siempre usarlo; nunca `=== "active"` manual.
+- Gate de suscripción: siempre `isActiveSubscription(status, current_period_end)`; `past_due` no degrada el perfil a `free`.
+- Cancelación y portal: proveedor primero; un error real del proveedor no debe marcar la baja local. `cancel_subscription` devuelve filas afectadas y el caller verifica el resultado.
+- Upgrade pendiente: TTL 60 minutos; un solo `pending` por usuaria. Bienvenida Mail Club: claim condicional `welcome_sent_at`, at-most-once con rollback si Sender falla.
+- Mail Club: elegibilidad y dirección se congelan al corte; el despacho no revalida el estado vivo. Número de fundadora consecutivo, inmutable y sin tope.
+- Badges: `edition_languages.badge` solo en la edición destacada; mantener `syncFeaturedBadges()` al crear, editar o borrar.
+- Ediciones: los archivos grandes se suben directo a Storage con URL firmada; tras el PUT, el servidor verifica tamaño, MIME y firma antes de guardar. Limpiar si falla; no pasarlos por Vercel.
+- `security.checkOrigin: false` es intencional con Astro/Vercel y las rutas multipart; no cambiarlo sin probar los formularios admin.
+- Webhook MP: validar con `WebhookSignatureValidator` del SDK, sin tolerancia propia. Stripe: estados mapeados por `mapStripeSubscriptionStatus` (desconocidos se omiten sin reintento; `deleted` solo libera el perfil sin otra sub con acceso); no sustituir períodos reales por `+30 días` sin revisar la fuente.
+- Rate limiting (`src/lib/rate-limit.ts`, tabla `rate_limits`): fail-closed con 503, claves IPv6-safe vía `enforceRateLimit`. Cubierto en formularios/checkouts, PDF, cuenta y mutaciones admin; webhooks excluidos a propósito y el login vive en Supabase Auth.
+- PDFViewer: `client:only="react"`; import estático de `react-pdf` y worker `pdfjs-dist/...mjs?url`; ampliar mediante overlay portal, nunca Fullscreen API.
+- Cron y webhooks requieren secreto/firma. Consultar `mailClub.md` para estado y pasos antes de tocar producción.
 
-## Admin
-- Promover: `update profiles set role='admin' where email='...'`.
-- Nueva edición `/admin/ediciones/nuevo`: portada ≤5MB, PDF ≤50MB, featured única. Validación `src/lib/admin/editions.ts`.
-- Cancelar `/admin/suscriptoras` → RPC `cancel_subscription`. Reembolsar → `POST /api/admin/subscribers/[id]/refund` + `admin_audit_log`.
-- **Upload directo (no por Vercel 4.5MB):** `EditionForm` → `POST /api/admin/uploads/sign` → `createSignedUploadUrl(path,{upsert:true})` → `PUT` directo (`Content-Type` solo) → `POST/PATCH` edición con URLs. Si `PUT` OK y `POST/PATCH` falla (400/409), cleanup fire-and-forget `POST /api/admin/uploads/cleanup {paths}` → `removeStoragePaths` (`src/lib/storage.ts`). Barrido de huérfanos históricos: `node --env-file=.env scripts/cleanup-orphan-storage.mjs [--real]` (dry-run default, idempotente).
-- Notificar edición: `POST /api/admin/editions/[id]/notify` → `role=subscriber` (devuelve `{failures:[{email,error}]}` + retry filtrado `POST {emails}`).
-- Migradas: tab `status=migrated` + stats `totalMigrated`/`totalPending`/`totalRefunded`.
-- Dashboard `newsletter_pending_sync` = `sender_synced=false` → card + banner en `/admin`.
+## UI, navegación e i18n
 
-## Revista bilingüe (ES/EN)
-- Modelo: `editions` (ejemplar) + `edition_languages` (versión `es|en`, UNIQUE edition_id+language). `editions` solo `id, edition_number, kind, featured, published_at`. Contenido en `edition_languages`. Migración `019` ya dropeó `title/cover/pdf/badge` de `editions`; añade `profiles.preferred_locale`.
-- Helpers `src/lib/editions.ts` (`getEditions(lang)` etc.) devuelven `EditionView` con `isFallback/hasEn`. Siempre usarlos.
-- `/api/pdf/{id}` acepta `edition_languages.id` o `editions.id` legacy + `?lang`.
-- Admin form manda `es_*/en_*`; EN vacío = sin versión EN. Paths `pdfs/revista-{n}-{lang}.pdf`, `covers/edicion-{n}-{lang}-{ts}.ext`.
-- Tipos `database.types.ts` canónico, sincronizado con migraciones.
-- Emails por `preferred_locale` (`src/lib/email.ts`, `src/lib/locale-pref.ts`, `notify.ts`).
-
-## Estructura
-```
-triba/
-├── public/ · supabase/migrations/ · src/{components, layouts, lib(+admin), middleware.ts, pages, scripts}
-├── astro.config.mjs · tailwind.config.mjs
-```
-
-## Newsletter / Sender (retirado del público)
-- `POST /api/newsletter` responde **410**: el newsletter gratuito se retiró como producto. La tabla `newsletters`, el grupo `newsletter-gratuito` y la automatización de Sender se conservan solo para exportar/borrar la lista histórica al lanzamiento (`scripts/export-newsletters.mjs`, solo lectura).
-- Emails transaccionales (bienvenida, pagos, Mail Club) siguen activos vía Sender.
-- Sender API v2 `Bearer`, `POST /subscribers` con `groups` en una llamada, `POST /message/send` transaccional. Cliente `src/lib/sender.ts` reintenta `429/5xx` con backoff. Failures `sender_synced=false` visibles en dashboard + `scripts/resync-newsletters.mjs`.
-- Grupos `newsletter-gratuito`/`suscriptora-paga`. `SENDER_FROM_EMAIL: hola@comunidadtriba.com` (plan free 429 a nivel cuenta).
-
-## Migración WooCommerce
-- 92 pagos Stripe en `subscriber_migrations` (`handle_new_user` → `migrated` 7d). 6 MP preaprobaciones viejas vía `scripts/import-migrated-mp.mjs`. Ver detalle en `docs/flujo-funcional.md`.
-
-## i18n
-- `astro.config.mjs i18n` `es` default sin prefijo, `en` con `/en/`. Rutas FÍSICAS `src/pages/en/*.astro` → componente compartido `<X lang>`, no `[lang]`.
-- `src/i18n/ui.ts` dict tipado + `src/i18n/locale.ts` `EN_ROUTES/localizePath/switchPath`. `locals.locale` desde middleware (`getLocaleFromUrl` + cookie `triba_locale`).
-- Switcher `Navbar` `data-locale-switcher` + cookie `triba_locale`. Links internos vía `localizePath`. `404.astro` locale-aware. Data a scripts por `data-*`.
-- Admin queda ES.
-
-## Deuda de tipos
-`npx astro check` → 0 errores · `npm test` → 34/34 · `npm run build` OK (05-Oct-2026: activación MP con pago aprobado aunque preapproval reporte pending + cron reconcile diario + admin con ficha 360°/alertas/simular-lote; migraciones `021–025` aplicadas, precios Stripe EUR/USD verificados por API). Smoke público: `node scripts/smoke-prod.mjs` (12/12). Ver `docs/flujo-funcional.md §6`.
-
-⚠️ `src/lib/database.types.ts` canónico, sincronizado con `supabase/migrations/` (última añadida: `028_unbounded_mail_club_founder_numbers.sql`; aplicar `027–028` en Supabase antes del deploy).
-
-Cuentas de prueba: ver `README.md §Accesos de prueba` (digital y Mail Club; no sirven para el portal porque no existen en Stripe).
-
-Lecciones:
-- Siempre `onPageCycle(fn)` (sin View Transitions `astro:page-load` no dispara).
-- `NodeListOf.forEach` tipar `querySelectorAll<HTMLDetailsElement>`, no param `HTMLElement`; `<details>.open` → `HTMLDetailsElement`.
-- No `HTML*Attribute` en `.astro`; unión literal en `Props`. Custom props: `as HTMLElement & {_x?:T}`. Narrowing no propaga a closures → usar `!`.
+- Navbar mide `--nav-height` con `ResizeObserver`; conservar espaciado superior y la excepción móvil de Mi Cuenta.
+- Rutas EN físicas en `src/pages/en/`; usar `localizePath`/`switchPath`. Admin queda en español.
+- Al agregar una ruta bilingüe, revisar canonical, `hreflang`, sitemap y textos ES/EN.

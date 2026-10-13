@@ -4,12 +4,18 @@ import { ok, error } from "../../../../../lib/response";
 import { supabaseAdmin } from "../../../../../lib/supabase-admin";
 import { sendNewEditionEmail } from "../../../../../lib/email";
 import { logger } from "../../../../../lib/logger";
+import { enforceRateLimit } from "../../../../../lib/rate-limit";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ params, locals, request }) => {
   const admin = requireAdmin(locals);
   if (admin instanceof Response) return admin;
+  const limited = await enforceRateLimit(request, "admin-notify", {
+    maxRequests: 30,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
 
   // Optional body { emails: string[] } to retry only failed ones — backward compat: no body = all
   let filterEmails: Set<string> | null = null;
@@ -68,7 +74,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
 
   const { data: rows, error: subsError } = await supabaseAdmin
     .from("profiles")
-    .select("email, preferred_locale")
+    .select("id, email, preferred_locale")
     .eq("role", "subscriber");
 
   if (subsError) {
@@ -77,7 +83,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
   }
 
   const all = rows ?? [];
-  const allWithEmail = all.filter((s): s is { email: string; preferred_locale: "es" | "en" } =>
+  const allWithEmail = all.filter((s): s is { id: string; email: string; preferred_locale: "es" | "en" } =>
     typeof s.email === "string" && s.email.length > 0
   );
   const noEmail = all.length - allWithEmail.length;
@@ -111,7 +117,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
       failed++;
       const msg = err instanceof Error ? err.message : String(err);
       failures.push({ email: sub.email, error: msg });
-      logger.error({ err, email: sub.email, editionId }, "Failed to notify subscriber");
+      logger.error({ err, subscriberId: sub.id, editionId }, "Failed to notify subscriber");
     }
   }
 

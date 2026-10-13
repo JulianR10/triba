@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger";
 import { validateMailClubAddress, saveMailClubAddress } from "../../lib/mail-club-address";
 import { getActiveSubscriptionForUser } from "../../lib/subscription-guard";
 import { getPlanType, isBeforeCutoffThisMonth } from "../../lib/mail-club";
+import { enforceRateLimit } from "../../lib/rate-limit";
 
 // Lee (GET) y actualiza (PUT) la dirección postal de una suscriptora Mail Club.
 // Los cambios rigen hasta el corte del 15 inclusive; después, al mes siguiente.
@@ -22,6 +23,12 @@ export const GET: APIRoute = async ({ request }) => {
 };
 
 export const PUT: APIRoute = async ({ request }) => {
+  const limited = await enforceRateLimit(request, "address", {
+    maxRequests: 30,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;
   const user = auth.user;

@@ -4,6 +4,7 @@ import { ok, error } from "../../../../lib/response";
 import { logger } from "../../../../lib/logger";
 import { logAdminAction } from "../../../../lib/admin/audit";
 import { purgeMailClubRetention } from "../../../../lib/admin/mail-club";
+import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 export const prerender = false;
 
@@ -24,6 +25,11 @@ export const GET: APIRoute = async ({ request, locals }) => {
 export const POST: APIRoute = async ({ request, locals }) => {
   const admin = requireAdmin(locals);
   if (admin instanceof Response) return admin;
+  const limited = await enforceRateLimit(request, "admin-mail-club", {
+    maxRequests: 60,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
   let body: { days?: unknown };
   try {
     body = await request.json().catch(() => ({}));

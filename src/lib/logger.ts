@@ -7,7 +7,14 @@ export const logger = pino({
       return { level: label };
     },
   },
-  redact: ["req.headers.authorization", "req.headers.cookie"],
+  redact: [
+    "req.headers.authorization",
+    "req.headers.cookie",
+    "email",
+    "*.email",
+    "to",
+    "*.to",
+  ],
   ...(import.meta.env.DEV
     ? {
         transport: {

@@ -90,7 +90,7 @@ export async function applyUpgrade(upgradeId: string): Promise<{ applied: boolea
     const email = (profile as any)?.email as string | undefined;
     if (email) {
       syncPaidSubscriber(email).catch((err) =>
-        logger.error({ err, email }, "Sender sync error (upgrade)"),
+        logger.error({ err, userId, upgradeId }, "Sender sync error (upgrade)"),
       );
       await sendMailClubActivation(userId, email);
     }

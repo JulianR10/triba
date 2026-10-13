@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { requireUser } from "../../lib/auth";
 import { ok, error } from "../../lib/response";
 import { getPaymentProvider } from "../../lib/payment-provider";
-import { checkRateLimit, rateLimitKey } from "../../lib/rate-limit";
+import { enforceRateLimit } from "../../lib/rate-limit";
 import { logger } from "../../lib/logger";
 import { getSiteOrigin } from "../../lib/site-url";
 import { supabaseAdmin } from "../../lib/supabase-admin";
@@ -18,17 +18,11 @@ const validPlans = ["digital", "mail_club"] as const;
 type Plan = (typeof validPlans)[number];
 
 export const POST: APIRoute = async ({ request }) => {
-  const ip =
-    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
-    request.headers.get("cf-connecting-ip") ||
-    "unknown";
-  const rl = await checkRateLimit(rateLimitKey(ip, "create-checkout"), {
+  const limited = await enforceRateLimit(request, "create-checkout", {
     maxRequests: 10,
     windowMs: 60_000,
   });
-  if (!rl.allowed) {
-    return error("Demasiados intentos. Esperá un momento.", 429);
-  }
+  if (limited) return limited;
 
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;

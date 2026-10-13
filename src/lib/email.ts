@@ -112,7 +112,7 @@ export async function sendWelcomeEmail(
   try {
     await sendEmail(to, locale === "en" ? "Welcome to Triba!" : "¡Bienvenida a Triba!", welcomeHtml(showCta, locale));
   } catch (err) {
-    logger.error({ err, to }, "Sender welcome email error");
+    logger.error({ err }, "Sender welcome email error");
     throw err;
   }
 }
@@ -125,7 +125,7 @@ export async function sendMailClubWelcomeEmail(
   try {
     await sendEmail(to, locale === "en" ? "Welcome to the Triba Mail Club ✉️" : "Bienvenida al Mail Club ✉️", mailClubWelcomeHtml(data, locale, SITE_URL));
   } catch (err) {
-    logger.error({ err, to }, "Sender mail club welcome email error");
+    logger.error({ err }, "Sender mail club welcome email error");
     throw err;
   }
 }
@@ -204,7 +204,7 @@ export async function sendDispatchNoticeEmail(
   try {
     await sendEmail(to, locale === "en" ? "Your Triba envelope is on its way ✉️" : "Tu sobre de Triba está en camino ✉️", mailClubDispatchHtml(data, locale));
   } catch (err) {
-    logger.error({ err, to }, "Sender dispatch notice email error");
+    logger.error({ err }, "Sender dispatch notice email error");
     throw err;
   }
 }
@@ -295,7 +295,7 @@ export async function sendNewEditionEmail(
   try {
     await sendEmail(to, subject, newEditionHtml(edition, locale));
   } catch (err) {
-    logger.error({ err, to, edition }, "Sender new edition email error");
+    logger.error({ err, editionId: edition.id, editionNumber: edition.edition_number }, "Sender new edition email error");
     throw err;
   }
 }
