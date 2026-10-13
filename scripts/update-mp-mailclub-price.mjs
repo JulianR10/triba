@@ -26,6 +26,7 @@
  *   PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, MP_ACCESS_TOKEN
  */
 import { createClient } from "@supabase/supabase-js";
+import { csvCell } from "../src/lib/csv-cell.mjs";
 
 const MP_BASE = "https://api.mercadopago.com";
 
@@ -73,12 +74,6 @@ async function mpPut(path, body) {
     throw new Error(`MP ${res.status} PUT ${path}: ${(await res.text()).slice(0, 200)}`);
   }
   return res.json();
-}
-
-function csvCell(s) {
-  const v = s === null || s === undefined ? "" : String(s);
-  const neutralized = /^[=+\-@\t\r]/.test(v) ? `'${v}` : v;
-  return /[",\n\r]/.test(v) || neutralized !== v ? `"${neutralized.replace(/"/g, '""')}"` : neutralized;
 }
 
 const { data: subs, error } = await supabase

@@ -1,0 +1,23 @@
+# Triba
+
+> Triba es una revista digital mensual escrita por y para mujeres, sobre cultura, arte, identidad y comunidad. También publica Triba Mail Club, un sobre postal mensual.
+
+El sitio está disponible en español y en inglés. Las páginas públicas explican el proyecto, sus ediciones y sus opciones de suscripción.
+
+## Páginas públicas
+
+- Inicio: https://www.universotriba.com/
+- Revista: https://www.universotriba.com/revista
+- Mail Club: https://www.universotriba.com/mail-club
+- Suscripciones: https://www.universotriba.com/suscribirme
+- Triba Creators: https://www.universotriba.com/triba-creators
+- Privacidad: https://www.universotriba.com/privacidad
+- Términos: https://www.universotriba.com/terminos
+- English home: https://www.universotriba.com/en/
+- English magazine: https://www.universotriba.com/en/revista
+
+## Descubrimiento
+
+- Sitemap: https://www.universotriba.com/sitemap.xml
+
+Las cuentas, el contenido de suscripción y las rutas administrativas no son páginas públicas.

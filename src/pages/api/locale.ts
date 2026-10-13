@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { requireUser } from "../../lib/auth";
 import { ok, error } from "../../lib/response";
 import { supabaseAdmin } from "../../lib/supabase-admin";
+import { logger } from "../../lib/logger";
 
 export const prerender = false;
 
@@ -28,7 +29,7 @@ export const POST: APIRoute = async ({ request }) => {
     .eq("id", user.id);
 
   if (updateError) {
-    console.error(`[locale] update error for ${user.id}:`, updateError);
+    logger.error({ err: updateError, userId: user.id, locale }, "[locale] update error");
     return error(updateError.message, 500);
   }
 

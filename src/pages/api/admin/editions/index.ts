@@ -9,6 +9,7 @@ import {
   syncFeaturedBadges,
 } from "../../../../lib/admin/editions";
 import { logAdminAction } from "../../../../lib/admin/audit";
+import { logger } from "../../../../lib/logger";
 
 export const prerender = false;
 
@@ -47,7 +48,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
           .update({ featured: false })
           .eq("featured", true);
         if (featError) {
-          console.error("[editions.create] unset-featured error:", featError);
+          logger.error({ err: featError }, "[editions.create] unset-featured error");
         }
       }
     }
@@ -63,7 +64,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .single();
 
     if (insertError) {
-      console.error("[editions.create] insert error:", insertError);
+      logger.error({ err: insertError }, "[editions.create] insert error");
       return error(insertError.message, 500);
     }
 
@@ -85,7 +86,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       );
 
     if (langError) {
-      console.error("[editions.create] languages insert error:", langError);
+      logger.error({ err: langError }, "[editions.create] languages insert error");
       return error(langError.message, 500);
     }
 
@@ -108,7 +109,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     return ok({ id: issue.id });
   } catch (e) {
-    console.error("[editions.create] unexpected error:", e);
+    logger.error({ err: e }, "[editions.create] unexpected error");
     return error(e instanceof Error ? e.message : "Error inesperado al crear la edición", 500);
   }
 };

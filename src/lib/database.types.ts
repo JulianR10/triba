@@ -578,6 +578,42 @@ export interface Database {
         };
         Relationships: [];
       };
+      mail_club_reminders: {
+        Row: {
+          period_year: number;
+          period_month: number;
+          reminder_type: "create_batch" | "dispatch_batch";
+          admin_user_id: string;
+          status: "pending" | "sending" | "sent";
+          claimed_at: string | null;
+          sent_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          period_year: number;
+          period_month: number;
+          reminder_type: "create_batch" | "dispatch_batch";
+          admin_user_id: string;
+          status?: "pending" | "sending" | "sent";
+          claimed_at?: string | null;
+          sent_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          period_year?: number;
+          period_month?: number;
+          reminder_type?: "create_batch" | "dispatch_batch";
+          admin_user_id?: string;
+          status?: "pending" | "sending" | "sent";
+          claimed_at?: string | null;
+          sent_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;

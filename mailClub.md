@@ -56,7 +56,7 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 - [x] **Alta digital validada.** El servidor rechaza combinaciones proveedor/moneda inválidas (Stripe solo EUR/USD, Mercado Pago solo ARS).
 - [x] **`past_due` no degrada de inmediato.** Stripe `past_due` mantiene rol y mensaje de “actualizá tu medio de pago”; solo `canceled` libera el perfil.
 - [x] **Renovación MP más estable.** El período se extiende desde el vencimiento vigente (no desde “ahora”) y los webhooks repetidos no vuelven a extenderlo.
-- [x] **Retención 60 días operativa.** `scripts/purge-mail-club-retention.mjs` (dry-run por defecto, `--real`, `--days N`) purga snapshots despachados y direcciones sin suscripción activa.
+- [x] **Retención 60 días operativa.** `scripts/purge-mail-club-retention.mjs` (dry-run por defecto, `--real`, `--days N`) purga snapshots despachados y conserva direcciones de suscripciones Mail Club activas/vigentes o `past_due` recuperables.
 - [x] **Nueva API pública.** `isBeforeCutoffThisMonth()` en `src/lib/mail-club.ts`, con test (suite 25/25).
 
 ### Cierre 03-oct-2026 (noche)
@@ -70,10 +70,14 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 
 - [x] **Pagos aprobados que no activaban (caso real).** Una suscriptora Mail Club MP pagó ARS 16.000 y quedó en `incomplete` con perfil `free`: dos bugs encadenados — (1) gate de estado incondicional en `activateSubscription` (bloqueaba aunque el pago estuviera aprobado), (2) `/v1/payments` no devuelve `preapproval_id` y el handler lo exigía. Fix: `isActivationBlocked` (pago aprobado siempre activa) + `resolveAuthorizedPayment()` (cubre `data.id` = pago o authorized_payment; link por `external_reference` a la única `incomplete`, con 0 o 2+ va a reconcile) + tests de regresión (suite 25/25). Curada vía replay del evento contra el código deployado: sub `active`, fundadora #7, bienvenida enviada.
 - [x] **Reconciliación automática diaria.** `GET /api/cron/reconcile` (`vercel.json` 07:00 UTC, `CRON_SECRET` obligatorio en Vercel) activa `incomplete` con pago aprobado (MP + Stripe, `past_due` excluido) vía `src/lib/reconcile.ts` — la misma fn del endpoint admin, el botón de la ficha y el aviso pre-lote. "Crear lote" avisa si hay candidatos (activar-y-continuar / crear-igual).
+- [x] **Recordatorios operativos del Mail Club.** El mismo cron diario envía un aviso idempotente a admins el 14 (crear lote) y el 19 (despacho); solo recuerda, no crea ni despacha automáticamente.
 - [x] **Admin para propietarias.** Ficha 360° mobile-first (`/admin/suscriptoras/[id]`, link desde el email de la tabla); suscriptoras con plan real (Digital/Mail Club), estados (`Pendiente de pago`, `Pago fallido`), filtros por plan, buscador global en header y skeleton de carga; Mail Club con alerta de activas sin dirección, simulación de lote (dry-run), checklist + countdown al corte/despacho (Madrid), avisos de despacho con reintento, purga de retención 60 días con dry-run, y dashboard con alertas accionables. Retirados: vista Actividad (queda solo el registro) y migración manual WooCommerce (quedan los datos históricos).
 
 ### Pendiente actual
 
+- [ ] Aplicar las migraciones `027_mail_club_reminder_delivery.sql` y `028_unbounded_mail_club_founder_numbers.sql` en Supabase antes del deploy. `CRON_SECRET` habilita tanto la conciliación como los recordatorios del 14/19.
+
+- [ ] **`CRON_SECRET` falta en Vercel Production** (detectado 05-oct-2026: `GET /api/cron/reconcile` responde 500 "Cron misconfigured"). Sin la variable, no corren ni la conciliación ni los recordatorios del 14/19. Fix: generar string aleatorio → Vercel `triba` → Settings → Env Vars → `CRON_SECRET` con alcance Production → redeploy. Verificar después con `curl https://www.universotriba.com/api/cron/reconcile` → debe dar 401 (no 500).
 - [ ] Repetir la verificación interactiva del teaser plegable del upgrade: expandir, contraer, foco, etiquetas ES/EN y `aria-expanded`.
 - [ ] Cobros reales EUR/USD/ARS con webhooks, conciliados o reembolsados.
 - [ ] Validar el portal de gestión con suscripciones creadas por checkout real, no con fixtures manuales.
@@ -130,14 +134,15 @@ Este documento resume las decisiones vigentes y el orden recomendado para el upg
 - El corte es el **día 15 inclusive hasta las 23:59:59, hora de España**. Alta o upgrade con pago confirmado hasta ese instante recibe el sobre del mes en curso; después del corte, el primero corresponde al mes siguiente.
 - Para entrar en el lote, la suscripción debe estar activa y efectivamente pagada/vigente al corte. Un checkout iniciado o un pago pendiente no alcanza.
 - El despacho se realiza el día 20 de cada mes. La dirección puede actualizarse desde Mi Cuenta hasta el corte; el cambio posterior afecta al siguiente envío.
-- Crear un lote mensual con snapshot inmutable de elegibilidad y dirección. Cambios de perfil posteriores al corte no alteran las etiquetas ya preparadas; repetir una operación del lote no duplica destinatarias.
+- El cron diario existente recuerda crear el lote el día 14 y registrar el despacho el 19. Son avisos internos; no crean ni despachan lotes automáticamente.
+- Crear un lote mensual con snapshot inmutable de elegibilidad y dirección. Cambios de perfil posteriores al corte no alteran las etiquetas ya preparadas; repetir una operación del lote no duplica destinatarias. Decisión confirmada: el corte define quién recibe el sobre; el despacho posterior no revalida el estado vivo de la suscripción.
 - Envíos gratuitos a todo el mundo, por correo ordinario, sin tracking. Plazos informativos desde el despacho: España 3–7 días; resto de Europa 1–2 semanas; Argentina y resto del mundo 3–6 semanas. Si no llega, se contempla reposición según las condiciones finales aprobadas.
 - Administración registra manualmente la salida del lote. Solo al registrar el despacho se envía el email de aviso correspondiente.
-- Retener dirección/snapshot postal durante **60 días** para coincidir con la ventana de reposición; reflejarlo de forma coherente en la política de privacidad.
+- Retener snapshots postales durante **60 días** para coincidir con la ventana de reposición. Conservar además la dirección actual mientras haya una suscripción activa y vigente o `past_due` recuperable.
 
 ### Numeración de socias fundadoras
 
-- Las primeras 100 altas confirmadas de Mail Club reciben un número de fundadora único.
+- Cada alta confirmada de Mail Club recibe un número de fundadora único consecutivo, sin tope: después del 100 continúa 101, 102 y así sucesivamente.
 - Cuenta tanto el alta nueva como el primer upgrade digital→Mail Club. Se asigna una sola vez al confirmarse el primer pago de Mail Club.
 - El número queda asociado para siempre a la persona: no se sobrescribe al cambiar de plan, volver a Mail Club o cancelar; tampoco se reutiliza.
 - Pagos fallidos/pendientes no reservan número. La asignación debe ser transaccional e idempotente ante eventos concurrentes o webhooks repetidos.
@@ -306,7 +311,7 @@ Comparativo exhaustivo ES+EN. Estado: `hecho` / `pendiente` (+ `dueña` si requi
 - Downgrade a digital al fin del período (`src/pages/api/downgrade.ts`) + cancelación existente.
 - Fecha de corte visible pre-pago (15/20) en tarjeta, upgrade, FAQs y página.
 - Casilla de condiciones exigida en servidor (alta y upgrade; edición de dirección la omite).
-- Dirección editable desde Mi Cuenta (`PUT /api/address`); fundadoras 1–100 inmutables.
+- Dirección editable desde Mi Cuenta (`PUT /api/address`); numeración de fundadoras consecutiva e inmutable, sin tope.
 - Términos: 10 puntos ES+EN (`src/components/TermsPage.astro:80-97,164-181`), con los dos
   mails del PDF (reposición `universotriba@`, desistimiento `comunidadtriba@`).
 - Privacidad: dirección postal, finalidad limitada, retención 30 días + 60 días por envío.

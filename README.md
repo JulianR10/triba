@@ -25,23 +25,27 @@ Ver `.env.example`. Requeridas: Supabase (`PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABAS
 | Comando | Uso |
 |---|---|
 | `npm run dev` | Dev server |
+| `npm run check` | Type-check de Astro |
+| `npm test` | Tests unitarios |
 | `npm run build` | Build producción |
 | `npm run preview` | Sirve build local |
 
-## Scripts operativos
+El inventario completo, con scripts operativos, migraciones históricas y utilidades retiradas, está en [`scripts/README.md`](./scripts/README.md). No ejecutar scripts marcados como históricos/deprecados sin revisar primero su alcance y el estado actual de producción.
+
+## Scripts operativos frecuentes
 
 | Script | Uso |
 |---|---|
+| `node --env-file=.env scripts/prelaunch-check.mjs` | Chequeo local de configuración (solo lectura) |
+| `node scripts/smoke-prod.mjs` | Smoke test público después de un deploy |
 | `node --env-file=.env scripts/cleanup-orphan-storage.mjs [--real]` | Barrido de archivos huérfanos en Storage (dry-run default) |
-| `node --env-file=.env scripts/resync-newsletters.mjs [--all\|--email=x]` | Re-sincroniza newsletters con `sender_synced=false` a Sender |
-| `node --env-file=.env scripts/reconcile-mp-subscribers.mjs [--real]` | Activa retroactivamente pagadores MP sin acceso (histórico; hoy lo cubren el cron diario `/api/cron/reconcile` y el botón admin) |
-| `node --env-file=.env scripts/recreate-migrated-billing.mjs [--dry-run]` | Recrea el cobro automático de las migradas (idempotente) |
-| `node --env-file=.env scripts/import-wp-subscribers.mjs <csv>` | Importa suscriptores de WooCommerce a `subscriber_migrations` + Sender |
-| `node --env-file=.env scripts/fix-admin.mjs <email> '<password>'` | Promueve admin / fix de acceso |
+| `node --env-file=.env scripts/cleanup-mp-pending.mjs [--real]` | Cancela intentos MP abandonados (dry-run default) |
+| `node --env-file=.env scripts/purge-mail-club-retention.mjs [--real] [--days 60]` | Retención postal (dry-run default) |
+| `node --env-file=.env scripts/resync-newsletters.mjs [--all\|--email=x]` | Re-sincroniza pendientes históricos de newsletter con Sender |
 | `node --env-file=.env scripts/update-mp-mailclub-price.mjs --amount <ARS> [--real] [--list-emails]` | Actualización trimestral ARS de preaprobaciones MP (dry-run default, aviso 30 días) |
-| `node --env-file=.env scripts/purge-mail-club-retention.mjs [--real] [--days 60]` | Retención postal: purga snapshots y direcciones vencidas (dry-run default) |
-| `node --env-file=.env scripts/send-mailclub-preview.mjs --email=<destino> [--dry]` | Preview/envío de la bienvenida Mail Club con la plantilla real de producción |
-| `node scripts/smoke-prod.mjs` | Smoke test de producción (home, Suscribirme, Mail Club, legales y consola) |
+| `node --env-file=.env scripts/send-mailclub-preview.mjs --email=<destino> --dry` | Preview local del email real (sin envío) |
+
+`create-test-subscriber.mjs`, `fix-admin.mjs`, `resend-welcome.mjs` y el envío real del preview son acciones manuales sensibles; ver las guardas en [`scripts/README.md`](./scripts/README.md).
 
 ## Accesos de prueba
 

@@ -33,7 +33,7 @@ const backLink = {
 const subscribeHref = localizePath("/suscribirme", lang);
 ---
 
-<div class="card-flip relative aspect-[3/4] cursor-pointer">
+<div class="card-flip relative aspect-[3/4]">
   <div class="card-flip-inner relative w-full h-full">
     <div class={`card-flip-front absolute inset-0 ${rounded} overflow-hidden border-2 border-triba-black shadow-md`}>
       <img src={image} alt={alt} loading="lazy" class="w-full h-full object-cover" />
@@ -44,7 +44,7 @@ const subscribeHref = localizePath("/suscribirme", lang);
       )}
     </div>
     <div class={`card-flip-back absolute inset-0 ${rounded} border-2 border-triba-black flex flex-col items-center justify-center ${pad} text-center ${flipColor}`}>
-      <p class={`font-sans ${backTextClass} ${textSize} leading-relaxed text-balance`}>{backLink.prefix} <a href={subscribeHref} class="font-bold underline hover:text-triba-red transition-colors">{backLink.word}</a></p>
+      <p class={`font-sans ${backTextClass} ${textSize} leading-relaxed text-balance`}>{backLink.prefix} <a href={subscribeHref} class="font-bold underline hover:text-triba-red transition-colors focus-visible:outline-2 focus-visible:outline-triba-red focus-visible:outline-offset-4">{backLink.word}</a></p>
     </div>
   </div>
 </div>
@@ -68,5 +68,14 @@ const subscribeHref = localizePath("/suscribirme", lang);
   }
   .card-flip:hover .card-flip-inner {
     transform: rotateY(180deg);
+  }
+  .card-flip:focus-within .card-flip-inner {
+    transform: rotateY(180deg);
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .card-flip-inner {
+      transition: none;
+    }
   }
 </style>

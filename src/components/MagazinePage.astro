@@ -191,7 +191,7 @@ const ctaSubscribe = localizePath("/suscribirme", lang);
     var ctaAccount = section?.getAttribute("data-cta-account") || "/mi-cuenta";
     var ctaSubscribe = section?.getAttribute("data-cta-subscribe") || "/suscribirme";
     var coverAltTpl = section?.getAttribute("data-cover-alt") || "Portada de {title}";
-    var carousel = document.querySelector("[data-carousel]")!;
+    var carousel = document.querySelector<HTMLElement>("[data-carousel]");
 
     var featuredEl = document.querySelector("[data-featured]") as HTMLElement | null;
     var currentId = featuredEl ? parseInt(featuredEl.dataset.editionId || "0") : 0;
@@ -219,7 +219,7 @@ const ctaSubscribe = localizePath("/suscribirme", lang);
     }
 
     function selectEdition(id: number) {
-      if (id === currentId) return;
+      if (!carousel || id === currentId) return;
       var card = carousel.querySelector<HTMLElement>('[data-edition-id="' + id + '"]');
       if (!card) return;
       var ed = readEdition(card);
@@ -244,6 +244,16 @@ const ctaSubscribe = localizePath("/suscribirme", lang);
           var id = parseInt(card.dataset.editionId!);
           selectEdition(id);
         }
+      });
+
+      carousel.addEventListener("keydown", function (e: KeyboardEvent) {
+        if (e.key !== "Enter" && e.key !== " ") return;
+        var target = e.target as HTMLElement | null;
+        if (!target || target.closest("a, button, input, select, textarea")) return;
+        var card = target.closest<HTMLElement>("[data-edition-id]");
+        if (!card) return;
+        e.preventDefault();
+        selectEdition(parseInt(card.dataset.editionId!));
       });
     }
   }

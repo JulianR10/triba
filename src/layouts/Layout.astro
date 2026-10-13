@@ -4,14 +4,16 @@ import Footer from "../components/Footer.astro";
 import "./global.css";
 import { SITE_URL } from "../lib/site-url";
 import { t, type Locale } from "../i18n/ui";
+import { isEnRoute, localizePath, toEsPath } from "../i18n/locale";
 
-const { title, description, image, canonical, navLogoAlways, lang } = Astro.props as {
+const { title, description, image, canonical, navLogoAlways, lang, alternateLanguages } = Astro.props as {
   title?: string;
   description?: string;
   image?: string;
   canonical?: string;
   navLogoAlways?: boolean;
   lang?: Locale;
+  alternateLanguages?: { es: string; en: string } | false;
 };
 
 const locale = lang ?? "es";
@@ -19,9 +21,32 @@ const dict = t(locale);
 
 const siteTitle = title ? `${title} — Triba` : dict.layout.defaultTitle;
 const siteDescription = description || dict.layout.defaultDescription;
-const ogImage = image || "/logo-triba.svg";
+const ogImage = image || "/og-triba.png";
 const siteUrl = SITE_URL;
 const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
+const esCanonical = canonical ? toEsPath(canonical) : undefined;
+const inferredAlternates = esCanonical &&
+  esCanonical !== "/mi-cuenta" &&
+  esCanonical !== "/iniciar-sesion" &&
+  isEnRoute(esCanonical)
+  ? { es: esCanonical, en: localizePath(esCanonical, "en") }
+  : undefined;
+const hreflangAlternates = alternateLanguages === false
+  ? undefined
+  : alternateLanguages ?? inferredAlternates;
+const jsonLd = {
+  "@context": "https://schema.org",
+  "@type": "WebSite",
+  name: "Triba",
+  url: siteUrl,
+  description: dict.layout.jsonLdDescription,
+  publisher: {
+    "@type": "Organization",
+    name: "Triba",
+    logo: { "@type": "ImageObject", url: `${siteUrl}/logo-triba.svg` },
+  },
+};
+const jsonLdText = JSON.stringify(jsonLd).replace(/</g, "\\u003c");
 ---
 
 <!doctype html>
@@ -43,6 +68,13 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
     <meta name="description" content={siteDescription} />
 
     {canonical && <link rel="canonical" href={pageUrl} />}
+    {hreflangAlternates && (
+      <>
+        <link rel="alternate" hreflang="es" href={`${siteUrl}${hreflangAlternates.es}`} />
+        <link rel="alternate" hreflang="en" href={`${siteUrl}${hreflangAlternates.en}`} />
+        <link rel="alternate" hreflang="x-default" href={`${siteUrl}${hreflangAlternates.es}`} />
+      </>
+    )}
 
     <!-- Open Graph -->
     <meta property="og:type" content="website" />
@@ -60,24 +92,12 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
     <meta name="twitter:image" content={`${siteUrl}${ogImage}`} />
 
     <!-- Schema.org JSON-LD -->
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "WebSite",
-        "name": "Triba",
-        "url": "${siteUrl}",
-        "description": "${dict.layout.jsonLdDescription}",
-        "publisher": {
-          "@type": "Organization",
-          "name": "Triba",
-          "logo": { "@type": "ImageObject", "url": "${siteUrl}/logo-triba.svg" }
-        }
-      }
-    </script>
+    <script type="application/ld+json" set:html={jsonLdText}></script>
   </head>
   <body class="bg-triba-bone text-triba-black text-pretty flex flex-col min-h-screen">
+    <a class="skip-link" href="#main-content">{dict.layout.skipToContent}</a>
     <Navbar lang={locale} showLogoAlways={navLogoAlways} />
-    <main class="relative z-0 flex-1 flex flex-col">
+    <main id="main-content" tabindex="-1" class="relative z-0 flex-1 flex flex-col">
       <slot />
     </main>
     <Footer lang={locale} />
@@ -128,5 +148,27 @@ const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
         onPageCycle(observeAll);
       })();
     </script>
+    <style>
+      .skip-link {
+        position: fixed;
+        top: 1rem;
+        left: 1rem;
+        z-index: 100;
+        transform: translateY(-200%);
+        padding: 0.75rem 1rem;
+        border: 2px solid #35220a;
+        border-radius: 0.75rem;
+        background: #fff;
+        color: #35220a;
+      }
+
+      .skip-link:focus {
+        transform: translateY(0);
+      }
+
+      #main-content:focus {
+        outline: none;
+      }
+    </style>
   </body>
 </html>

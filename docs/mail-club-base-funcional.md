@@ -34,9 +34,9 @@ Esta excepción protege suscripciones existentes; no cambia la regla de destino 
 - Alta/upgrade con pago confirmado hasta el día 15 inclusive: primer sobre en el envío de ese mes. Después del 15: primer sobre en el envío del mes siguiente. El primer cobro se realiza al confirmar el alta/upgrade.
 - La dirección de entrega se puede actualizar desde el perfil. Si se actualiza hasta el corte, afecta el envío de ese mes; después del corte, el siguiente.
 - El envío está incluido a todo el mundo y se despacha por correo ordinario, sin tracking. Plazos informativos: España 3–7 días; resto de Europa 1–2 semanas; Argentina y resto del mundo 3–6 semanas.
-- Se conserva la dirección hasta dos meses después del último despacho aplicable, para permitir gestionar reposiciones.
+- Se conserva la dirección hasta dos meses después del último despacho aplicable, para permitir gestionar reposiciones; también mientras el Mail Club siga `past_due` y se intente recuperar el pago.
 - El borrador conserva el criterio de reclamo/reposición y las condiciones de aduana; su redacción final requiere aprobación junto con los términos.
-- El número de fundadora se asigna en orden al primer pago Mail Club confirmado, incluyendo upgrades, hasta completar las primeras 100.
+- El número de fundadora se asigna en orden al primer pago Mail Club confirmado, incluyendo upgrades; la numeración continúa sin tope después del 100.
 
 ### Newsletter y contenido
 

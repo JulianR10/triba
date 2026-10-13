@@ -14,6 +14,7 @@
  * Requiere: PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY
  */
 import { createClient } from "@supabase/supabase-js";
+import { shouldRetainMailClubAddress } from "../src/lib/mail-club-retention.mjs";
 
 const args = process.argv.slice(2);
 const REAL = args.includes("--real");
@@ -66,23 +67,28 @@ const withSnapshot = (items || []).filter((it) => {
 });
 console.log(`Items en lotes vencidos: ${(items || []).length} · con snapshot a purgar: ${withSnapshot.length}`);
 
-// 3) Direcciones de usuarias sin suscripción Mail Club activa.
-const userIds = [...new Set(withSnapshot.map((it) => it.user_id))];
+// 3) Direcciones sin Mail Club activo/vigente ni past_due recuperable.
+// Keep users from already-purged snapshots in scope so a later run can delete
+// their address after a past_due recovery window ends.
+const userIds = [...new Set((items || []).map((it) => it.user_id))];
 const keepAddress = new Set();
+const now = new Date();
 for (const userId of userIds) {
-  const { data: active } = await admin
+  const { data: subscriptions, error: subscriptionErr } = await admin
     .from("subscriptions")
-    .select("id")
+    .select("status, current_period_end")
     .eq("user_id", userId)
     .eq("plan_type", "mail_club")
-    .eq("status", "active")
-    .gt("current_period_end", new Date().toISOString())
-    .limit(1)
-    .maybeSingle();
-  if (active) keepAddress.add(userId);
+    .in("status", ["active", "past_due"]);
+  if (subscriptionErr) {
+    console.error(`Error leyendo suscripciones de ${userId}; se conserva su dirección: ${subscriptionErr.message}`);
+    keepAddress.add(userId);
+    continue;
+  }
+  if (shouldRetainMailClubAddress(subscriptions || [], now)) keepAddress.add(userId);
 }
 const addressesToDelete = userIds.filter((id) => !keepAddress.has(id));
-console.log(`Usuarias alcanzadas: ${userIds.length} · con Mail Club activo (conservan dirección): ${keepAddress.size} · direcciones a borrar: ${addressesToDelete.length}`);
+console.log(`Usuarias alcanzadas: ${userIds.length} · dirección conservada (activa vigente/past_due recuperable o error de consulta): ${keepAddress.size} · direcciones a borrar: ${addressesToDelete.length}`);
 
 if (!REAL) {
   console.log("\nDry-run: no se escribió nada. Repetir con --real para aplicar.\n");

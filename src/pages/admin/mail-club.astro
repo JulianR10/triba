@@ -413,7 +413,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
     retApply.addEventListener("click", async () => {
       const confirmed = await (window as any).adminConfirm?.(
         "Aplicar purga",
-        "¿Purgar snapshots vencidos y borrar direcciones sin Mail Club activo? No se puede deshacer.",
+        "¿Purgar snapshots vencidos y borrar direcciones sin Mail Club activo/vigente o past_due recuperable? No se puede deshacer.",
       );
       if (!confirmed) return;
       retApply.disabled = true;

@@ -9,6 +9,7 @@ import {
   syncFeaturedBadges,
 } from "../../../../lib/admin/editions";
 import { logAdminAction } from "../../../../lib/admin/audit";
+import { logger } from "../../../../lib/logger";
 
 export const prerender = false;
 
@@ -66,7 +67,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
         .update({ featured: false })
         .eq("featured", true);
       if (featError) {
-        console.error(`[editions.update:${editionId}] unset-featured error:`, featError);
+        logger.error({ err: featError, editionId }, "[editions.update] unset-featured error");
       }
     }
 
@@ -80,7 +81,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
       .eq("id", editionId);
 
     if (updateError) {
-      console.error(`[editions.update:${editionId}] update error:`, updateError);
+      logger.error({ err: updateError, editionId }, "[editions.update] update error");
       return error(updateError.message, 500);
     }
 
@@ -102,7 +103,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
         .from("edition_languages")
         .upsert(rows, { onConflict: "edition_id,language" });
       if (langError) {
-        console.error(`[editions.update:${editionId}] languages upsert error:`, langError);
+        logger.error({ err: langError, editionId }, "[editions.update] languages upsert error");
         return error(langError.message, 500);
       }
     }
@@ -114,7 +115,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
         .eq("edition_id", editionId)
         .eq("language", "en");
       if (delError) {
-        console.error(`[editions.update:${editionId}] languages delete error:`, delError);
+        logger.error({ err: delError, editionId }, "[editions.update] languages delete error");
         return error(delError.message, 500);
       }
     }
@@ -138,7 +139,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
 
     return ok();
   } catch (e) {
-    console.error(`[editions.update:${editionId}] unexpected error:`, e);
+    logger.error({ err: e, editionId }, "[editions.update] unexpected error");
     return error(e instanceof Error ? e.message : "Error inesperado al actualizar la edición", 500);
   }
 };
@@ -174,7 +175,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
       .single();
 
     if (deleteError) {
-      console.error(`[editions.delete:${editionId}] delete error:`, deleteError);
+      logger.error({ err: deleteError, editionId }, "[editions.delete] delete error");
       return error(deleteError.message, 500);
     }
 
@@ -194,7 +195,7 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
 
     return ok();
   } catch (e) {
-    console.error(`[editions.delete:${editionId}] unexpected error:`, e);
+    logger.error({ err: e, editionId }, "[editions.delete] unexpected error");
     return error(e instanceof Error ? e.message : "Error inesperado al eliminar la edición", 500);
   }
 };

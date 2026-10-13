@@ -12,8 +12,9 @@ export const MAIL_CLUB_TIME_ZONE = "Europe/Madrid";
 export const MAIL_CLUB_CUTOFF_DAY = 15;
 export const MAIL_CLUB_DISPATCH_DAY = 20;
 export const MAIL_CLUB_TERMS_VERSION = "v1";
-export const MAIL_CLUB_FOUNDER_LIMIT = 100;
 export const MAIL_CLUB_ADDRESS_RETENTION_DAYS = 60;
+
+export { shouldRetainMailClubAddress } from "./mail-club-retention.mjs";
 
 export type MailClubZone = "europe" | "rest" | "argentina";
 export type MailClubCurrency = "EUR" | "USD" | "ARS";
@@ -93,6 +94,21 @@ function madridParts(date: Date): { year: number; month: number; day: number } {
   const parts = fmt.formatToParts(date);
   const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? 0);
   return { year: get("year"), month: get("month"), day: get("day") };
+}
+
+export type MailClubReminderType = "create_batch" | "dispatch_batch";
+
+export function mailClubReminderForDate(
+  date: Date,
+): { year: number; month: number; type: MailClubReminderType } | null {
+  const { year, month, day } = madridParts(date);
+  if (day === 14) return { year, month, type: "create_batch" };
+  if (day === 19) return { year, month, type: "dispatch_batch" };
+  return null;
+}
+
+export function nextFounderNumber(lastAssigned: number | null | undefined): number {
+  return (lastAssigned ?? 0) + 1;
 }
 
 // Corte inclusivo: pago confirmado hasta el día 15 23:59:59 Madrid entra

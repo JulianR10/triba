@@ -1,9 +1,10 @@
 import { supabaseAdmin } from "./supabase-admin";
-import { MAIL_CLUB_FOUNDER_LIMIT } from "./mail-club";
+import { nextFounderNumber } from "./mail-club";
 import { logger } from "./logger";
 
-// Asigna el número de socia fundadora (1..100) al confirmarse el primer pago
-// Mail Club. Idempotente: si la usuaria ya tiene número, lo devuelve.
+// Asigna el siguiente número consecutivo al confirmarse el primer pago Mail Club.
+// No hay tope: al superar el 100 continúa 101, 102, etc. Idempotente: si la
+// usuaria ya tiene número, lo devuelve.
 // Ante webhooks concurrentes, reintenta si otro proceso tomó el número.
 export async function assignFounderNumber(userId: string): Promise<number | null> {
   const { data: existing } = await supabaseAdmin
@@ -20,8 +21,7 @@ export async function assignFounderNumber(userId: string): Promise<number | null
       .order("founder_number", { ascending: false })
       .limit(1)
       .maybeSingle();
-    const next = ((maxRow?.founder_number as number | undefined) ?? 0) + 1;
-    if (next > MAIL_CLUB_FOUNDER_LIMIT) return null;
+    const next = nextFounderNumber(maxRow?.founder_number as number | undefined);
 
     const { error } = await supabaseAdmin.from("mail_club_founders").insert({
       user_id: userId,

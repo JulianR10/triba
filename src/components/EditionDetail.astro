@@ -52,7 +52,16 @@ const seeAllHref = `${localizePath("/mi-cuenta", lang)}#tus-tomos`;
 const comingSoonLabel = (dict.magazine as { comingSoon?: string }).comingSoon ?? "EN coming soon";
 ---
 
-<Layout {title} {description} {canonical} lang={lang} navLogoAlways>
+<Layout
+  {title}
+  {description}
+  {canonical}
+  lang={lang}
+  navLogoAlways
+  alternateLanguages={edition.hasEn
+    ? { es: `/revista/${slug}`, en: `/en/revista/${slug}` }
+    : false}
+>
   <script type="application/ld+json" set:html={JSON.stringify(structuredData)}></script>
   <section class="page-shell page-gutter bg-triba-bone">
     <div class="max-w-6xl mx-auto">

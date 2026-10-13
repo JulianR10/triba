@@ -4,6 +4,7 @@ import {
   MAIL_CLUB_CUTOFF_DAY,
   MAIL_CLUB_TIME_ZONE,
   resolveMailClubZone,
+  shouldRetainMailClubAddress,
   shipmentMonthLabel,
 } from "../mail-club";
 import { getPreferredLocale } from "../locale-pref";
@@ -188,7 +189,7 @@ export async function listMailClubPendingNotices(limitBatches = 6): Promise<Mail
 
 // Retención postal 60 días (misma lógica que scripts/purge-mail-club-retention.mjs):
 // purga snapshots de lotes despachados hace >days días y borra direcciones
-// de usuarias sin Mail Club activo. dry-run por defecto.
+// sin Mail Club activo/vigente ni past_due recuperable. dry-run por defecto.
 export interface MailClubRetentionReport {
   days: number;
   cutoff: string;
@@ -223,19 +224,25 @@ export async function purgeMailClubRetention(days = 60, real = false): Promise<M
     return snap && typeof snap === "object" && Object.keys(snap).length > 0 && !snap.purged;
   });
 
-  const userIds = [...new Set(withSnapshot.map((it) => it.user_id as string))];
+  // Include previously purged snapshots too: a past_due address must become
+  // eligible for deletion on a later run after recovery/cancellation ends.
+  const userIds = [...new Set(((items as any[]) || []).map((it) => it.user_id as string))];
   const keepAddress = new Set<string>();
+  const now = new Date();
   for (const userId of userIds) {
-    const { data: active } = await supabaseAdmin
+    const { data: subscriptions, error: subscriptionError } = await supabaseAdmin
       .from("subscriptions")
-      .select("id")
+      .select("status, current_period_end")
       .eq("user_id", userId)
       .eq("plan_type", "mail_club")
-      .eq("status", "active")
-      .gt("current_period_end", new Date().toISOString())
-      .limit(1)
-      .maybeSingle();
-    if (active) keepAddress.add(userId);
+      .in("status", ["active", "past_due"]);
+    if (subscriptionError) {
+      // Fail closed: a transient DB error must never cause address deletion.
+      logger.error({ err: subscriptionError, userId }, "retention subscription lookup error");
+      keepAddress.add(userId);
+      continue;
+    }
+    if (shouldRetainMailClubAddress(subscriptions ?? [], now)) keepAddress.add(userId);
   }
   const addressesToDelete = userIds.filter((id) => !keepAddress.has(id));
 
@@ -540,6 +547,8 @@ export async function dispatchMailClubBatch(
     .select("*")
     .eq("batch_id", batchId)
     .eq("notice_sent", false);
+  // The cutoff snapshot decides eligibility; dispatch intentionally does not
+  // revalidate the subscription's live status after the cutoff.
   if (onlyEmails && onlyEmails.length > 0) {
     query = query.in("email", onlyEmails.map((e) => e.toLowerCase().trim()));
   }

@@ -30,6 +30,7 @@ export const ui = {
         "Triba es una revista digital mensual escrita por y para mujeres. Cultura, arte, identidad y todo lo que nos interesa.",
       jsonLdDescription:
         "Revista digital mensual escrita por y para mujeres. Cultura, arte, identidad.",
+      skipToContent: "Saltar al contenido principal",
     },
     notFound: {
       title: "Página no encontrada",
@@ -461,6 +462,7 @@ export const ui = {
         "Triba is a monthly digital magazine written by and for women. Culture, art, identity and everything we care about.",
       jsonLdDescription:
         "Monthly digital magazine written by and for women. Culture, art, identity.",
+      skipToContent: "Skip to main content",
     },
     notFound: {
       title: "Page not found",

@@ -17,6 +17,7 @@
  */
 import { createClient } from "@supabase/supabase-js";
 import { writeFileSync } from "node:fs";
+import { csvCell } from "../src/lib/csv-cell.mjs";
 
 const supabase = createClient(
   process.env.PUBLIC_SUPABASE_URL,
@@ -31,15 +32,6 @@ if (!key) {
 const SENDER_API_BASE = "https://api.sender.net/v2";
 const outArg = process.argv.find((a) => a.startsWith("--out="));
 const outPath = outArg ? outArg.split("=")[1] : "lista-newsletter.csv";
-
-function csvCell(v) {
-  const s = v === null || v === undefined ? "" : String(v);
-  const neutralized = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
-  if (/[",\n\r]/.test(s) || neutralized !== s) {
-    return `"${neutralized.replace(/"/g, '""')}"`;
-  }
-  return neutralized;
-}
 
 function memberOf(sub, groupId, groupTitle) {
   const tags = sub.subscriber_tags || [];
@@ -90,7 +82,6 @@ async function fetchAllSender() {
 }
 
 const dbRows = await fetchAllNewsletters();
-const dbByEmail = new Map(dbRows.map((r) => [String(r.email).toLowerCase(), r]));
 
 const { subs: senderSubs, free: freeGroup, paid: paidGroup } = await fetchAllSender();
 

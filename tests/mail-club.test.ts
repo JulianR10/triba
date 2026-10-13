@@ -8,8 +8,11 @@ import {
   isBeforeCutoffThisMonth,
   isOnOrBeforeCutoff,
   isUpgradeZoneCompatible,
+  mailClubReminderForDate,
+  nextFounderNumber,
   normalizeCountryIso,
   resolveMailClubZone,
+  shouldRetainMailClubAddress,
   shipmentMonthLabel,
 } from "../src/lib/mail-club";
 import { COUNTRIES, SUPPORTED_COUNTRY_ISO } from "../src/lib/countries";
@@ -242,5 +245,44 @@ describe("activación Mercado Pago", () => {
     expect(isActivationBlocked(false, "pending")).toBe(true);
     expect(isActivationBlocked(false, undefined)).toBe(true);
     expect(isActivationBlocked(false, "cancelled")).toBe(true);
+  });
+});
+
+describe("operación mensual Mail Club", () => {
+  it("elige recordatorios por día de Madrid, no por fecha UTC", () => {
+    expect(mailClubReminderForDate(new Date("2026-10-13T22:30:00Z"))).toEqual({
+      year: 2026,
+      month: 10,
+      type: "create_batch",
+    });
+    expect(mailClubReminderForDate(new Date("2026-10-18T22:30:00Z"))).toEqual({
+      year: 2026,
+      month: 10,
+      type: "dispatch_batch",
+    });
+    expect(mailClubReminderForDate(new Date("2026-10-19T22:30:00Z"))).toBeNull();
+  });
+
+  it("conserva direcciones activas vigentes y past_due recuperables", () => {
+    const now = new Date("2026-10-13T12:00:00Z");
+    expect(shouldRetainMailClubAddress([
+      { status: "past_due", current_period_end: "2026-09-01T00:00:00Z" },
+    ], now)).toBe(true);
+    expect(shouldRetainMailClubAddress([
+      { status: "active", current_period_end: "2026-11-01T00:00:00Z" },
+    ], now)).toBe(true);
+    expect(shouldRetainMailClubAddress([
+      { status: "active", current_period_end: "2026-09-01T00:00:00Z" },
+    ], now)).toBe(false);
+    expect(shouldRetainMailClubAddress([
+      { status: "canceled", current_period_end: "2026-11-01T00:00:00Z" },
+    ], now)).toBe(false);
+  });
+
+  it("continúa la numeración de fundadoras sin tope en 100", () => {
+    expect(nextFounderNumber(99)).toBe(100);
+    expect(nextFounderNumber(100)).toBe(101);
+    expect(nextFounderNumber(101)).toBe(102);
+    expect(nextFounderNumber(null)).toBe(1);
   });
 });

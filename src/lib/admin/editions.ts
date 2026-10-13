@@ -1,6 +1,7 @@
 import { supabaseAdmin } from "../supabase-admin";
 import { EDITION_LANGUAGES, type Edition, type EditionKind, type EditionLanguage } from "../editions";
 import type { Database } from "../database.types";
+import { logger } from "../logger";
 
 type EditionLanguageRow = Database["public"]["Tables"]["edition_languages"]["Row"];
 
@@ -112,7 +113,7 @@ export async function syncFeaturedBadges(): Promise<void> {
       .from("edition_languages")
       .update({ badge: null })
       .not("badge", "is", null);
-    if (error) console.error("[editions.badges] clear-all error:", error);
+    if (error) logger.error({ err: error }, "[editions.badges] clear-all error");
     return;
   }
 
@@ -121,7 +122,7 @@ export async function syncFeaturedBadges(): Promise<void> {
     .update({ badge: null })
     .neq("edition_id", featuredId)
     .not("badge", "is", null);
-  if (clearError) console.error("[editions.badges] clear-others error:", clearError);
+  if (clearError) logger.error({ err: clearError }, "[editions.badges] clear-others error");
 
   for (const lang of EDITION_LANGUAGES) {
     const { error } = await supabaseAdmin
@@ -130,7 +131,7 @@ export async function syncFeaturedBadges(): Promise<void> {
       .eq("edition_id", featuredId)
       .eq("language", lang)
       .is("badge", null);
-    if (error) console.error(`[editions.badges] default ${lang} error:`, error);
+    if (error) logger.error({ err: error, lang }, "[editions.badges] default badge error");
   }
 }
 
