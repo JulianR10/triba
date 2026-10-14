@@ -55,7 +55,7 @@ Fuentes: `src/lib/mail-club.ts`, `src/lib/admin/mail-club.ts`, `src/lib/admin/ma
 
 - Home/Revista usan `src/lib/editions.ts`; detalle dinámico: `/revista/edicion-N`.
 - El cliente público lee la vista `public_edition_catalog` (migración `030`): sin `pdf_url`, con `hasPdf`. La URL real solo la resuelve el servidor en `/api/pdf/{versionId}` (respeta `isActiveSubscription`, free/featured públicos, redirige a firmada de 5 min).
-- PDFs en bucket privado `editions-pdfs` (migración `031`): `pdf_url` guarda refs `storage://editions-pdfs/...`; `/api/pdf`, firma y verificación resuelven el bucket por ref/kind. Legacy pre-backfill (URL pública en `editions`) sigue funcionando hasta `--delete-old`.
+- PDFs en bucket privado `editions-pdfs` (migración `031` aplicada + backfill completo 2026-10-14): `pdf_url` guarda refs `storage://editions-pdfs/...`; `/api/pdf`, firma y verificación resuelven el bucket por ref/kind. Copias públicas borradas (URL directa → 400).
 - `EditionForm` (admin) sigue contra `edition_languages` vía `service_role`; sube PDFs al privado y portadas al público, con "ver" vía `/api/pdf`. El servidor verifica tamaño, MIME y firma real antes de guardar, limpiando si falla.
 - `EditionForm` (admin) sigue contra `edition_languages` vía `service_role`; sube directo a Storage con URL firmada y el servidor verifica tamaño, MIME y firma real antes de guardar, limpiando si falla.
 - `PDFViewer` es una isla React `client:only="react"`; ver reglas específicas en `AGENTS.md`.
