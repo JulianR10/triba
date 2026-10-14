@@ -1,4 +1,10 @@
 -- Founder numbering continues consecutively after the original first 100.
+-- NOTE: the ALTER TYPE on mail_club_founders.founder_number must drop the
+-- no_delete_or_reassign_founder trigger first (022): Postgres (0A000) refuses
+-- to alter a column used in a trigger definition. The trigger is recreated
+-- below, identical to 022. Idempotent.
+drop trigger if exists no_delete_or_reassign_founder on public.mail_club_founders;
+
 alter table public.mail_club_founders
   drop constraint if exists mail_club_founders_founder_number_check;
 
@@ -22,3 +28,8 @@ $$;
 
 alter table public.mail_club_batch_items
   alter column founder_number type bigint using founder_number::bigint;
+
+create trigger no_delete_or_reassign_founder
+  before delete or update of user_id, founder_number on public.mail_club_founders
+  for each row
+  execute function public.prevent_mail_club_erase();
