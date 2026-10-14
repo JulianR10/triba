@@ -10,7 +10,7 @@ Fuente única para reglas y pendientes operativos. No guardar claves, contraseñ
   - Sin `028`: todo funciona hasta la fundadora 100; la 101 fallaría sin esta migración.
   - Sin `029`: el dashboard usa automáticamente el cálculo anterior de 12 conteos.
   - Sin `030`: sigue el P0 datos (UPDATE propio en `role`/`subscription_id`/`subscriptions`, `cancel_subscription` sin guard de dueño, policies `using(true)` en `admin_audit_log`/`rate_limits`, grants amplios y sin vista `public_edition_catalog`). El código ya no pide `pdf_url` al cliente (usa `hasPdf` + `/api/pdf/{versionId}` con fallback pre-030), pero el REST directo a `edition_languages` aún expone `pdf_url` y el bucket `editions` sigue público hasta `031`.
-  - Sin `031`: `edition_languages` sigue legible por anon (el `pdf_url` se obtiene por REST directo) y los PDFs siguen en el bucket público. El código ya soporta el bucket privado `editions-pdfs` (refs `storage://`, firma por bucket en `/api/pdf`). Orden de cierre: deploy del código → aplicar `031` → `node --env-file=.env scripts/migrate-pdfs-to-private.mjs --real` → verificar lector → mismo script con `--real --delete-old`.
+  - Sin `031`: *ya aplicada y backfill completo 2026-10-14* — `edition_languages` cerrada a anon (401), 5/5 PDFs en `editions-pdfs` privado con tamaño verificado, copias públicas borradas (URL directa → 400) y lector verificado vía `/api/pdf` (302 a firmada).
 - Último estado documentado: faltaba `CRON_SECRET` en Vercel Production. Confirmarlo/configurarlo antes de depender del cron.
 - Pendiente: pagos reales de validación EUR/USD/ARS, portal con suscripción real, exportación verificada del newsletter histórico, costeo postal y aprobación final de fotos/textos legales.
 
