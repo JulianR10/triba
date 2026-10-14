@@ -5,7 +5,11 @@ Fuente única para reglas y pendientes operativos. No guardar claves, contraseñ
 ## Estado y bloqueos
 
 - Mail Club está publicado; producción y Previews usan el proyecto Supabase `Triba`.
-- Antes del siguiente deploy, aplicar `027_mail_club_reminder_delivery.sql`, `028_unbounded_mail_club_founder_numbers.sql` y `029_admin_dashboard_stats_view.sql`.
+- **Migraciones `027–030` pendientes** (se aplican en otro momento, vía SQL Editor del dashboard, en orden). Mientras tanto:
+  - Sin `027`: los recordatorios del 14/19 no se envían y el cron responde 502 en ese tramo (la reconciliación de pagos igual se ejecuta antes).
+  - Sin `028`: todo funciona hasta la fundadora 100; la 101 fallaría sin esta migración.
+  - Sin `029`: el dashboard usa automáticamente el cálculo anterior de 12 conteos.
+  - Sin `030`: sigue el P0 datos (UPDATE propio en `role`/`subscription_id`/`subscriptions`, `cancel_subscription` sin guard de dueño, policies `using(true)` en `admin_audit_log`/`rate_limits`, grants amplios y sin vista `public_edition_catalog`). El código ya no pide `pdf_url` al cliente (usa `hasPdf` + `/api/pdf/{versionId}`), pero el REST directo a `edition_languages` aún expone `pdf_url` y el bucket `editions` sigue público hasta la Fase 1b (`031` + bucket privado).
 - Último estado documentado: faltaba `CRON_SECRET` en Vercel Production. Confirmarlo/configurarlo antes de depender del cron.
 - Pendiente: pagos reales de validación EUR/USD/ARS, portal con suscripción real, exportación verificada del newsletter histórico, costeo postal y aprobación final de fotos/textos legales.
 
@@ -48,7 +52,7 @@ La elegibilidad del corte determina quién recibe el sobre. No se revalida el es
 
 Antes del deploy que activa el cron y la numeración sin tope:
 
-1. Aplicar migraciones `027`, `028` y `029` en Supabase (`029` es solo lectura: el dashboard usa el cálculo anterior hasta que exista la vista).
+1. Aplicar migraciones `027`, `028`, `029` y `030` en Supabase cuando se decida, en orden (`029` es solo lectura: el dashboard usa el cálculo anterior hasta que exista la vista).
 2. Configurar `CRON_SECRET` en Vercel Production y redeplegar.
 3. Verificar que `GET /api/cron/reconcile` sin autorización responde 401, no 500.
 4. Después del deploy, ejecutar `node scripts/smoke-prod.mjs`.

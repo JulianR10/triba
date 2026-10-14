@@ -9,7 +9,6 @@ import { localizePath } from "../i18n/locale";
 import { createSupabaseServerClient } from "../lib/supabase-server";
 import { supabaseAdmin } from "../lib/supabase-admin";
 import { getEditions, getFeaturedEdition } from "../lib/editions";
-import { getSignedPdfUrl } from "../lib/storage";
 import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
 import { getCheckoutOutcome } from "../lib/checkout-status";
 import { getPlanType, MAIL_CLUB_TERMS_VERSION } from "../lib/mail-club";
@@ -109,7 +108,7 @@ const editions = allEditions.map((e) => ({
   title: e.title,
   description: e.description,
   cover: e.cover_url,
-  pdf: e.pdf_url ? `/api/pdf/${e.id}?lang=${lang}` : "#",
+  pdf: e.hasPdf && e.versionId ? `/api/pdf/${e.versionId}?lang=${lang}` : "#",
   featured: e.featured,
   badge: e.badge,
   hasEn: e.hasEn,
@@ -131,9 +130,10 @@ const editionsPayload = editions.map((e) => ({
 
 const featured = editions.find((e) => e.featured) || editions[0];
 const featuredEditionRaw = featuredEdition ?? allEditions[0];
-const featuredPdfSignedUrl = featuredEditionRaw?.pdf_url
-  ? await getSignedPdfUrl(featuredEditionRaw.pdf_url).catch(() => null) ?? featured?.pdf
-  : undefined;
+const featuredPdfUrl =
+  featuredEditionRaw?.hasPdf && featuredEditionRaw?.versionId
+    ? `/api/pdf/${featuredEditionRaw.versionId}?lang=${lang}`
+    : undefined;
 
 const checkoutOutcome = getCheckoutOutcome(Astro.url.searchParams);
 const checkoutFlow = Astro.url.searchParams.get("flow");
@@ -468,7 +468,7 @@ const miCuentaMessages = {
             <PatchTitle content={featured.title} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
 
             <div class="-mx-5 md:mx-0">
-              <PDFViewer pdfUrl={featuredPdfSignedUrl || ''} lang={lang} client:only="react" />
+              <PDFViewer pdfUrl={featuredPdfUrl || ''} lang={lang} client:only="react" />
             </div>
 
             <p class="font-heading text-xs uppercase tracking-[0.2em] text-triba-brown/40 text-center mt-6">{dict.miCuenta.viewerHint}</p>

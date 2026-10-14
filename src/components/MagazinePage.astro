@@ -46,7 +46,7 @@ const editions = allEditions.map((e, i) => ({
   title: e.title,
   description: e.description,
   cover: e.cover_url ?? "",
-  pdf: e.pdf_url ? `/api/pdf/${e.id}?lang=${lang}` : "#",
+  pdf: e.hasPdf && e.versionId ? `/api/pdf/${e.versionId}?lang=${lang}` : "#",
   featured: e.featured,
   badge: !e.hasEn ? (dict.magazine as { comingSoon?: string }).comingSoon ?? "EN coming soon" : e.badge,
   flipColor: ["bg-triba-pink/80", "bg-triba-blue/80", "bg-triba-red/80"][i % 3],
@@ -153,7 +153,7 @@ const ctaSubscribe = localizePath("/suscribirme", lang);
       <!-- Bloque 3: Vista previa de artículo -->
       <div id="visor-revista" class="scroll-anchor flex flex-col md:flex-row gap-8 md:gap-12 lg:gap-16">
         <div class="flex-1 order-2 md:order-1">
-          <PDFViewer pdfUrl={freeArticle?.pdf_url ?? "/articulo-gratis.pdf"} lang={lang} client:only="react" />
+          <PDFViewer pdfUrl={freeArticle?.hasPdf && freeArticle?.versionId ? `/api/pdf/${freeArticle.versionId}?lang=${lang}` : "/articulo-gratis.pdf"} lang={lang} client:only="react" />
         </div>
         <div class="flex-1 flex flex-col justify-center order-1 md:order-2 text-center md:text-left">
           <PatchTitle tag="h2" class="mb-4 text-2xl md:text-3xl" lines={dict.magazine.freeArticlePatch} />

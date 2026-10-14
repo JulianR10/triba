@@ -3,7 +3,6 @@ import Layout from "../layouts/Layout.astro";
 import Button from "../components/Button.astro";
 import PDFViewer from "../components/PDFViewer.tsx";
 import { getEditionBySlug } from "../lib/editions";
-import { getSignedPdfUrl } from "../lib/storage";
 import { SITE_URL } from "../lib/site-url";
 import PatchTitle from "../components/PatchTitle.astro";
 import { t, type Locale } from "../i18n/ui";
@@ -95,19 +94,19 @@ const comingSoonLabel = (dict.magazine as { comingSoon?: string }).comingSoon ??
         </div>
         <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed whitespace-pre-line md:col-start-1 md:row-start-3 text-center md:text-left mx-auto md:mx-0 max-w-lg md:max-w-none mb-0 md:mb-8 mt-2 md:mt-0">{edition.description}</p>
         <div class="flex flex-wrap gap-4 justify-center md:justify-start md:col-start-1 md:row-start-4">
-          {edition.pdf_url && (
+          {edition.hasPdf && edition.versionId && (
               <Button variant="primary" size="md" href="#visor-revista">{dict.edition.readHere}</Button>
           )}
-          {edition.pdf_url && (
-            <Button variant="default" size="md" href={`/api/pdf/${edition.id}?lang=${lang}&download=1`}>{dict.edition.downloadPdf}</Button>
+          {edition.hasPdf && edition.versionId && (
+            <Button variant="default" size="md" href={`/api/pdf/${edition.versionId}?lang=${lang}&download=1`}>{dict.edition.downloadPdf}</Button>
           )}
         </div>
       </div>
 
-      {edition.pdf_url && (
+      {edition.hasPdf && edition.versionId && (
         <div class="mb-16 md:mb-20 scroll-anchor reveal" id="visor-revista" data-reveal>
           <PatchTitle content={dict.edition.preview} tag="h2" class="text-2xl md:text-3xl text-triba-brown mb-8" />
-          <PDFViewer pdfUrl={edition.pdf_url ? (await getSignedPdfUrl(edition.pdf_url).catch(() => edition.pdf_url)) ?? edition.pdf_url : ''} lang={lang} client:only="react" />
+          <PDFViewer pdfUrl={`/api/pdf/${edition.versionId}?lang=${lang}`} lang={lang} client:only="react" />
         </div>
       )}
 

@@ -589,7 +589,26 @@ export interface Database {
       };
     };
     Views: {
-      [_ in never]: never;
+      public_edition_catalog: {
+        Row: {
+          version_id: number;
+          edition_id: number;
+          language: "es" | "en";
+          edition_number: number | null;
+          featured: boolean;
+          kind: "magazine" | "free";
+          published_at: string;
+          created_at: string;
+          title: string;
+          description: string;
+          cover_url: string | null;
+          badge: string | null;
+          has_pdf: boolean;
+        };
+        Insert: never;
+        Update: never;
+        Relationships: [];
+      };
     };
     Functions: {
       cancel_subscription: {
