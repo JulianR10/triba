@@ -2,11 +2,9 @@ import type { APIRoute } from "astro";
 import { requireAdmin } from "../../../../lib/auth";
 import { ok, error } from "../../../../lib/response";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
-import { buildStoragePath, fileExt, FILE_RULES, getPublicUrl, type EditionFileKind } from "../../../../lib/storage";
+import { buildStoragePath, fileExt, FILE_RULES, getPublicUrl, buildPdfRef, bucketForKind, type EditionFileKind } from "../../../../lib/storage";
 
 export const prerender = false;
-
-const BUCKET = "editions";
 
 export const POST: APIRoute = async ({ request, locals }) => {
   const admin = requireAdmin(locals);
@@ -61,17 +59,23 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const path = buildStoragePath(kind, editionNumber as number | undefined, ext, { slug, language });
 
   const { data, error: signError } = await supabaseAdmin.storage
-    .from(BUCKET)
+    .from(bucketForKind(kind))
     .createSignedUploadUrl(path, { upsert: true });
 
   if (signError || !data) {
     return error(`Error generando enlace de subida: ${signError?.message || "desconocido"}`, 500);
   }
 
+  // Portadas (bucket público): URL directa. PDFs (bucket privado): referencia
+  // interna storage:// que solo el servidor resuelve vía firmada.
+  const fileRef = kind === "pdf" ? buildPdfRef(data.path ?? path) : getPublicUrl(data.path ?? path);
+
   return ok({
     signedUrl: data.signedUrl,
     token: data.token,
     path: data.path,
-    publicUrl: getPublicUrl(data.path ?? path),
+    bucket: bucketForKind(kind),
+    fileRef,
+    publicUrl: fileRef,
   });
 };

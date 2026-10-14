@@ -1,11 +1,10 @@
 /**
- * Barrido de huérfanos históricos en Supabase Storage (bucket `editions`).
+ * Barrido de huérfanos históricos en Supabase Storage.
  *
- * Complemento del cleanup en caliente de EditionForm ($ST-05, Ago-2026): ese
- * cubre solo los archivos subidos por un submit que luego falla. Este script
- * lista TODO lo que hay en covers/ y pdfs/ y lo compara contra las URLs
- * referenciadas en edition_languages (cover_url / pdf_url). Todo archivo sin
- * referencia es huérfano y se puede borrar.
+ * - Bucket público `editions`: covers/ (+ pdfs/ legacy hasta el backfill).
+ * - Bucket privado `editions-pdfs`: pdfs/ (referencias `storage://...`).
+ * Compara contra cover_url / pdf_url de edition_languages en ambos formatos
+ * (URL pública legacy y storage://bucket/path).
  *
  * Idempotente y seguro: DRY-RUN por defecto; solo borra con --real.
  *
@@ -23,25 +22,35 @@ const supabase = createClient(
 );
 
 const real = process.argv.includes("--real");
-const BUCKET = "editions";
-const PREFIX = "/storage/v1/object/public/editions/";
+const PUBLIC_BUCKET = "editions";
+const PDF_BUCKET = "editions-pdfs";
+const LEGACY_PREFIX = "/storage/v1/object/public/editions/";
 
-function extractStoragePath(url) {
-  if (typeof url !== "string") return null;
-  const idx = url.indexOf(PREFIX);
-  if (idx < 0) return null;
-  return url.slice(idx + PREFIX.length);
+function parseRef(url) {
+  if (typeof url !== "string" || !url) return null;
+  if (url.startsWith("storage://")) {
+    const rest = url.slice("storage://".length);
+    const slash = rest.indexOf("/");
+    if (slash < 0) return null;
+    return { bucket: rest.slice(0, slash), path: rest.slice(slash + 1) };
+  }
+  const idx = url.indexOf(LEGACY_PREFIX);
+  if (idx >= 0) return { bucket: PUBLIC_BUCKET, path: url.slice(idx + LEGACY_PREFIX.length) };
+  return null;
 }
 
-async function listAll(folder) {
+async function listAll(bucket, folder) {
   const out = [];
   let offset = 0;
   const limit = 100;
   for (;;) {
     const { data, error } = await supabase.storage
-      .from(BUCKET)
+      .from(bucket)
       .list(folder, { limit, offset, sortBy: { column: "created_at", order: "desc" } });
-    if (error) throw new Error(`list(${folder}): ${error.message}`);
+    if (error) {
+      if (error.message.includes("not found") || error.message.includes("does not exist")) return out;
+      throw new Error(`list(${bucket}/${folder}): ${error.message}`);
+    }
     if (!data || data.length === 0) break;
     for (const f of data) {
       // folders have id === null
@@ -65,44 +74,56 @@ async function main() {
     process.exit(1);
   }
 
-  const referenced = new Set();
+  const referenced = new Map(); // bucket -> Set(path)
   for (const v of versions || []) {
     for (const url of [v.cover_url, v.pdf_url]) {
-      const p = extractStoragePath(url);
-      if (p) referenced.add(p);
-      else if (url) console.log(`  · ref externa/ignorada (${v.language}): ${String(url).slice(0, 80)}`);
+      const ref = parseRef(url);
+      if (ref) {
+        if (!referenced.has(ref.bucket)) referenced.set(ref.bucket, new Set());
+        referenced.get(ref.bucket).add(ref.path);
+      } else if (url) console.log(`  · ref externa/ignorada (${v.language}): ${String(url).slice(0, 80)}`);
     }
   }
-  console.log(`referencias en edition_languages: ${referenced.size}`);
+  console.log(`referencias en edition_languages: ${[...referenced.values()].reduce((n, s) => n + s.size, 0)}`);
 
   // 2) Archivos reales en storage
-  const storageFiles = [...(await listAll("covers")), ...(await listAll("pdfs"))];
-  console.log(`archivos en storage: ${storageFiles.length} (covers+pdfs)`);
+  const publicFiles = [...(await listAll(PUBLIC_BUCKET, "covers")), ...(await listAll(PUBLIC_BUCKET, "pdfs"))];
+  const privateFiles = await listAll(PDF_BUCKET, "pdfs");
+  console.log(`archivos: ${publicFiles.length} en ${PUBLIC_BUCKET}, ${privateFiles.length} en ${PDF_BUCKET}`);
 
-  // 3) Diferencia
-  const orphans = storageFiles.filter((p) => !referenced.has(p));
-  const missing = [...referenced].filter((p) => !storageFiles.includes(p));
+  // 3) Diferencia por bucket
+  const orphans = [];
+  for (const p of publicFiles) {
+    if (!referenced.get(PUBLIC_BUCKET)?.has(p)) orphans.push({ bucket: PUBLIC_BUCKET, path: p });
+  }
+  for (const p of privateFiles) {
+    if (!referenced.get(PDF_BUCKET)?.has(p)) orphans.push({ bucket: PDF_BUCKET, path: p });
+  }
 
   if (orphans.length === 0) {
     console.log("\n✓ Sin huérfanos. Storage limpio.");
-  } else {
-    console.log(`\nhuérfanos detectados: ${orphans.length}`);
-    for (const p of orphans) console.log(`  ✗ ${p}`);
+    return;
   }
-  if (missing.length > 0) {
-    console.log(`\n⚠ referencias rotas (en DB pero no en storage): ${missing.length}`);
-    for (const p of missing) console.log(`  ! ${p}`);
-  }
+  console.log(`\nhuérfanos detectados: ${orphans.length}`);
+  for (const o of orphans) console.log(`  ✗ [${o.bucket}] ${o.path}`);
 
-  if (!real || orphans.length === 0) {
+  if (!real) {
     console.log("\nListo. Corré con --real para borrar los huérfanos.");
     return;
   }
 
-  const { error: rmError } = await supabase.storage.from(BUCKET).remove(orphans);
-  if (rmError) {
-    console.error("\nError borrando:", rmError.message);
-    process.exit(1);
+  const byBucket = new Map();
+  for (const o of orphans) {
+    const arr = byBucket.get(o.bucket) ?? [];
+    arr.push(o.path);
+    byBucket.set(o.bucket, arr);
+  }
+  for (const [bucket, paths] of byBucket) {
+    const { error: rmError } = await supabase.storage.from(bucket).remove(paths);
+    if (rmError) {
+      console.error(`\nError borrando en ${bucket}:`, rmError.message);
+      process.exit(1);
+    }
   }
   console.log(`\n✓ Borrados ${orphans.length} huérfanos.`);
 }

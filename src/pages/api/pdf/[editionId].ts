@@ -2,12 +2,10 @@ import type { APIRoute } from "astro";
 import { createSupabaseServerClient } from "../../../lib/supabase-server";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 import { error } from "../../../lib/response";
-import { extractStoragePath } from "../../../lib/storage";
+import { parseStoredFileRef } from "../../../lib/storage";
 import { isActiveSubscription } from "../../../lib/subscription-status";
 import { logger } from "../../../lib/logger";
 import { enforceRateLimit } from "../../../lib/rate-limit";
-
-const BUCKET = "editions";
 
 export const prerender = false;
 
@@ -80,13 +78,16 @@ export const GET: APIRoute = async ({ params, request, url, locals }) => {
     return error("Esta edición no tiene PDF", 404);
   }
 
-  const storagePath = extractStoragePath(version.pdf_url);
-  if (!storagePath) {
+  // storage://editions-pdfs/... (nuevo) o URL pública legacy del bucket
+  // editions (pre-backfill): en ambos casos se firma desde el bucket real.
+  const ref = parseStoredFileRef(version.pdf_url);
+  if (!ref) {
     return new Response(null, {
       status: 302,
       headers: { Location: version.pdf_url },
     });
   }
+  const storagePath = ref.path;
 
   const serverSupabase = createSupabaseServerClient(request);
   const { data: { session } } = await serverSupabase.auth.getSession();
@@ -143,7 +144,7 @@ export const GET: APIRoute = async ({ params, request, url, locals }) => {
   const isDownload = url.searchParams.get("download") === "1";
 
   const { data: signed, error: signedError } = await supabaseAdmin.storage
-    .from(BUCKET)
+    .from(ref.bucket)
     .createSignedUrl(storagePath, 60 * 5, {
       download: isDownload,
     });

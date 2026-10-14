@@ -3,7 +3,7 @@ import { requireAdmin } from "../../../../lib/auth";
 import { error, ok } from "../../../../lib/response";
 import { logger } from "../../../../lib/logger";
 import { supabaseAdmin } from "../../../../lib/supabase-admin";
-import { removeStoragePaths } from "../../../../lib/storage";
+import { removeStoragePaths, bucketForKind } from "../../../../lib/storage";
 import {
   isAllowedUploadPath,
   validateStoredUpload,
@@ -13,12 +13,11 @@ import {
 
 export const prerender = false;
 
-const BUCKET = "editions";
 const SIGNATURE_BYTES = 32;
 
-async function readObjectPrefix(path: string): Promise<Uint8Array> {
+async function readObjectPrefix(path: string, bucket: string): Promise<Uint8Array> {
   const { data, error: signError } = await supabaseAdmin.storage
-    .from(BUCKET)
+    .from(bucket)
     .createSignedUrl(path, 60);
   if (signError || !data) throw new Error("No se pudo crear el enlace temporal de verificación");
 
@@ -55,9 +54,9 @@ const failureMessages: Record<UploadValidationFailure, string> = {
   extension_mismatch: "La extensión del archivo no coincide con su contenido real.",
 };
 
-async function rejectAndClean(path: string, message: string): Promise<Response> {
+async function rejectAndClean(path: string, bucket: string, message: string): Promise<Response> {
   try {
-    await removeStoragePaths([path]);
+    await removeStoragePaths([path], bucket);
   } catch (err) {
     logger.error({ err, path }, "invalid edition upload cleanup error");
   }
@@ -82,9 +81,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
   if (!kind || !isAllowedUploadPath(kind, path)) {
     return error("Tipo o ruta de archivo inválidos", 400);
   }
+  const bucket = bucketForKind(kind);
 
   const { data: stored, error: infoError } = await supabaseAdmin.storage
-    .from(BUCKET)
+    .from(bucket)
     .info(path);
   if (infoError || !stored) {
     logger.error({ err: infoError, kind }, "edition upload metadata verification failed");
@@ -95,7 +95,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const contentType = stored.contentType ?? stored.metadata?.mimetype ?? "";
   let prefix: Uint8Array;
   try {
-    prefix = await readObjectPrefix(path);
+    prefix = await readObjectPrefix(path, bucket);
   } catch (err) {
     logger.error({ err, kind }, "edition upload signature read failed");
     return error("No pudimos verificar el archivo subido. Volvé a intentarlo.", 502);
@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     prefix,
   });
   if (validationFailure) {
-    return rejectAndClean(path, failureMessages[validationFailure]);
+    return rejectAndClean(path, bucket, failureMessages[validationFailure]);
   }
 
   return ok({ verified: true });

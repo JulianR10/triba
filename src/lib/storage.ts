@@ -1,15 +1,28 @@
 import { supabaseAdmin } from "./supabase-admin";
 import type { EditionFileKind } from "./storage-validation";
+import {
+  COVERS_BUCKET,
+  parseStoredFileRef,
+  bucketForKind,
+  bucketForPath,
+} from "./storage-refs";
 
 export { FILE_RULES, type EditionFileKind } from "./storage-validation";
+export {
+  COVERS_BUCKET,
+  PDF_BUCKET,
+  buildPdfRef,
+  bucketForKind,
+  bucketForPath,
+  parseStoredFileRef,
+  type StoredFileRef,
+} from "./storage-refs";
 
-const BUCKET = "editions";
-const STORAGE_URL_PREFIX = `/storage/v1/object/public/${BUCKET}/`;
+const STORAGE_URL_PREFIX = `/storage/v1/object/public/${COVERS_BUCKET}/`;
 
+/** Ruta dentro del bucket de portadas (compatibilidad: callers legacy). */
 export function extractStoragePath(publicUrl: string): string | null {
-  const idx = publicUrl.indexOf(STORAGE_URL_PREFIX);
-  if (idx < 0) return null;
-  return publicUrl.slice(idx + STORAGE_URL_PREFIX.length);
+  return parseStoredFileRef(publicUrl)?.path ?? null;
 }
 
 export function getPublicUrl(path: string): string {
@@ -18,7 +31,7 @@ export function getPublicUrl(path: string): string {
     import.meta.env.SUPABASE_URL ||
     import.meta.env.VITE_SUPABASE_URL ||
     "";
-  return `${supabaseUrl}/storage/v1/object/public/${BUCKET}/${path}`;
+  return `${supabaseUrl}/storage/v1/object/public/${COVERS_BUCKET}/${path}`;
 }
 
 export function fileExt(name: string): string {
@@ -53,12 +66,12 @@ export async function getSignedPdfUrl(
   pdfUrl: string,
   options?: { download?: boolean; ttl?: number }
 ): Promise<string | null> {
-  const path = extractStoragePath(pdfUrl);
-  if (!path) return pdfUrl;
+  const ref = parseStoredFileRef(pdfUrl);
+  if (!ref) return pdfUrl;
 
   const { data, error } = await supabaseAdmin.storage
-    .from(BUCKET)
-    .createSignedUrl(path, options?.ttl ?? 60 * 30, {
+    .from(ref.bucket)
+    .createSignedUrl(ref.path, options?.ttl ?? 60 * 30, {
       download: options?.download ?? false,
     });
 
@@ -74,13 +87,18 @@ export function isStorageConfigured(): boolean {
   ) && !!import.meta.env.SUPABASE_SERVICE_ROLE_KEY;
 }
 
-export async function removeStoragePaths(paths: string[]): Promise<{ removed: number }> {
+export async function removeStoragePaths(
+  paths: string[],
+  bucket: string = COVERS_BUCKET
+): Promise<{ removed: number }> {
   const clean = [...new Set(paths.filter((p): p is string => typeof p === "string" && !!p))];
   if (clean.length === 0) return { removed: 0 };
   // Guard: only allow known prefixes to avoid accidental deletes
   const allowed = clean.filter((p) => p.startsWith("covers/") || p.startsWith("pdfs/"));
   if (allowed.length === 0) return { removed: 0 };
-  const { error } = await supabaseAdmin.storage.from(BUCKET).remove(allowed);
+  const { error } = await supabaseAdmin.storage.from(bucket).remove(allowed);
   if (error) throw new Error(`Error limpiando storage: ${error.message}`);
   return { removed: allowed.length };
 }
+
+export { STORAGE_URL_PREFIX };

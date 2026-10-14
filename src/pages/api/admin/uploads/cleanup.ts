@@ -1,7 +1,7 @@
 import type { APIRoute } from "astro";
 import { requireAdmin } from "../../../../lib/auth";
 import { ok, error } from "../../../../lib/response";
-import { removeStoragePaths, extractStoragePath } from "../../../../lib/storage";
+import { removeStoragePaths, parseStoredFileRef, bucketForPath } from "../../../../lib/storage";
 
 export const prerender = false;
 
@@ -16,23 +16,49 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return error("Body inválido: se esperaba JSON", 400);
   }
 
-  let paths: string[] = [];
-  if (Array.isArray(body.paths)) paths = body.paths;
-  else if (Array.isArray(body.urls)) paths = body.urls.map((u: string) => extractStoragePath(u) || "").filter(Boolean);
-  else if (typeof body.path === "string") paths = [body.path];
-  else if (typeof body.url === "string") {
-    const p = extractStoragePath(body.url);
-    if (p) paths = [p];
+  // Acepta paths crudos ("covers/...", "pdfs/...") o referencias guardadas
+  // (URL pública legacy o storage://bucket/path). El bucket se infiere del
+  // prefijo: pdfs/* vive en el bucket privado.
+  const refs: { bucket: string; path: string }[] = [];
+  const pushRef = (bucket: string, path: string) => {
+    if (path.startsWith("covers/") || path.startsWith("pdfs/")) {
+      refs.push({ bucket: bucket || bucketForPath(path), path });
+    }
+  };
+  if (Array.isArray(body.paths)) {
+    for (const p of body.paths) {
+      if (typeof p !== "string") continue;
+      const parsed = parseStoredFileRef(p);
+      if (parsed) pushRef(parsed.bucket, parsed.path);
+      else pushRef("", p);
+    }
+  } else if (Array.isArray(body.urls)) {
+    for (const u of body.urls) {
+      if (typeof u !== "string") continue;
+      const parsed = parseStoredFileRef(u);
+      if (parsed) pushRef(parsed.bucket, parsed.path);
+    }
+  } else if (typeof body.path === "string") {
+    pushRef("", body.path);
+  } else if (typeof body.url === "string") {
+    const parsed = parseStoredFileRef(body.url);
+    if (parsed) pushRef(parsed.bucket, parsed.path);
   }
 
-  if (paths.length === 0) return ok({ removed: 0 });
+  if (refs.length === 0) return ok({ removed: 0 });
 
-  // Guard same as helper — only covers/pdfs
-  const allowed = paths.filter((p) => p.startsWith("covers/") || p.startsWith("pdfs/"));
-  if (allowed.length === 0) return ok({ removed: 0 });
+  const byBucket = new Map<string, string[]>();
+  for (const r of refs) {
+    const arr = byBucket.get(r.bucket) ?? [];
+    arr.push(r.path);
+    byBucket.set(r.bucket, arr);
+  }
 
   try {
-    const { removed } = await removeStoragePaths(allowed);
+    let removed = 0;
+    for (const [bucket, paths] of byBucket) {
+      removed += (await removeStoragePaths(paths, bucket)).removed;
+    }
     return ok({ removed });
   } catch (e: any) {
     return error(e?.message || "Error limpiando storage", 500);

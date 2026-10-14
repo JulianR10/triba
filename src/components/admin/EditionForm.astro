@@ -152,7 +152,7 @@ const enVersion = versionsByLang.get("en");
         <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">PDF (español)</p>
         <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-bone">
           {esVersion?.pdf_url && (
-            <p class="font-sans text-xs text-triba-brown/70 mb-2">PDF actual: <a href={esVersion.pdf_url} class="text-triba-red hover:underline" target="_blank" rel="noopener">ver</a></p>
+            <p class="font-sans text-xs text-triba-brown/70 mb-2">PDF actual: <a href={`/api/pdf/${esVersion.id}`} class="text-triba-red hover:underline" target="_blank" rel="noopener">ver</a></p>
           )}
           <input
             type="file"
@@ -231,7 +231,7 @@ const enVersion = versionsByLang.get("en");
         <p class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">PDF (English)</p>
         <div class="border-2 border-dashed border-triba-black/30 rounded-xl p-4 bg-triba-white">
           {enVersion?.pdf_url && (
-            <p class="font-sans text-xs text-triba-brown/70 mb-2">Current PDF: <a href={enVersion.pdf_url} class="text-triba-red hover:underline" target="_blank" rel="noopener">view</a></p>
+            <p class="font-sans text-xs text-triba-brown/70 mb-2">Current PDF: <a href={`/api/pdf/${enVersion.id}`} class="text-triba-red hover:underline" target="_blank" rel="noopener">view</a></p>
           )}
           <input
             type="file"

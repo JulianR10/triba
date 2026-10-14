@@ -5,11 +5,12 @@ Fuente única para reglas y pendientes operativos. No guardar claves, contraseñ
 ## Estado y bloqueos
 
 - Mail Club está publicado; producción y Previews usan el proyecto Supabase `Triba`.
-- **Migraciones `027–030` pendientes** (se aplican en otro momento, vía SQL Editor del dashboard, en orden). Mientras tanto:
+- **Migraciones `027–031` pendientes** (se aplican en otro momento, vía SQL Editor del dashboard, en orden). Mientras tanto:
   - Sin `027`: los recordatorios del 14/19 no se envían y el cron responde 502 en ese tramo (la reconciliación de pagos igual se ejecuta antes).
   - Sin `028`: todo funciona hasta la fundadora 100; la 101 fallaría sin esta migración.
   - Sin `029`: el dashboard usa automáticamente el cálculo anterior de 12 conteos.
-  - Sin `030`: sigue el P0 datos (UPDATE propio en `role`/`subscription_id`/`subscriptions`, `cancel_subscription` sin guard de dueño, policies `using(true)` en `admin_audit_log`/`rate_limits`, grants amplios y sin vista `public_edition_catalog`). El código ya no pide `pdf_url` al cliente (usa `hasPdf` + `/api/pdf/{versionId}`), pero el REST directo a `edition_languages` aún expone `pdf_url` y el bucket `editions` sigue público hasta la Fase 1b (`031` + bucket privado).
+  - Sin `030`: sigue el P0 datos (UPDATE propio en `role`/`subscription_id`/`subscriptions`, `cancel_subscription` sin guard de dueño, policies `using(true)` en `admin_audit_log`/`rate_limits`, grants amplios y sin vista `public_edition_catalog`). El código ya no pide `pdf_url` al cliente (usa `hasPdf` + `/api/pdf/{versionId}` con fallback pre-030), pero el REST directo a `edition_languages` aún expone `pdf_url` y el bucket `editions` sigue público hasta `031`.
+  - Sin `031`: `edition_languages` sigue legible por anon (el `pdf_url` se obtiene por REST directo) y los PDFs siguen en el bucket público. El código ya soporta el bucket privado `editions-pdfs` (refs `storage://`, firma por bucket en `/api/pdf`). Orden de cierre: deploy del código → aplicar `031` → `node --env-file=.env scripts/migrate-pdfs-to-private.mjs --real` → verificar lector → mismo script con `--real --delete-old`.
 - Último estado documentado: faltaba `CRON_SECRET` en Vercel Production. Confirmarlo/configurarlo antes de depender del cron.
 - Pendiente: pagos reales de validación EUR/USD/ARS, portal con suscripción real, exportación verificada del newsletter histórico, costeo postal y aprobación final de fotos/textos legales.
 
@@ -52,7 +53,7 @@ La elegibilidad del corte determina quién recibe el sobre. No se revalida el es
 
 Antes del deploy que activa el cron y la numeración sin tope:
 
-1. Aplicar migraciones `027`, `028`, `029` y `030` en Supabase cuando se decida, en orden (`029` es solo lectura: el dashboard usa el cálculo anterior hasta que exista la vista).
+1. Aplicar migraciones `027` a `031` en Supabase cuando se decida, en orden (`029` es solo lectura: el dashboard usa el cálculo anterior hasta que exista la vista; `031` exige el código con vista+fallback ya deployado).
 2. Configurar `CRON_SECRET` en Vercel Production y redeplegar.
 3. Verificar que `GET /api/cron/reconcile` sin autorización responde 401, no 500.
 4. Después del deploy, ejecutar `node scripts/smoke-prod.mjs`.
@@ -79,7 +80,8 @@ Antes del deploy que activa el cron y la numeración sin tope:
 |---|---|
 | `node scripts/smoke-prod.mjs` | Ejecutar después de cada deploy. |
 | `node --env-file=.env scripts/purge-mail-club-retention.mjs` | Dry-run; revisar antes de añadir `--real`. |
-| `node --env-file=.env scripts/cleanup-orphan-storage.mjs` | Dry-run; `--real` borra objetos de Storage. |
+| `node --env-file=.env scripts/cleanup-orphan-storage.mjs` | Dry-run; revisar antes de añadir `--real`. Cubre ambos buckets (`editions` y `editions-pdfs`). |
+| `node --env-file=.env scripts/migrate-pdfs-to-private.mjs` | Dry-run; `--real` copia PDFs al bucket privado y reescribe `pdf_url`. `--real --delete-old` borra los PDFs del bucket público (solo tras verificar el lector). |
 | `node --env-file=.env scripts/cleanup-mp-pending.mjs` | Dry-run; `--real` cancela preaprobaciones MP. |
 | `node --env-file=.env scripts/update-mp-mailclub-price.mjs --amount <ARS>` | Dry-run; `--real` solo tras aviso de 30 días. |
 | `node --env-file=.env scripts/send-mailclub-preview.mjs --email=<destino> --dry` | Preview local; sin `--dry` envía correo real. |

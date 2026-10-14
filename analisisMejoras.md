@@ -7,6 +7,7 @@ Auditoría de solo lectura. No se toca código hasta pedir un fix.
 - `030_p0_rls_hardening.sql` (pendiente de aplicar vía SQL Editor, junto a `027–029`): cierra P0 datos a nivel DB — trigger anti `role`/`subscription_id` en `profiles`, fuera UPDATE directo en `subscriptions`, `cancel_subscription` solo dueño o `service_role`, fuera policies `using(true)` en `admin_audit_log`/`rate_limits`, grants mínimos + vista `public_edition_catalog` sin `pdf_url`.
 - Código ya migrado: `src/lib/editions.ts` lee la vista (sin `pdf_url`, con `hasPdf`); `EditionDetail`/`Magazine`/`MiCuenta` usan `/api/pdf/{versionId}`. Verificado: `npm test` 73/73, `npm run check` 0 errores, `npm run build` ok.
 - Falta Fase 1b para cierre total del PDF: revocar `select` base a `anon` (`031`) + bucket de PDFs a privado. El REST directo a `edition_languages` aún expone `pdf_url` y el bucket sigue público.
+- `031_pdf_private_bucket.sql` lista (revoke base + crea bucket privado). Código listo: refs `storage://`, firma por bucket, backfill `scripts/migrate-pdfs-to-private.mjs`, huérfanos multi-bucket. Orden: deploy código → aplicar `031` → backfill `--real` → verificar lector → `--real --delete-old`.
 
 ## Alcance
 
