@@ -6,7 +6,7 @@ import { enforceRateLimit } from "../../lib/rate-limit";
 import { logger } from "../../lib/logger";
 import { getSiteOrigin } from "../../lib/site-url";
 import { supabaseAdmin } from "../../lib/supabase-admin";
-import { resolveMailClubZone } from "../../lib/mail-club";
+import { resolveMailClubZone, MAIL_CLUB_PAUSED } from "../../lib/mail-club";
 import { getActiveSubscriptionForUser } from "../../lib/subscription-guard";
 import { validateMailClubAddress, saveMailClubAddress } from "../../lib/mail-club-address";
 
@@ -36,6 +36,9 @@ export const POST: APIRoute = async ({ request }) => {
   }
 
   const plan: Plan = body.plan === "mail_club" ? "mail_club" : "digital";
+  if (plan === "mail_club" && MAIL_CLUB_PAUSED) {
+    return error("El Mail Club está pausado por el momento. Anotate en la lista de espera.", 409);
+  }
 
   if (plan === "digital") {
     const provider = body.provider as Provider;

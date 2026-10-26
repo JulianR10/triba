@@ -11,7 +11,8 @@ import { supabaseAdmin } from "../lib/supabase-admin";
 import { getEditions, getFeaturedEdition } from "../lib/editions";
 import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
 import { getCheckoutOutcome } from "../lib/checkout-status";
-import { getPlanType, MAIL_CLUB_TERMS_VERSION } from "../lib/mail-club";
+import { getPlanType, MAIL_CLUB_PAUSED, MAIL_CLUB_TERMS_VERSION } from "../lib/mail-club";
+import MailClubWaitlist from "../components/MailClubWaitlist.astro";
 import { COUNTRIES } from "../lib/countries";
 import type { Profile, Subscription } from "../lib/types";
 
@@ -272,8 +273,18 @@ const miCuentaMessages = {
         </div>
       )}
 
+      <!-- ===== MAIL CLUB PAUSADO: lista de espera en lugar del upgrade ===== -->
+      {showUpgrade && MAIL_CLUB_PAUSED && (
+        <div class="mt-12 md:mt-16 mx-5 md:mx-14 lg:mx-20 mb-8">
+          <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 md:p-8 max-w-2xl mx-auto">
+            <div class="inline-block bg-triba-green text-triba-brown font-heading text-xs uppercase tracking-wider px-5 py-1.5 rounded-full border border-triba-black mb-4">{dict.mailClubWaitlist.tag}</div>
+            <MailClubWaitlist lang={lang} email={user?.email ?? ""} />
+          </div>
+        </div>
+      )}
+
       <!-- ===== UPGRADE MAIL CLUB (solo plan digital activo) ===== -->
-      {showUpgrade && (
+      {showUpgrade && !MAIL_CLUB_PAUSED && (
         <div class="mt-12 md:mt-16 mx-5 md:mx-14 lg:mx-20 mb-8">
           <div class="bg-triba-cream rounded-xl border-2 border-triba-black p-6 md:p-8 max-w-2xl mx-auto">
             <div class="inline-block bg-triba-green text-triba-brown font-heading text-xs uppercase tracking-wider px-5 py-1.5 rounded-full border border-triba-black mb-4">{dict.mailClub.tag}</div>

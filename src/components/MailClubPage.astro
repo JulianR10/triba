@@ -4,13 +4,15 @@ import Button from "../components/Button.astro";
 import PatchTitle from "../components/PatchTitle.astro";
 import { t, type Locale } from "../i18n/ui";
 import { localizePath } from "../i18n/locale";
+import MailClubWaitlist from "../components/MailClubWaitlist.astro";
+import { MAIL_CLUB_PAUSED } from "../lib/mail-club";
 
 const { lang = "es" } = Astro.props as { lang?: Locale };
 const dict = t(lang);
 const page = dict.mailClubPage;
 const canonical = lang === "en" ? "/en/mail-club" : "/mail-club";
 const subscribeHref = localizePath("/suscribirme", lang);
-const faqs = dict.subscribe.faqs;
+const faqs = dict.subscribe.faqs.map((f) => ({ q: f.q, a: MAIL_CLUB_PAUSED && "pausedA" in f ? f.pausedA : f.a }));
 ---
 
 <style>
@@ -38,6 +40,9 @@ const faqs = dict.subscribe.faqs;
       <!-- Declaración -->
       <div class="max-w-3xl mx-auto text-center pt-8 md:pt-12 reveal-text" data-reveal>
         <PatchTitle content={page.heroTitle} tag="h1" class="text-5xl md:text-7xl text-triba-brown" />
+        {MAIL_CLUB_PAUSED && (
+          <p class="inline-block mt-6 bg-triba-green text-triba-brown font-heading text-sm uppercase tracking-wider px-6 py-2 rounded-full border-2 border-triba-black shadow-[2px_2px_0_#35220A]">✦ {dict.mailClubWaitlist.tag}</p>
+        )}
       </div>
 
       <div class="grid md:grid-cols-[1.8fr_1fr] gap-6 md:gap-10 items-center my-10 md:my-14 max-w-6xl" data-reveal>
@@ -62,9 +67,15 @@ const faqs = dict.subscribe.faqs;
         <p class="font-sans text-base md:text-lg text-triba-brown leading-relaxed mt-6 text-balance">
           {page.heroBody}
         </p>
-        <div class="mt-10 flex justify-center">
-          <Button variant="primary" size="md" href={subscribeHref} class="px-10 py-4 text-base">{page.heroButton}</Button>
-        </div>
+        {MAIL_CLUB_PAUSED ? (
+          <div id="lista-de-espera" class="mt-10 bg-triba-cream rounded-xl border-2 border-triba-black p-6 md:p-8">
+            <MailClubWaitlist lang={lang} />
+          </div>
+        ) : (
+          <div class="mt-10 flex justify-center">
+            <Button variant="primary" size="md" href={subscribeHref} class="px-10 py-4 text-base">{page.heroButton}</Button>
+          </div>
+        )}
       </div>
 
       <!-- Cómo funciona · pasos vivos en zigzag -->
@@ -87,7 +98,11 @@ const faqs = dict.subscribe.faqs;
             <div class="p-8 md:p-12 pt-24 md:pt-16">
               <p class="font-sans text-base md:text-lg text-triba-brown mb-3">{page.closingTitle}</p>
               <p class="font-serif italic text-2xl md:text-4xl text-triba-brown mb-10">{page.closingBody}</p>
-              <Button variant="primary" size="md" href={subscribeHref} class="px-10 py-4 text-base">{page.closingButton}</Button>
+              {MAIL_CLUB_PAUSED ? (
+                <MailClubWaitlist lang={lang} showIntro={false} />
+              ) : (
+                <Button variant="primary" size="md" href={subscribeHref} class="px-10 py-4 text-base">{page.closingButton}</Button>
+              )}
             </div>
           </div>
           </div>

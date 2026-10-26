@@ -183,6 +183,7 @@ export const ui = {
         {
           q: "¿Cuándo sale mi sobre?",
           a: "Si te suscribís antes del 15, tu sobre sale ese mismo mes. Si te sumás después del 15, sale en el envío del mes siguiente. Despachamos todos juntos el día 20 de cada mes y te avisamos por mail.",
+          pausedA: "Por ahora pausamos los envíos del Mail Club. Anotate en la lista de espera y te avisamos por mail apenas vuelva.",
         },
         {
           q: "¿Cuánto tarda en llegar?",
@@ -195,6 +196,7 @@ export const ui = {
         {
           q: "Ya estoy suscripta, ¿cómo me paso al Mail Club?",
           a: "Desde tu perfil, en “Pasarme al Mail Club”. Cargás tu dirección y pagás solo la diferencia de este mes (€3,50 / U$S 5,50 / $9.000). Desde tu próxima renovación pagás el precio del club.",
+          pausedA: "Por ahora el Mail Club está pausado. Anotate en la lista de espera y te avisamos cuando puedas pasarte.",
         },
         {
           q: "¿Puedo cambiar mi dirección?",
@@ -245,6 +247,19 @@ export const ui = {
       needLogin: "Iniciá sesión para suscribirte al Mail Club.",
       error: "No pudimos procesar tu suscripción. Intentá de nuevo.",
       networkError: "Error de conexión. Intentá de nuevo.",
+    },
+    mailClubWaitlist: {
+      tag: "Próximamente",
+      title: "El Mail Club vuelve pronto",
+      body: "Pausamos los envíos por un tiempo. Dejanos tu email y te avisamos apenas vuelva a estar disponible.",
+      emailLabel: "Tu email",
+      submit: "Avisame",
+      processing: "Enviando...",
+      success: "¡Listo! Te vamos a avisar cuando el Mail Club vuelva.",
+      error: "No pudimos anotarte. Intentá de nuevo.",
+      networkError: "Error de conexión. Intentá de nuevo.",
+      consent: "Usamos tu email solo para avisarte de la vuelta del Mail Club.",
+      privacyLink: "Privacidad",
     },
     mailClubPage: {
       title: "Mail Club",
@@ -620,6 +635,7 @@ export const ui = {
         {
           q: "When does my envelope ship?",
           a: "If you subscribe before the 15th, your envelope ships that same month. If you join after the 15th, it ships with the following month's dispatch. We dispatch everything together on the 20th of each month and email you.",
+          pausedA: "We have paused Mail Club shipping for now. Join the waitlist and we'll email you as soon as it's back.",
         },
         {
           q: "How long does it take to arrive?",
@@ -632,6 +648,7 @@ export const ui = {
         {
           q: "I'm already subscribed, how do I switch to the Mail Club?",
           a: "From your profile, under “Join the Mail Club”. You enter your address and only pay this month's difference (€3.50 / US$5.50 / $9,000). From your next renewal you pay the club price.",
+          pausedA: "The Mail Club is paused for now. Join the waitlist and we'll let you know when you can switch.",
         },
         {
           q: "Can I change my address?",
@@ -682,6 +699,19 @@ export const ui = {
       needLogin: "Sign in to join the Mail Club.",
       error: "We couldn't process your subscription. Try again.",
       networkError: "Connection error. Try again.",
+    },
+    mailClubWaitlist: {
+      tag: "Coming soon",
+      title: "The Mail Club is coming back soon",
+      body: "We've paused shipping for a while. Leave your email and we'll let you know as soon as it's available again.",
+      emailLabel: "Your email",
+      submit: "Notify me",
+      processing: "Sending...",
+      success: "Done! We'll let you know when the Mail Club is back.",
+      error: "We couldn't sign you up. Please try again.",
+      networkError: "Connection error. Please try again.",
+      consent: "We'll only use your email to tell you when the Mail Club is back.",
+      privacyLink: "Privacy",
     },
     mailClubPage: {
       title: "Mail Club",

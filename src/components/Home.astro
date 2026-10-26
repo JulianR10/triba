@@ -5,6 +5,7 @@ import MagazineCard from "../components/MagazineCard.astro";
 import MagazineSlider from "../components/MagazineSlider.astro";
 import PatchTitle from "../components/PatchTitle.astro";
 import MailClubPopup from "../components/MailClubPopup.astro";
+import { MAIL_CLUB_PAUSED } from "../lib/mail-club";
 import { t, type Locale } from "../i18n/ui";
 import { localizePath } from "../i18n/locale";
 
@@ -249,7 +250,7 @@ const scatter = [
     <div class="flex flex-col sm:flex-row gap-4 items-center justify-center my-16">
       <span class="mailclub-wrap">
         <Button variant="mailclub" href={localizePath("/mail-club", lang)} class="px-10 py-4 text-base" font="sans">{dict.mailClub.title}</Button>
-        <span class="mailclub-sticker" aria-hidden="true">✦ {dict.mailClub.tag}</span>
+        <span class="mailclub-sticker" aria-hidden="true">✦ {MAIL_CLUB_PAUSED ? dict.mailClubWaitlist.tag : dict.mailClub.tag}</span>
       </span>
       <Button variant="default" href={localizePath("/suscribirme", lang)} class="px-10 py-4 text-base" font="sans">{dict.home.digitalMagazine}</Button>
     </div>
@@ -382,7 +383,7 @@ const scatter = [
     </div>
   </section>
   </div>
-  <MailClubPopup lang={lang} />
+  {!MAIL_CLUB_PAUSED && <MailClubPopup lang={lang} />}
 </Layout>
 
 <script>

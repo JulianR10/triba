@@ -1,0 +1,93 @@
+---
+// Lista de espera del Mail Club mientras MAIL_CLUB_PAUSED está activo.
+import Button from "../components/Button.astro";
+import { t, type Locale } from "../i18n/ui";
+import { localizePath } from "../i18n/locale";
+
+const { lang = "es", email = "", showIntro = true } = Astro.props as {
+  lang?: Locale;
+  email?: string;
+  showIntro?: boolean;
+};
+const copy = t(lang).mailClubWaitlist;
+const messages = {
+  processing: copy.processing,
+  success: copy.success,
+  error: copy.error,
+  networkError: copy.networkError,
+};
+---
+
+<div class="text-center">
+  {showIntro && (
+    <>
+      <p class="font-heading text-lg md:text-xl uppercase tracking-wider text-triba-brown mb-2">{copy.title}</p>
+      <p class="font-sans text-sm text-triba-brown/80 leading-relaxed mb-5 text-balance">{copy.body}</p>
+    </>
+  )}
+  <form data-mc-waitlist data-messages={JSON.stringify(messages)} class="flex flex-col sm:flex-row gap-3 max-w-md mx-auto text-left">
+    <label class="flex-1">
+      <span class="sr-only">{copy.emailLabel}</span>
+      <input
+        type="email"
+        name="email"
+        required
+        maxlength="254"
+        autocomplete="email"
+        value={email}
+        placeholder={copy.emailLabel}
+        class="w-full px-4 py-3 rounded-button border-2 border-triba-black bg-triba-white font-sans text-sm text-triba-brown outline-none focus:border-triba-red transition-colors"
+      />
+    </label>
+    <Button variant="primary" size="md" type="submit">{copy.submit}</Button>
+  </form>
+  <p data-mc-waitlist-msg role="status" class="hidden font-sans text-sm text-triba-red mt-3"></p>
+  <p class="font-sans text-[11px] text-triba-brown/60 mt-3">
+    {copy.consent}{" "}<a href={localizePath("/privacidad", lang)} class="text-triba-red hover:underline">{copy.privacyLink}</a>
+  </p>
+</div>
+
+<script>
+  import { onPageCycle } from "../lib/onPageCycle";
+
+  function setup() {
+    document.querySelectorAll<HTMLFormElement>("form[data-mc-waitlist]").forEach(function (form) {
+      if (form.dataset.bound) return;
+      form.dataset.bound = "1";
+      var msgs = JSON.parse(form.dataset.messages || "{}");
+      var msgEl = form.parentElement!.querySelector<HTMLElement>("[data-mc-waitlist-msg]");
+      var btn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
+
+      function show(text: string) {
+        if (!msgEl) return;
+        msgEl.textContent = text;
+        msgEl.classList.remove("hidden");
+      }
+
+      form.addEventListener("submit", async function (e) {
+        e.preventDefault();
+        var email = (new FormData(form).get("email") || "").toString().trim();
+        if (btn) btn.disabled = true;
+        show(msgs.processing);
+        try {
+          var res = await fetch("/api/mail-club-waitlist", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: email }),
+          });
+          if (res.ok) {
+            form.classList.add("hidden");
+            show(msgs.success);
+            return;
+          }
+          show(msgs.error);
+        } catch {
+          show(msgs.networkError);
+        }
+        if (btn) btn.disabled = false;
+      });
+    });
+  }
+
+  onPageCycle(setup);
+</script>

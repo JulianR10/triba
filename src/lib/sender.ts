@@ -81,6 +81,13 @@ export async function syncPaidSubscriber(email: string, firstName?: string): Pro
   await addSubscriberToGroup(email, group.id, firstName);
 }
 
+export async function addToMailClubWaitlist(email: string): Promise<boolean> {
+  if (!isConfigured()) return false;
+  const group = await getOrCreateGroup("mail-club-lista-espera");
+  await addSubscriberToGroup(email, group.id);
+  return true;
+}
+
 export async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   const key = apiKey();
   if (!key) {

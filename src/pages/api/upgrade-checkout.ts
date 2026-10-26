@@ -7,7 +7,7 @@ import { getSiteOrigin } from "../../lib/site-url";
 import { supabaseAdmin } from "../../lib/supabase-admin";
 import { getActiveSubscriptionForUser } from "../../lib/subscription-guard";
 import { validateMailClubAddress, saveMailClubAddress } from "../../lib/mail-club-address";
-import { getPlanType, MAIL_CLUB_UPGRADE_DIFF_CENTS, isUpgradeZoneCompatible, resolveMailClubZone } from "../../lib/mail-club";
+import { getPlanType, MAIL_CLUB_PAUSED, MAIL_CLUB_UPGRADE_DIFF_CENTS, isUpgradeZoneCompatible, resolveMailClubZone } from "../../lib/mail-club";
 import {
   buildUpgradePaymentIntentParams,
   getSubscriptionSavedCard,
@@ -27,6 +27,10 @@ export const POST: APIRoute = async ({ request }) => {
     windowMs: 60_000,
   });
   if (limited) return limited;
+
+  if (MAIL_CLUB_PAUSED) {
+    return error("El Mail Club está pausado por el momento. Anotate en la lista de espera.", 409);
+  }
 
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;

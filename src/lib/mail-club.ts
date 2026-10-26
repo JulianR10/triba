@@ -14,6 +14,10 @@ export const MAIL_CLUB_DISPATCH_DAY = 20;
 export const MAIL_CLUB_TERMS_VERSION = "v1";
 export const MAIL_CLUB_ADDRESS_RETENTION_DAYS = 60;
 
+// Pausa temporal (sin envíos): bloquea altas y upgrades nuevos y muestra la
+// lista de espera. Las suscripciones existentes no se tocan. Volver a false para reabrir.
+export const MAIL_CLUB_PAUSED = true;
+
 export { shouldRetainMailClubAddress } from "./mail-club-retention.mjs";
 
 export type MailClubZone = "europe" | "rest" | "argentina";

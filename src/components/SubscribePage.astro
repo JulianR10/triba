@@ -8,13 +8,14 @@ import { getCheckoutOutcome } from "../lib/checkout-status";
 import { t, type Locale } from "../i18n/ui";
 import { localizePath } from "../i18n/locale";
 import { COUNTRIES } from "../lib/countries";
-import { MAIL_CLUB_EUROPE_ISO, MAIL_CLUB_TERMS_VERSION } from "../lib/mail-club";
+import { MAIL_CLUB_EUROPE_ISO, MAIL_CLUB_PAUSED, MAIL_CLUB_TERMS_VERSION } from "../lib/mail-club";
+import MailClubWaitlist from "../components/MailClubWaitlist.astro";
 
 const { lang = "es" } = Astro.props as { lang?: Locale };
 const dict = t(lang);
 const canonical = lang === "en" ? "/en/suscribirme" : "/suscribirme";
 
-const faqs = dict.subscribe.faqs;
+const faqs = dict.subscribe.faqs.map((f) => ({ q: f.q, a: MAIL_CLUB_PAUSED && "pausedA" in f ? f.pausedA : f.a }));
 
 const checkoutOutcome = getCheckoutOutcome(Astro.url.searchParams);
 
@@ -178,7 +179,7 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
         <!-- Triba Mail Club -->
         <div>
           <div class="mailclub-card bg-triba-pink rounded-xl border-2 border-triba-black p-6 md:p-8 flex flex-col h-full shadow-[6px_6px_0_#35220A]">
-            <div class="mailclub-sticker-card inline-block self-start bg-triba-green text-triba-brown font-heading text-sm uppercase tracking-wider px-6 py-2 rounded-full border-2 border-triba-black shadow-[2px_2px_0_#35220A] mb-6">✦ {dict.mailClub.tag}</div>
+            <div class="mailclub-sticker-card inline-block self-start bg-triba-green text-triba-brown font-heading text-sm uppercase tracking-wider px-6 py-2 rounded-full border-2 border-triba-black shadow-[2px_2px_0_#35220A] mb-6">✦ {MAIL_CLUB_PAUSED ? dict.mailClubWaitlist.tag : dict.mailClub.tag}</div>
             <h3 class="font-heading text-2xl md:text-3xl font-bold text-triba-brown mb-6 uppercase tracking-wider">{dict.mailClub.title}</h3>
             <ul class="space-y-2 font-sans text-base text-triba-brown text-left mb-4">
               {
@@ -187,8 +188,16 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
                 ))
               }
             </ul>
-            <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">{dict.mailClub.cutoffNote}</p>
+            {!MAIL_CLUB_PAUSED && <p class="font-sans text-xs text-triba-brown/70 mb-6 leading-relaxed text-balance">{dict.mailClub.cutoffNote}</p>}
 
+            {MAIL_CLUB_PAUSED ? (
+            <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8 mt-2">
+              <MailClubWaitlist lang={lang} />
+              <div class="text-center">
+                <a href={localizePath("/mail-club", lang)} class="inline-block mt-2 font-sans text-xs text-triba-red hover:underline">{dict.mailClub.howItWorks}</a>
+              </div>
+            </div>
+            ) : (
             <div class="bg-triba-white rounded-xl border-2 border-triba-black p-6 md:p-8">
               <div class="flex border-2 border-triba-black rounded-full overflow-hidden mb-6 w-full max-w-xs mx-auto" id="mailclub-segments">
                 {[
@@ -290,6 +299,7 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
                 <a href={localizePath("/mail-club", lang)} class="inline-block mt-2 font-sans text-xs text-triba-red hover:underline">{dict.mailClub.howItWorks}</a>
               </div>
             </div>
+            )}
           </div>
         </div>
       </div>
