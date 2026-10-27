@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { requireUser } from "../../lib/auth";
 import { ok, error } from "../../lib/response";
 import { supabaseAdmin } from "../../lib/supabase-admin";
-import { getPaymentProvider } from "../../lib/payment-provider";
+import { scheduleProviderCancels } from "../../lib/cancel-providers";
 import { logger } from "../../lib/logger";
 import { enforceRateLimit } from "../../lib/rate-limit";
 
@@ -18,15 +18,6 @@ const SUCCESS_MESSAGE =
   "Listo: tu suscripción se cancela al final del período ya pagado. Conservás el acceso hasta esa fecha.";
 const ALREADY_MESSAGE = "Tu suscripción ya se cancela al final del período.";
 
-// El proveedor ya frenó la recurrencia por otro canal: no bloquear la baja
-// local por eso. Se matchea por mensaje porque Stripe/MP no usan códigos
-// estables para este caso (404 No such subscription, sub canceled, etc.).
-function isAlreadyCanceledProviderError(message: string): boolean {
-  return /no such (subscription|preapproval)|already\s*cancel+ed|has been cancel+ed|resource\s+(not\s+found|missing)|not found/i.test(
-    message,
-  );
-}
-
 export const POST: APIRoute = async ({ request }) => {
   const limited = await enforceRateLimit(request, "cancel-subscription", {
     maxRequests: 20,
@@ -39,48 +30,32 @@ export const POST: APIRoute = async ({ request }) => {
   const user = auth.user;
 
   try {
-    const { data: subscription, error: subError } = await supabaseAdmin
+    const { data: subs, error: subError } = await supabaseAdmin
       .from("subscriptions")
       .select("id, provider, provider_subscription_id, status, cancel_at_period_end")
       .eq("user_id", user.id)
       .in("status", CANCELABLE_STATUSES)
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+      .order("created_at", { ascending: false });
 
+    const subscription = subs?.[0];
     if (subError || !subscription) {
       return error("No encontramos una suscripción cancelable.", 404);
     }
 
-    if (subscription.cancel_at_period_end) {
+    if (subs.every((s) => s.cancel_at_period_end)) {
       return ok({ message: ALREADY_MESSAGE, alreadyScheduled: true });
     }
 
-    const providerWarnings: string[] = [];
-    const provider = getPaymentProvider(subscription.provider as "stripe" | "mercadopago");
-
-    // Cortesías 'migrated' no tienen gateway: se marcan directo.
-    if (provider && subscription.provider_subscription_id && subscription.provider !== "migrated") {
-      try {
-        await provider.scheduleCancel(subscription.provider_subscription_id);
-      } catch (err: any) {
-        const providerMessage = err?.message || String(err);
-        if (isAlreadyCanceledProviderError(providerMessage)) {
-          // La recurrencia ya está frenada en el proveedor: seguir para
-          // reflejarlo local en vez de trabar a la usuaria con un 502.
-          logger.warn({ userId: user.id, providerMessage }, "cancel-subscription already canceled at provider");
-          providerWarnings.push(
-            "La renovación ya figuraba frenada en el proveedor de pago; registramos la baja en Triba.",
-          );
-        } else {
-          logger.error({ err, userId: user.id }, "cancel-subscription provider error");
-          return error(
-            "No pudimos cancelar la recurrencia con el proveedor de pago. No se cambió nada; intentá de nuevo o escribinos.",
-            502,
-          );
-        }
-      }
+    // Todas las filas vigentes: una usuaria puede tener varias y la RPC las
+    // marca todas, así que el proveedor debe frenarlas todas también.
+    const providerResult = await scheduleProviderCancels(user.id, subs);
+    if (providerResult.failed) {
+      return error(
+        "No pudimos cancelar la recurrencia con el proveedor de pago. No se cambió nada; intentá de nuevo o escribinos.",
+        502,
+      );
     }
+    const providerWarnings = providerResult.warnings;
 
     const { data: marked, error: dbError } = await supabaseAdmin.rpc("cancel_subscription", {
       p_user_id: user.id,
