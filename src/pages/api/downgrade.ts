@@ -6,10 +6,17 @@ import { getPaymentProvider } from "../../lib/payment-provider";
 import { getActiveSubscriptionForUser } from "../../lib/subscription-guard";
 import { getPlanType } from "../../lib/mail-club";
 import { logger } from "../../lib/logger";
+import { enforceRateLimit } from "../../lib/rate-limit";
 
 // Vuelta al plan digital al final del período pagado. Conserva la cuenta,
 // la fecha de renovación y el acceso Mail Club hasta esa fecha.
 export const POST: APIRoute = async ({ request }) => {
+  const limited = await enforceRateLimit(request, "downgrade", {
+    maxRequests: 5,
+    windowMs: 60_000,
+  });
+  if (limited) return limited;
+
   const auth = await requireUser(request);
   if (auth instanceof Response) return auth;
   const user = auth.user;

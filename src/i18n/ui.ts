@@ -187,7 +187,7 @@ export const ui = {
         },
         {
           q: "¿Cuánto tarda en llegar?",
-          a: "España: 3 a 7 días. Resto de Europa: 1 a 2 semanas. Argentina y resto del mundo: 3 a 6 semanas. El correo a veces tiene demoras que no dependen de nosotras.",
+          a: "Por el momento el Mail Club está disponible únicamente en Argentina: los envíos tardan entre 3 a 8 días en llegar. El correo a veces tiene demoras que no dependen de nosotras.",
         },
         {
           q: "¿Tiene número de seguimiento?",
@@ -264,7 +264,7 @@ export const ui = {
     mailClubPage: {
       title: "Mail Club",
       description:
-        "Mail Club Triba: la revista en tu buzón cada mes. Zine, carta, stickers y más, con envío gratis a todo el mundo.",
+        "Mail Club Triba: la revista en tu buzón cada mes. Zine, carta, stickers y más, con envío gratis a toda Argentina.",
       heroTitle: "Mail Club Triba",
       heroLead: "La revista que leés en pantalla, ahora también en tu buzón.",
       heroBody:
@@ -282,11 +282,11 @@ export const ui = {
       ],
       box3Title: "Cómo funciona",
       box3Steps: [
-        "Te suscribís y nos dejás tu dirección. Hacemos envíos gratis a todo el mundo.",
+        "Te suscribís y nos dejás tu dirección. Hacemos envíos gratis a toda Argentina.",
         "Si te sumás antes del 15, tu sobre sale ese mismo mes. Si te sumás después, sale el mes siguiente.",
         "Despachamos todos los sobres juntos el día 20 de cada mes, junto con la nueva edición.",
         "Te avisamos por mail cuando tu sobre salió.",
-        "España: 3 a 7 días. Resto de Europa: 1 a 2 semanas. Resto del mundo: 3 a 6 semanas. Enviamos por correo ordinario, sin número de seguimiento. Si tu sobre no llega luego del plazo establecido, te mandamos otro.",
+        "Mail Club disponible únicamente en Argentina (por el momento). Los envíos tardan entre 3 a 8 días en llegar. Enviamos por correo ordinario sin número de seguimiento.",
       ],
       closingTitle: "Somos una comunidad de mujeres que escriben para mujeres.",
       closingBody: "Ahora también nos escribimos por carta.",
@@ -424,6 +424,15 @@ export const ui = {
       upgradeCutoffNote: "Si te sumás antes del 15, tu sobre sale este mes.",
       upgradeInterestButton: "Me interesa",
       upgradeHideFormButton: "Ocultar formulario",
+      downgradeTitle: "Pasarte a la suscripción digital",
+      downgradeBody: "El cambio se aplica en tu próxima renovación: hasta entonces seguís con tu plan actual y desde ahí pagás el precio de la suscripción digital.",
+      downgradeButton: "Pasarme a la digital",
+      downgradeConfirmTitle: "Pasarte a la suscripción digital",
+      downgradeConfirmBody: "En tu próxima renovación dejás el Mail Club y pasás a pagar la suscripción digital. ¿Confirmás?",
+      downgradeProcessing: "Procesando...",
+      downgradeSuccess: "Listo: en tu próxima renovación pasás a la suscripción digital.",
+      downgradeScheduled: "Ya programaste el paso a la suscripción digital: se aplica el {date}.",
+      downgradeError: "No pudimos programar el cambio. Intentá de nuevo.",
       upgradeSubmit: "Confirmar y pagar la diferencia",
       upgradeProcessing: "Procesando...",
       upgradeError: "No pudimos procesar tu upgrade. Intentá de nuevo.",
@@ -639,7 +648,7 @@ export const ui = {
         },
         {
           q: "How long does it take to arrive?",
-          a: "Spain: 3 to 7 days. Rest of Europe: 1 to 2 weeks. Argentina and rest of the world: 3 to 6 weeks. The post sometimes has delays beyond our control.",
+          a: "For now the Mail Club is available only in Argentina: shipping takes 3 to 8 days to arrive. The post sometimes has delays beyond our control.",
         },
         {
           q: "Does it have a tracking number?",
@@ -716,7 +725,7 @@ export const ui = {
     mailClubPage: {
       title: "Mail Club",
       description:
-        "Triba Mail Club: the magazine in your mailbox every month. Zine, letter, stickers and more, with free worldwide shipping.",
+        "Triba Mail Club: the magazine in your mailbox every month. Zine, letter, stickers and more, with free shipping across Argentina.",
       heroTitle: "Triba Mail Club",
       heroLead: "The magazine you read on screen, now also in your mailbox.",
       heroBody:
@@ -734,11 +743,11 @@ export const ui = {
       ],
       box3Title: "How it works",
       box3Steps: [
-        "You subscribe and leave us your address. We ship free worldwide.",
+        "You subscribe and leave us your address. We ship free across Argentina.",
         "If you join before the 15th, your envelope ships that same month. If you join after, it ships the following month.",
         "We dispatch all envelopes together on the 20th of each month, along with the new edition.",
         "We email you when your envelope is on its way.",
-        "Spain: 3 to 7 days. Rest of Europe: 1 to 2 weeks. Rest of the world: 3 to 6 weeks. We ship by ordinary mail, with no tracking number. If your envelope doesn't arrive within the stated window, we send another one.",
+        "Mail Club available only in Argentina (for now). Shipping takes 3 to 8 days to arrive. We ship by ordinary mail, with no tracking number.",
       ],
       closingTitle: "We are a community of women who write for women.",
       closingBody: "Now we also write to each other by letter.",
@@ -876,6 +885,15 @@ export const ui = {
       upgradeCutoffNote: "If you join before the 15th, your envelope ships this month.",
       upgradeInterestButton: "I'm interested",
       upgradeHideFormButton: "Hide form",
+      downgradeTitle: "Switch to the digital subscription",
+      downgradeBody: "The change applies at your next renewal: until then you keep your current plan, and from then on you pay the digital subscription price.",
+      downgradeButton: "Switch to digital",
+      downgradeConfirmTitle: "Switch to the digital subscription",
+      downgradeConfirmBody: "At your next renewal you leave the Mail Club and start paying the digital subscription. Confirm?",
+      downgradeProcessing: "Processing...",
+      downgradeSuccess: "Done: at your next renewal you switch to the digital subscription.",
+      downgradeScheduled: "You've scheduled the switch to the digital subscription: it applies on {date}.",
+      downgradeError: "We couldn't schedule the change. Please try again.",
       upgradeSubmit: "Confirm and pay the difference",
       upgradeProcessing: "Processing...",
       upgradeError: "We couldn't process your upgrade. Try again.",
