@@ -120,28 +120,44 @@ class StripePaymentProvider implements PaymentProvider {
       throw new Error("Invalid period end for downgrade schedule");
     }
 
+    // Reintento tras un fallo parcial (p. ej. falló la DB luego del proveedor):
+    // un schedule previo ya apuntando al precio digital cuenta como hecho.
+    if (current.schedule) {
+      const scheduleId = typeof current.schedule === "string" ? current.schedule : current.schedule.id;
+      const existing = await stripe.subscriptionSchedules.retrieve(scheduleId);
+      const digitalPhase = existing.phases.find((p) => p.items.some((i) => (typeof i.price === "string" ? i.price : i.price.id) === digitalPriceId));
+      if (!digitalPhase) throw new Error("La suscripción ya tiene otro cambio programado en Stripe.");
+      return { effectiveAt: new Date(digitalPhase.start_date * 1000).toISOString() };
+    }
+
     const schedule = await stripe.subscriptionSchedules.create({
       from_subscription: providerSubscriptionId,
     });
-    // Al reemplazar las fases, Stripe exige anclar con el start_date vigente
-    // de la fase actual (pasar "now" u omitirlo responde 400).
-    const currentPhaseStart = (schedule as unknown as { current_phase?: { start_date?: number } })
-      .current_phase?.start_date;
-    await stripe.subscriptionSchedules.update(schedule.id, {
-      end_behavior: "release",
-      phases: [
-        {
-          items: [{ price: currentPriceId, quantity: 1 }],
-          ...(currentPhaseStart ? { start_date: currentPhaseStart } : {}),
-          end_date: periodEndSec,
-          proration_behavior: "none",
-        },
-        {
-          items: [{ price: digitalPriceId, quantity: 1 }],
-          proration_behavior: "none",
-        },
-      ],
-    });
+    try {
+      // Al reemplazar las fases, Stripe exige anclar con el start_date vigente
+      // de la fase actual (pasar "now" u omitirlo responde 400).
+      const currentPhaseStart = (schedule as unknown as { current_phase?: { start_date?: number } })
+        .current_phase?.start_date;
+      await stripe.subscriptionSchedules.update(schedule.id, {
+        end_behavior: "release",
+        phases: [
+          {
+            items: [{ price: currentPriceId, quantity: 1 }],
+            ...(currentPhaseStart ? { start_date: currentPhaseStart } : {}),
+            end_date: periodEndSec,
+            proration_behavior: "none",
+          },
+          {
+            items: [{ price: digitalPriceId, quantity: 1 }],
+            proration_behavior: "none",
+          },
+        ],
+      });
+    } catch (err) {
+      // Un schedule a medio armar bloquearía todos los reintentos.
+      await stripe.subscriptionSchedules.release(schedule.id).catch(() => {});
+      throw err;
+    }
 
     return { effectiveAt: new Date(periodEndSec * 1000).toISOString() };
   }

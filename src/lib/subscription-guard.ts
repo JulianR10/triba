@@ -8,6 +8,7 @@ export interface ActiveSubscription {
   provider: string;
   plan_currency: string;
   current_period_end: string | null;
+  scheduled_plan_type: string | null;
 }
 
 // Devuelve la suscripción vigente de la usuaria (si tiene) para evitar
@@ -26,7 +27,7 @@ export async function getActiveSubscriptionForUser(
 
   const { data: sub } = await supabaseAdmin
     .from("subscriptions")
-    .select("id, status, plan_type, provider, plan_currency, current_period_end")
+    .select("id, status, plan_type, provider, plan_currency, current_period_end, scheduled_plan_type")
     .eq("id", subscriptionId)
     .maybeSingle();
   if (!sub) return null;
