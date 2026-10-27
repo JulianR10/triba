@@ -2,11 +2,13 @@
 import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
 import { t, type Locale } from "../i18n/ui";
 import { localizePath } from "../i18n/locale";
+import { getPlanType } from "../lib/mail-club";
 
 interface Sub {
   status?: string | null;
   provider?: string | null;
   plan_currency?: string | null;
+  plan_type?: string | null;
   current_period_end?: string | null;
 }
 
@@ -33,6 +35,7 @@ if (sub?.status === "migrated" && !isActiveSub) {
 }
 
 const planLabel = dict.accountMenu.planVia
+  .replace("{plan}", getPlanType(sub) === "mail_club" ? dict.accountMenu.planMailClub : dict.accountMenu.planDigital)
   .replace("{currency}", sub?.plan_currency ?? "")
   .replace("{provider}", sub?.provider ?? "");
 const expiresLabel = dict.accountMenu.expires.replace("{date}", periodEndLabel);

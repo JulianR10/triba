@@ -80,6 +80,10 @@ const upgradeMessages = {
 };
 const upgradeSuccessHref = localizePath("/mi-cuenta", lang) + "?checkout=success&flow=mail_club_upgrade";
 const showMailClubAddress = hasActiveSub && getPlanType(subscription) === "mail_club";
+const currentPlanLabel = dict.miCuenta.currentPlan.replace(
+  "{plan}",
+  getPlanType(subscription) === "mail_club" ? dict.accountMenu.planMailClub : dict.accountMenu.planDigital,
+);
 // Vuelta a digital (POST /api/downgrade): mismos proveedores que admite el endpoint.
 const showDowngrade =
   showMailClubAddress && (subscription?.provider === "stripe" || subscription?.provider === "mercadopago");
@@ -244,6 +248,9 @@ const miCuentaMessages = {
             </div>
           </div>
           <div class="md:col-start-1 md:row-start-3">
+            {hasActiveSub && (
+              <p class="w-fit mx-auto md:mx-0 mt-2 bg-triba-green text-triba-brown font-heading text-xs uppercase tracking-wider px-5 py-1.5 rounded-full border border-triba-black">{currentPlanLabel}</p>
+            )}
             <div class="mt-6 mb-3 flex flex-col items-center md:items-start gap-2">
               {featured.badge && (
                 <span class="inline-flex px-2.5 py-1 rounded-full bg-triba-white border border-triba-black/10 font-heading text-[10px] uppercase tracking-wider text-triba-brown">{featured.badge}</span>

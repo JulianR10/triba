@@ -34,6 +34,7 @@ if (user) {
           status: localsSubscription.status,
           provider: localsSubscription.provider,
           plan_currency: localsSubscription.plan_currency,
+          plan_type: localsSubscription.plan_type,
           current_period_end: localsSubscription.current_period_end,
         }
       : null;
@@ -43,7 +44,7 @@ if (user) {
     if (p?.subscription_id) {
       const { data: s } = await supabase
         .from("subscriptions")
-        .select("status, provider, plan_currency, current_period_end")
+        .select("status, provider, plan_currency, plan_type, current_period_end")
         .eq("id", p.subscription_id)
         .single();
       accountSub = s;
