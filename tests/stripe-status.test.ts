@@ -41,6 +41,14 @@ describe("periodRange", () => {
     });
   });
 
+  it("prefiere el período del item (API dahlia) sobre el fallback", () => {
+    const range = periodRange({
+      created: 1000,
+      items: { data: [{ current_period_start: 1790000000, current_period_end: 1792678400 }] },
+    } as any);
+    expect(range.end).toBe(new Date(1792678400 * 1000).toISOString());
+  });
+
   it("aplica el fallback +30d solo sin períodos reales", () => {
     const created = 1790000000;
     const range = periodRange({ created } as any);
