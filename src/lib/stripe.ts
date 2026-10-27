@@ -16,7 +16,7 @@ export const STRIPE_PRICE_IDS: Record<"EUR" | "USD" | "ARS", string> = {
 };
 
 // Mail Club: precios recurrentes SEPARADOS de los digitales. Configurar en
-// Stripe Dashboard antes de habilitar el checkout (ver mailClub.md §6).
+// Stripe Dashboard antes de habilitar el checkout (ver README, Producción, y ROADMAP, validación pendiente).
 export const MAIL_CLUB_STRIPE_PRICE_IDS: Record<"EUR" | "USD", string> = {
   EUR: import.meta.env.STRIPE_PRICE_MAIL_CLUB_EUR || "",
   USD: import.meta.env.STRIPE_PRICE_MAIL_CLUB_USD || "",
