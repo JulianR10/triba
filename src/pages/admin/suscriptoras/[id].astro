@@ -175,6 +175,15 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
         <h2 class="font-heading text-xs uppercase tracking-wider mb-2">Acciones</h2>
         ${actions}
         <p id="act-msg" class="font-sans text-sm hidden mt-3"></p>
+      </section>
+
+      <section class="mt-3 bg-triba-white rounded-xl border-2 border-triba-black p-4">
+        <h2 class="font-heading text-xs uppercase tracking-wider mb-2">Contraseña</h2>
+        <p class="font-sans text-xs text-triba-brown/70 mb-3">Si no puede entrar ni recuperarla por email, definí una nueva (mín. 8 caracteres) y pasásela por un canal seguro.</p>
+        <form id="set-password-form" class="flex flex-wrap gap-2">
+          <input id="new-password" type="text" minlength="8" maxlength="72" autocomplete="off" required placeholder="Nueva contraseña" class="flex-1 min-w-[200px] rounded-button border-2 border-triba-black px-3 py-2 font-sans text-sm min-h-[44px]" />
+          <button type="submit" class="rounded-button bg-triba-white text-triba-red border-2 border-triba-red px-4 py-2 font-heading text-xs uppercase tracking-wider min-h-[44px]">Cambiar contraseña</button>
+        </form>
       </section>`;
 
     document.getElementById("copy-email")?.addEventListener("click", async () => {
@@ -232,6 +241,28 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
         (window as any).adminToast?.(out.message || "Suscripción cancelada", "success");
         if (warns.length > 0) (window as any).adminToast?.(warns.join(". "), "warning");
         setTimeout(() => window.location.reload(), warns.length > 0 ? 1600 : 800);
+      } catch { say("Error de conexión", true); }
+      finally { btn.disabled = false; }
+    });
+
+    document.getElementById("set-password-form")?.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("new-password") as HTMLInputElement;
+      const btn = (e.currentTarget as HTMLFormElement).querySelector("button")!;
+      const confirmed = await (window as any).adminConfirm?.("Cambiar contraseña", `¿Definir una contraseña nueva para ${p.email}? La actual deja de funcionar.`);
+      if (!confirmed) return;
+      btn.disabled = true;
+      try {
+        const res = await fetch(`/api/admin/subscribers/${encodeURIComponent(p.id)}/password`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ password: input.value }),
+        });
+        const out = await res.json().catch(() => ({}));
+        if (!res.ok) { say(out.error || "Error cambiando la contraseña", true); return; }
+        input.value = "";
+        say(out.message || "Contraseña actualizada.", false);
+        (window as any).adminToast?.("Contraseña actualizada", "success");
       } catch { say("Error de conexión", true); }
       finally { btn.disabled = false; }
     });
