@@ -40,3 +40,18 @@ export async function getActiveSubscriptionForUser(
   if (isActiveSubscription(status, end)) return sub as ActiveSubscription;
   return null;
 }
+
+// Hay una suscripción paga vigente (Stripe/MP) en cualquier fila de la usuaria,
+// no solo la del puntero del perfil. Las 'migrated' (cortesía) no cuentan:
+// esas personas deben poder suscribirse para convertir.
+export async function hasLivePaidSubscription(userId: string): Promise<boolean> {
+  const { data } = await supabaseAdmin
+    .from("subscriptions")
+    .select("status, current_period_end")
+    .eq("user_id", userId)
+    .in("provider", ["stripe", "mercadopago"])
+    .in("status", ["active", "trialing"]);
+  return (data || []).some(
+    (s: any) => s.status === "trialing" || isActiveSubscription(s.status, s.current_period_end),
+  );
+}

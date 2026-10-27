@@ -7,7 +7,7 @@ import { logger } from "../../lib/logger";
 import { getSiteOrigin } from "../../lib/site-url";
 import { supabaseAdmin } from "../../lib/supabase-admin";
 import { resolveMailClubZone, MAIL_CLUB_PAUSED } from "../../lib/mail-club";
-import { getActiveSubscriptionForUser } from "../../lib/subscription-guard";
+import { getActiveSubscriptionForUser, hasLivePaidSubscription } from "../../lib/subscription-guard";
 import { validateMailClubAddress, saveMailClubAddress } from "../../lib/mail-club-address";
 
 const validProviders = ["stripe", "mercadopago"] as const;
@@ -54,6 +54,17 @@ export const POST: APIRoute = async ({ request }) => {
     const allowedCurrencies = provider === "stripe" ? ["EUR", "USD"] : ["ARS"];
     if (!allowedCurrencies.includes(currency)) {
       return error("La moneda no corresponde al proveedor de pago.", 400);
+    }
+
+    // Sin dobles cobros: quien ya paga no puede abrir otro checkout.
+    if (await hasLivePaidSubscription(user.id)) {
+      return new Response(
+        JSON.stringify({
+          error: "Ya tenés una suscripción activa. Gestionala desde Mi Cuenta.",
+          code: "already_subscribed",
+        }),
+        { status: 409, headers: { "Content-Type": "application/json" } },
+      );
     }
 
     try {
