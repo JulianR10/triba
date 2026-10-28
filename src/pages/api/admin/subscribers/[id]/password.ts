@@ -52,7 +52,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
     return error("No se pudo cambiar la contraseña. Intentá de nuevo.", 500);
   }
 
-  logAdminAction(admin.user.id, admin.profile.email, "subscriber.password_set", "subscriber", profile.id, {
+  await logAdminAction(admin.user.id, admin.profile.email, "subscriber.password_set", "subscriber", profile.id, {
     target_email: profile.email,
   });
 

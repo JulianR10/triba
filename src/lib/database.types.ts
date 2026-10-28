@@ -98,6 +98,7 @@ export interface Database {
           kind: "magazine" | "free";
           published_at: string;
           created_at: string;
+          notified_at: string | null;
         };
         Insert: {
           id?: number;
@@ -106,6 +107,7 @@ export interface Database {
           kind?: "magazine" | "free";
           published_at?: string;
           created_at?: string;
+          notified_at?: string | null;
         };
         Update: {
           id?: number;
@@ -114,6 +116,7 @@ export interface Database {
           kind?: "magazine" | "free";
           published_at?: string;
           created_at?: string;
+          notified_at?: string | null;
         };
         Relationships: [];
       };

@@ -226,7 +226,7 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
 
     document.getElementById("act-cancel")?.addEventListener("click", async (e) => {
       const btn = e.currentTarget as HTMLButtonElement;
-      const confirmed = await (window as any).adminConfirm?.("Cancelar suscripción", `¿Cancelar la suscripción de ${p.email}?`);
+      const confirmed = await (window as any).adminConfirm?.("Cancelar suscripción", `¿Cancelar la suscripción de ${p.email}? Se cancela al final del período ya pagado: conserva el acceso hasta esa fecha y no se le vuelve a cobrar. Para cortar el acceso ahora, usá Reembolsar.`);
       if (!confirmed) return;
       btn.disabled = true;
       try {
@@ -269,7 +269,17 @@ import AdminLayout from "../../../components/admin/AdminLayout.astro";
 
     document.getElementById("act-refund")?.addEventListener("click", async (e) => {
       const btn = e.currentTarget as HTMLButtonElement;
-      const confirmed = await (window as any).adminConfirm?.("Reembolsar y Cancelar", `¿Reembolsar el último cobro de ${p.email} y cancelar? No se puede deshacer.`);
+      // Primero se consulta qué cobro se devolvería: la confirmación muestra importe y fecha reales.
+      btn.disabled = true;
+      let previewText = "el último cobro";
+      try {
+        const pr = await fetch(`/api/admin/subscribers/${encodeURIComponent(p.id)}/refund`);
+        const pd = await pr.json().catch(() => ({}));
+        if (!pr.ok) { say(pd.error || "No se pudo consultar el cobro a reembolsar", true); btn.disabled = false; return; }
+        previewText = `${pd.amountLabel} (cobrados el ${pd.dateLabel})`;
+      } catch { say("Error de conexión al consultar el cobro", true); btn.disabled = false; return; }
+      btn.disabled = false;
+      const confirmed = await (window as any).adminConfirm?.("Reembolsar y Cancelar", `Se devuelven ${previewText} a ${p.email} y su suscripción se cancela ahora: pierde el acceso de inmediato. No se puede deshacer. ¿Seguimos?`);
       if (!confirmed) return;
       btn.disabled = true;
       try {

@@ -3,6 +3,7 @@ import { supabaseAdmin } from "../../lib/supabase-admin";
 import { ok, error } from "../../lib/response";
 import { logger } from "../../lib/logger";
 import { enforceRateLimit } from "../../lib/rate-limit";
+import { CREATOR_AREAS } from "../../lib/creator-areas";
 
 const MAX_LENGTH = {
   nombre: 120,
@@ -11,7 +12,7 @@ const MAX_LENGTH = {
   trabajo_url: 500,
 };
 
-const AREAS = ["Escritura", "Producción", "Fotografía", "Diseño gráfico", "Arte", "Otros"];
+const AREAS: readonly string[] = CREATOR_AREAS;
 
 export const POST: APIRoute = async ({ request }) => {
   const limited = await enforceRateLimit(request, "creators", {

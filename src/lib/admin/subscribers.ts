@@ -2,6 +2,7 @@ import { supabaseAdmin } from "../supabase-admin";
 import { stripe } from "../stripe";
 import { isActiveSubscription } from "../subscription-status";
 import type { Profile, Subscription } from "../types";
+import { csvCell } from "../csv";
 
 export interface AdminSubscriberRow {
   profile: Profile | null;
@@ -46,12 +47,6 @@ export interface SearchMigratedResult {
   totalPages: number;
 }
 
-function escapeCSV(val: string): string {
-  if (val.includes(",") || val.includes('"') || val.includes("\n")) {
-    return `"${val.replace(/"/g, '""')}"`;
-  }
-  return val;
-}
 
 export async function exportSubscribersCSV(
   search: string,
@@ -63,7 +58,7 @@ export async function exportSubscribersCSV(
   const header = "Email,Rol,Provider,Plan,Moneda,Estado,Vence,Creada";
   const lines = rows.map((r) => {
     const s = r.subscription;
-    const email = escapeCSV(r.profile?.email || r.migrationId || "");
+    const email = r.profile?.email || r.migrationEmail || r.migrationId || "";
     const role = r.profile?.role || "migrated";
     const provider = s?.provider || (r.migrationId ? (r.migrationMpPreapprovalId ? "mercadopago" : r.migrationStripeSubId ? "stripe" : "migrado") : "");
     const plan = (s as any)?.plan_type || "";
@@ -75,7 +70,8 @@ export async function exportSubscribersCSV(
     const createdAt = r.profile?.created_at
       ? new Date(r.profile.created_at).toISOString()
       : "";
-    return `${email},${role},${provider},${plan},${currency},${statusVal},${periodEnd},${createdAt}`;
+    // csvCell neutraliza celdas que empiezan con = + - @ (el email lo escribe cada usuaria al registrarse).
+    return [email, role, provider, plan, currency, statusVal, periodEnd, createdAt].map(csvCell).join(",");
   });
 
   return [header, ...lines].join("\n");

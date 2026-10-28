@@ -77,7 +77,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
     }
 
     if (typeof marked === "number" && marked > 0) {
-      logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", profile.id, {
+      await logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", profile.id, {
         canceled_email: profile.email,
       });
       return ok({
@@ -94,7 +94,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
       .maybeSingle();
 
     if (current?.cancel_at_period_end) {
-      logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", profile.id, {
+      await logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", profile.id, {
         canceled_email: profile.email,
       });
       return ok({
@@ -134,7 +134,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
     .update({ stripe_subscription_id: null })
     .eq("id", id);
 
-  logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", id, {
+  await logAdminAction(admin.user.id, admin.profile.email, "subscriber.canceled", "subscriber", id, {
     canceled_email: migration.email,
   });
 

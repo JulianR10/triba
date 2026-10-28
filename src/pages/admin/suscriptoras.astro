@@ -98,7 +98,6 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
   let currentPage = 1;
   let currentFilter = "all";
   let currentSearch = "";
-  let currentTotal = 0;
   let currentTotalPages = 0;
 
   const tbody = document.getElementById("subscribers-tbody")!;
@@ -136,7 +135,6 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
       if (!res.ok) return;
 
       const { rows, total, page, totalPages } = data;
-      currentTotal = total;
       currentTotalPages = totalPages;
 
       if (typeof data.totalPending === "number") {
@@ -237,10 +235,10 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
           // ocultar el botón si la baja ya está programada evita no-ops.
           const canCancel = !!s && ["active", "trialing", "past_due", "incomplete"].includes(s.status) && !s.cancel_at_period_end;
           const cancelBtn = canCancel
-            ? `<button class="cancel-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-email="${row.profile.email}">Cancelar</button>`
+            ? `<button class="cancel-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-email="${escapeHtml(row.profile.email)}">Cancelar</button>`
             : "";
           const refundBtn = canRefund
-              ? `<button class="refund-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-migration-id="" data-email="${row.profile.email}">Reembolsar</button>`
+              ? `<button class="refund-btn font-sans text-xs text-triba-red hover:underline min-h-[44px] min-w-[44px] flex items-center justify-center" data-user-id="${row.profile.id}" data-migration-id="" data-email="${escapeHtml(row.profile.email)}">Reembolsar</button>`
               : "";
           const actionsContent = [cancelBtn, refundBtn].filter(Boolean).join('<span class="text-triba-brown/20 mx-1">|</span>') || "—";
           return `<tr class="border-b border-triba-black/10 last:border-0 hover:bg-triba-bone/50">
@@ -280,7 +278,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
         const email = btn.dataset.email!;
         const confirmed = await (window as any).adminConfirm?.(
           "Cancelar suscripción",
-          `¿Cancelar la suscripción de ${email}? Esto también resetea su role a 'free'.`
+          `¿Cancelar la suscripción de ${email}? Se cancela al final del período ya pagado: conserva el acceso hasta esa fecha y no se le vuelve a cobrar. Para cortar el acceso ahora, usá Reembolsar.`
         );
         if (!confirmed) return;
         btn.disabled = true;
@@ -319,9 +317,27 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
         const migrationId = btn.dataset.migrationId;
         const id = userId || migrationId;
         const email = btn.dataset.email!;
+        // Primero se consulta qué cobro se devolvería: la confirmación muestra importe y fecha reales.
+        btn.disabled = true;
+        let previewText = "el último cobro";
+        try {
+          const pr = await fetch(`/api/admin/subscribers/${id}/refund`);
+          const pd = await pr.json().catch(() => ({}));
+          if (!pr.ok) {
+            (window as any).adminToast?.(pd.error || "No se pudo consultar el cobro a reembolsar", "error");
+            btn.disabled = false;
+            return;
+          }
+          previewText = `${pd.amountLabel} (cobrados el ${pd.dateLabel})`;
+        } catch {
+          (window as any).adminToast?.("Error de conexión al consultar el cobro", "error");
+          btn.disabled = false;
+          return;
+        }
+        btn.disabled = false;
         const confirmed = await (window as any).adminConfirm?.(
           "Reembolsar y Cancelar",
-          `¿Reembolsar el último cobro de ${email} y cancelar su suscripción? Esto no se puede deshacer.`
+          `Se devuelven ${previewText} a ${email} y su suscripción se cancela ahora: pierde el acceso de inmediato. Esto no se puede deshacer. ¿Seguimos?`
         );
         if (!confirmed) return;
         btn.disabled = true;

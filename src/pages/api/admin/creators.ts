@@ -59,7 +59,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     return error(updateError.message, 500);
   }
 
-  logAdminAction(
+  await logAdminAction(
     admin.user.id,
     admin.profile.email,
     `creator.${status}`,

@@ -25,7 +25,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
   const { activated, failed, skipped } = await applyReconcileCandidates(onlyIds);
   for (const email of activated) {
-    logAdminAction(admin.user.id, admin.profile.email, "subscriber.reconciled", "subscriber", undefined, {
+    await logAdminAction(admin.user.id, admin.profile.email, "subscriber.reconciled", "subscriber", undefined, {
       reconciled_email: email,
       via: "admin",
     });

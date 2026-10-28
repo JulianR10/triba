@@ -4,12 +4,16 @@ import Button from "../components/Button.astro";
 import Input from "../components/Input.astro";
 import PatchTitle from "../components/PatchTitle.astro";
 import { t, type Locale } from "../i18n/ui";
+import { CREATOR_AREAS } from "../lib/creator-areas";
 
 const { lang = "es" } = Astro.props as { lang?: Locale };
 const dict = t(lang);
 const canonical = lang === "en" ? "/en/triba-creators" : "/triba-creators";
 
 const formMessages = {
+  lang,
+  invalid: dict.creators.invalid,
+  tooMany: dict.creators.tooMany,
   sending: dict.creators.sending,
   success: dict.creators.success,
   error: dict.creators.error,
@@ -50,9 +54,9 @@ const formMessages = {
           <div>
             <span class="block font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">{dict.creators.contribution}</span>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              {dict.creators.areas.map((area) => (
+              {dict.creators.areas.map((area, i) => (
                 <label class="flex items-center gap-2 font-sans text-base text-triba-brown cursor-pointer">
-                  <input type="checkbox" name="area" value={area} class="accent-triba-red" />
+                  <input type="checkbox" name="area" value={CREATOR_AREAS[i]} class="accent-triba-red" />
                   {area}
                 </label>
               ))}
@@ -77,7 +81,7 @@ const formMessages = {
 
     if (!form) return;
 
-    const messages = { sending: "Enviando...", success: "¡Gracias por postularte! Te vamos a contactar pronto.", error: "Error al enviar. Intentalo de nuevo.", networkError: "Error de conexión. Intentalo de nuevo.", submit: "Enviar postulación" };
+    const messages = { lang: "es", invalid: "Revisá los campos e intentá de nuevo.", tooMany: "Esperá un momento antes de volver a intentar.", sending: "Enviando...", success: "¡Gracias por postularte! Te vamos a contactar pronto.", error: "Error al enviar. Intentalo de nuevo.", networkError: "Error de conexión. Intentalo de nuevo.", submit: "Enviar postulación" };
     const raw = form.dataset.messages;
     if (raw) {
       try { Object.assign(messages, JSON.parse(raw)); } catch { /* keep defaults */ }
@@ -117,10 +121,15 @@ const formMessages = {
 
         if (res.ok) {
           msg.textContent = messages.success;
-          msg.className = "font-sans text-sm text-center text-triba-green";
+          // Antes era verde claro sobre fondo crema: casi ilegible y se confundía con "no pasó nada".
+          msg.className = "font-sans text-sm text-center text-triba-brown font-medium";
           form.reset();
         } else {
-          msg.textContent = dataRes.error || messages.error;
+          // El servidor responde en español: en inglés se muestra un mensaje equivalente por tipo de error.
+          const localized = messages.lang === "en"
+            ? (res.status === 400 ? messages.invalid : res.status === 429 ? messages.tooMany : messages.error)
+            : null;
+          msg.textContent = localized ?? dataRes.error ?? messages.error;
           msg.className = "font-sans text-sm text-center text-triba-red";
         }
       } catch (err) {
