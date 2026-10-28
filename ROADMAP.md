@@ -62,9 +62,9 @@ Siete personas tenían más de una suscripción paga viva y se les cobró de má
 
 Próximos cobros dobles: 02/11 (abrilsollosqui), 03/11 (segsierra), 10/11 (pedrosubils21) y siguientes.
 
-Pasos con `scripts/dedupe-subscriptions.mjs` (dry-run por defecto, `--real` y `--email=` para acotar, `--backup=` guarda el estado):
-1. Corregir el script para ordenar por la fecha de creación **en el proveedor** (Stripe `created`, MP `date_created`); la `created_at` de la base no es confiable.
-2. Dry-run, respaldo y OK de la dueña (incluida la decisión sobre Karen).
+Pasos con `scripts/dedupe-subscriptions.mjs` (dry-run por defecto; `--backup=` guarda el estado; `--real` **exige** `--email=` para cancelar de a una persona; `--keep=<id del proveedor>` fuerza cuál queda):
+1. ~~Corregir el script para ordenar por la fecha de alta en el proveedor~~ **Hecho (28/10):** ordena por Stripe `created` / MP `date_created`, muestra monto y plan, y avisa si el perfil apunta a otra fila. El dry-run del 28/10 detectó las 7 personas de la tabla (segsierra con 6 sobrantes).
+2. Dry-run, respaldo y OK de la dueña. **Pendiente de su decisión:** Karen. El script propone dejar la de 10,50 EUR (alta 04/08) y cancelar la de 7 EUR (22/09); si ella decide lo contrario, usar `--keep=`.
 3. Stripe: `subscriptions.cancel(id, { invoice_now:false, prorate:false })`; los avisos a clientas están apagados en Stripe, no genera mail.
 4. Mercado Pago: cancelar **una sola persona primero**; la documentación de MP dice que notifica por email al cancelar (no aclara a quién). Es irreversible.
 5. Base: duplicadas a `canceled` y `profiles.subscription_id` apuntando a la que queda (si apuntara a una cancelada de MP, la persona perdería acceso al vencer).
