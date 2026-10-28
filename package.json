@@ -13,14 +13,12 @@
   },
   "dependencies": {
     "@astrojs/react": "^4.2.4",
-    "@astrojs/sitemap": "^3.7.3",
     "@astrojs/tailwind": "^6.0.2",
     "@astrojs/vercel": "^8.2.11",
     "@supabase/ssr": "^0.12.1",
     "@supabase/supabase-js": "^2.49.4",
     "astro": "^5.6.2",
     "mercadopago": "^3.2.0",
-    "pdf-poppler": "^0.2.3",
     "pino": "^10.3.1",
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
@@ -34,9 +32,13 @@
     "@types/react-dom": "^19.1.2",
     "archiver": "^8.0.0",
     "basic-ftp": "^6.0.1",
+    "pdf-poppler": "^0.2.3",
     "pino-pretty": "^13.0.0",
     "playwright": "^1.61.1",
     "typescript": "^5.9.3",
     "vitest": "^5.0.3"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }
