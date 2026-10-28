@@ -7,12 +7,16 @@ import {
   validateEditionInput,
   isEmptyVersion,
   syncFeaturedBadges,
+  removeStoredFiles,
 } from "../../../../lib/admin/editions";
 import { logAdminAction } from "../../../../lib/admin/audit";
 import { logger } from "../../../../lib/logger";
 import { enforceRateLimit } from "../../../../lib/rate-limit";
 
 export const prerender = false;
+
+// El detalle técnico queda en el log; la admin ve qué pasó y qué hacer.
+const SAVE_FAILED = "No se pudo guardar la edición. Revisá los datos e intentá de nuevo; si se repite, avisá al equipo técnico.";
 
 export const PATCH: APIRoute = async ({ request, params, locals }) => {
   const admin = requireAdmin(locals);
@@ -67,6 +71,12 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
       }
     }
 
+    // Archivos vigentes antes de editar: los reemplazados se borran DESPUÉS de guardar bien.
+    const { data: previousVersions } = await supabaseAdmin
+      .from("edition_languages")
+      .select("language, cover_url, pdf_url")
+      .eq("edition_id", editionId);
+
     if (validated.data.kind === "magazine" && validated.data.featured && !current.featured) {
       const { error: featError } = await supabaseAdmin
         .from("editions")
@@ -88,7 +98,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
 
     if (updateError) {
       logger.error({ err: updateError, editionId }, "[editions.update] update error");
-      return error(updateError.message, 500);
+      return error(SAVE_FAILED, 500);
     }
 
     const versions = validated.data.versions;
@@ -110,7 +120,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
         .upsert(rows, { onConflict: "edition_id,language" });
       if (langError) {
         logger.error({ err: langError, editionId }, "[editions.update] languages upsert error");
-        return error(langError.message, 500);
+        return error(SAVE_FAILED, 500);
       }
     }
 
@@ -122,7 +132,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
         .eq("language", "en");
       if (delError) {
         logger.error({ err: delError, editionId }, "[editions.update] languages delete error");
-        return error(delError.message, 500);
+        return error(SAVE_FAILED, 500);
       }
     }
 
@@ -130,7 +140,18 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     // destacada. No bloquea la edición si falla.
     await syncFeaturedBadges();
 
-    logAdminAction(
+    // Guardado OK: recién ahora se borran los archivos que quedaron sin uso (PDF/portada
+    // reemplazados o versión EN quitada). Antes se pisaban antes de guardar.
+    const nextByLang = new Map(rows.map((r) => [r.language, r]));
+    const stale: (string | null)[] = [];
+    for (const prev of previousVersions ?? []) {
+      const next = nextByLang.get(prev.language as "es" | "en");
+      if (!next || next.cover_url !== prev.cover_url) stale.push(prev.cover_url);
+      if (!next || next.pdf_url !== prev.pdf_url) stale.push(prev.pdf_url);
+    }
+    await removeStoredFiles(stale);
+
+    await logAdminAction(
       admin.user.id,
       admin.profile.email,
       "edition.updated",
@@ -146,7 +167,7 @@ export const PATCH: APIRoute = async ({ request, params, locals }) => {
     return ok();
   } catch (e) {
     logger.error({ err: e, editionId }, "[editions.update] unexpected error");
-    return error(e instanceof Error ? e.message : "Error inesperado al actualizar la edición", 500);
+    return error(SAVE_FAILED, 500);
   }
 };
 
@@ -178,6 +199,12 @@ export const DELETE: APIRoute = async ({ params, locals, request }) => {
       .eq("id", editionId)
       .maybeSingle();
 
+    // Archivos de la edición, para borrarlos de Storage una vez eliminada la fila.
+    const { data: filesToRemove } = await supabaseAdmin
+      .from("edition_languages")
+      .select("cover_url, pdf_url")
+      .eq("edition_id", editionId);
+
     const { data: deleted, error: deleteError } = await supabaseAdmin
       .from("editions")
       .delete()
@@ -187,13 +214,16 @@ export const DELETE: APIRoute = async ({ params, locals, request }) => {
 
     if (deleteError) {
       logger.error({ err: deleteError, editionId }, "[editions.delete] delete error");
-      return error(deleteError.message, 500);
+      return error("No se pudo eliminar la edición. Intentá de nuevo.", 500);
     }
 
     // Si se borró la destacada, se limpian badges huérfanos.
     await syncFeaturedBadges();
 
-    logAdminAction(
+    // Sin esto los PDF y portadas quedaban huérfanos en Storage para siempre.
+    await removeStoredFiles((filesToRemove ?? []).flatMap((f) => [f.cover_url, f.pdf_url]));
+
+    await logAdminAction(
       admin.user.id,
       admin.profile.email,
       "edition.deleted",
@@ -207,6 +237,6 @@ export const DELETE: APIRoute = async ({ params, locals, request }) => {
     return ok();
   } catch (e) {
     logger.error({ err: e, editionId }, "[editions.delete] unexpected error");
-    return error(e instanceof Error ? e.message : "Error inesperado al eliminar la edición", 500);
+    return error("No se pudo eliminar la edición. Intentá de nuevo.", 500);
   }
 };

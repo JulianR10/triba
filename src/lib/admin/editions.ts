@@ -2,6 +2,7 @@ import { supabaseAdmin } from "../supabase-admin";
 import { EDITION_LANGUAGES, type Edition, type EditionKind, type EditionLanguage } from "../editions";
 import type { Database } from "../database.types";
 import { logger } from "../logger";
+import { parseStoredFileRef, removeStoragePaths } from "../storage";
 
 type EditionLanguageRow = Database["public"]["Tables"]["edition_languages"]["Row"];
 
@@ -92,6 +93,27 @@ const DEFAULT_BADGES: Record<EditionLanguage, string> = {
   es: "Última edición",
   en: "Latest issue",
 };
+
+/**
+ * Borra de Storage los archivos que una edición dejó de usar (reemplazados o de una edición
+ * eliminada). Se llama SOLO después de guardar bien en la base; un fallo se registra y no
+ * rompe la operación (queda un huérfano, nunca una edición sin archivo).
+ */
+export async function removeStoredFiles(refs: (string | null | undefined)[]): Promise<void> {
+  const byBucket = new Map<string, string[]>();
+  for (const ref of refs) {
+    const parsed = ref ? parseStoredFileRef(ref) : null;
+    if (!parsed) continue;
+    byBucket.set(parsed.bucket, [...(byBucket.get(parsed.bucket) ?? []), parsed.path]);
+  }
+  for (const [bucket, paths] of byBucket) {
+    try {
+      await removeStoragePaths(paths, bucket);
+    } catch (err) {
+      logger.error({ err, bucket, paths }, "[editions] stale storage cleanup failed");
+    }
+  }
+}
 
 /**
  * Regla de badge única (AGENTS.md): la etiqueta de "última edición" vive SOLO

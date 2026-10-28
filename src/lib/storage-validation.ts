@@ -22,7 +22,8 @@ export type UploadValidationFailure =
 export function isAllowedUploadPath(kind: EditionFileKind, path: string): boolean {
   if (path.includes("..") || path.includes("\\") || path.split("/").length !== 2) return false;
   if (kind === "pdf") {
-    return /^pdfs\/(?:revista-\d+|articulo-gratis-\d+)-(?:es|en)\.pdf$/i.test(path);
+    // revista-N-es.pdf (formato anterior) y revista-N-<timestamp>-es.pdf (subidas nuevas).
+    return /^pdfs\/(?:revista-\d+(?:-\d+)?|articulo-gratis-\d+)-(?:es|en)\.pdf$/i.test(path);
   }
   return /^covers\/edicion-\d+-(?:es|en)-\d+\.(?:jpe?g|png|webp|avif)$/i.test(path);
 }

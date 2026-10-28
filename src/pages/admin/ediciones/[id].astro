@@ -2,6 +2,7 @@
 import AdminLayout from "../../../components/admin/AdminLayout.astro";
 import EditionForm from "../../../components/admin/EditionForm.astro";
 import { getEditionForAdmin } from "../../../lib/admin/editions";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
 
 const { id } = Astro.params;
 const editionId = Number(id);
@@ -16,6 +17,21 @@ if (!edition) {
 }
 const esVersion = edition.versions.find((v) => v.language === "es");
 const editionTitle = esVersion?.title ?? `Edición ${edition.edition_number ?? ""}`;
+
+// A cuántas llegaría el aviso y si ya se envió (la columna existe desde la migración 033).
+const { count: recipientCount } = await supabaseAdmin
+  .from("profiles")
+  .select("id", { count: "exact", head: true })
+  .eq("role", "subscriber");
+const { data: notifyRow } = await supabaseAdmin
+  .from("editions")
+  .select("notified_at")
+  .eq("id", editionId)
+  .maybeSingle();
+const notifiedAt = notifyRow?.notified_at ?? null;
+const notifiedLabel = notifiedAt
+  ? new Date(notifiedAt).toLocaleDateString("es-AR", { day: "2-digit", month: "long", year: "numeric" })
+  : "";
 ---
 
 <AdminLayout title={`Editar #${edition.edition_number} — ${editionTitle}`} active="ediciones">
@@ -31,9 +47,12 @@ const editionTitle = esVersion?.title ?? `Edición ${edition.edition_number ?? "
 
   <div class="mt-6 p-6 bg-triba-cream rounded-xl border-2 border-triba-black">
     <p class="font-heading text-xs uppercase tracking-wider text-triba-brown mb-2">Notificar suscriptoras</p>
-    <p class="font-sans text-base text-triba-brown/70 mb-4">Envía un email a todas las suscriptoras activas avisando que esta edición ya está disponible.</p>
-    <button id="notify-subscribers-btn" data-edition-id={edition.id} type="button" class="rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-6 py-3 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
-      Notificar suscriptoras
+    <p class="font-sans text-base text-triba-brown/70 mb-4">Envía un email a las suscriptoras avisando que esta edición ya está disponible. Hoy son <strong>{recipientCount ?? "?"}</strong>.</p>
+    {notifiedAt && (
+      <p class="font-sans text-sm text-triba-brown bg-triba-white border border-triba-black/20 rounded p-3 mb-4">Ya se avisó a las suscriptoras el <strong>{notifiedLabel}</strong>. Solo volvé a enviarlo si fue un error o hubo un cambio importante.</p>
+    )}
+    <button id="notify-subscribers-btn" data-edition-id={edition.id} data-recipients={recipientCount ?? ""} data-notified={notifiedAt ? "1" : "0"} data-notified-label={notifiedLabel} type="button" class="rounded-button bg-triba-green text-triba-brown border-2 border-triba-black px-6 py-3 font-heading text-xs uppercase tracking-wider hover:scale-[1.02] transition-all">
+      {notifiedAt ? "Volver a notificar a todas" : "Notificar suscriptoras"}
     </button>
     <p id="notify-msg" class="font-sans text-sm hidden mt-3"></p>
     <div id="notify-failures" class="hidden mt-3"></div>
@@ -123,16 +142,18 @@ const editionTitle = esVersion?.title ?? `Edición ${edition.edition_number ?? "
       });
     }
 
-    async function doNotify(emails?: string[]) {
+    async function doNotify(emails?: string[], force = false) {
       const editionId = btn!.dataset.editionId;
+      const idleLabel = btn!.textContent || "Notificar suscriptoras";
       btn!.disabled = true;
       btn!.textContent = "Enviando...";
       failuresEl!.classList.add("hidden");
       try {
+        const payload = emails ? { emails } : force ? { force: true } : null;
         const res = await fetch(`/api/admin/editions/${editionId}/notify`, {
           method: "POST",
-          headers: emails ? { "Content-Type": "application/json" } : undefined,
-          body: emails ? JSON.stringify({ emails }) : undefined,
+          headers: payload ? { "Content-Type": "application/json" } : undefined,
+          body: payload ? JSON.stringify(payload) : undefined,
         });
         const data = await res.json();
 
@@ -156,17 +177,21 @@ const editionTitle = esVersion?.title ?? `Edición ${edition.edition_number ?? "
         (window as any).adminToast?.("Error de conexión", "error");
       } finally {
         btn!.disabled = false;
-        btn!.textContent = "Notificar suscriptoras";
+        btn!.textContent = idleLabel;
       }
     }
 
     btn.addEventListener("click", async () => {
+      const recipients = btn!.dataset.recipients || "las";
+      const alreadyNotified = btn!.dataset.notified === "1";
       const confirmed = await (window as any).adminConfirm?.(
-        "Notificar suscriptoras",
-        "¿Enviar email a todas las suscriptoras activas sobre esta edición?"
+        alreadyNotified ? "Volver a notificar" : "Notificar suscriptoras",
+        alreadyNotified
+          ? `Ya se avisó el ${btn!.dataset.notifiedLabel}. Si seguís, TODAS las suscriptoras (${recipients}) reciben el mail otra vez. ¿Es lo que querés?`
+          : `Se envía un email a ${recipients} suscriptoras sobre esta edición. No se puede deshacer. ¿Enviar?`,
       );
       if (!confirmed) return;
-      await doNotify();
+      await doNotify(undefined, alreadyNotified);
     });
   }
 

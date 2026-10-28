@@ -75,6 +75,9 @@ describe("verificación de uploads de ediciones", () => {
   });
 
   it("rechaza rutas ajenas, archivos vacíos y tamaños sobre el máximo", () => {
+    expect(isAllowedUploadPath("pdf", "pdfs/revista-5-es.pdf")).toBe(true);
+    expect(isAllowedUploadPath("pdf", "pdfs/revista-5-1790000000000-en.pdf")).toBe(true);
+    expect(isAllowedUploadPath("pdf", "pdfs/revista-5-x-es.pdf")).toBe(false);
     expect(isAllowedUploadPath("pdf", "covers/edicion-5-es-1.jpg")).toBe(false);
     expect(isAllowedUploadPath("pdf", "pdfs/../private.pdf")).toBe(false);
     expect(validateStoredUpload({

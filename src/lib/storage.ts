@@ -3,8 +3,6 @@ import type { EditionFileKind } from "./storage-validation";
 import {
   COVERS_BUCKET,
   parseStoredFileRef,
-  bucketForKind,
-  bucketForPath,
 } from "./storage-refs";
 
 export { FILE_RULES, type EditionFileKind } from "./storage-validation";
@@ -57,7 +55,9 @@ export function buildStoragePath(
 ): string {
   const lang = opts?.language ?? "es";
   if (kind === "pdf") {
-    return `pdfs/${opts?.slug ?? `revista-${editionNumber}`}-${lang}.${ext}`;
+    // Nombre único por subida: con ruta fija (+ upsert) subir un PDF nuevo pisaba el que las
+    // suscriptoras estaban leyendo ANTES de guardar, y si el guardado fallaba se limpiaba el archivo vigente.
+    return `pdfs/${opts?.slug ?? `revista-${editionNumber}-${Date.now()}`}-${lang}.${ext}`;
   }
   return `covers/edicion-${editionNumber}-${lang}-${Date.now()}.${ext}`;
 }

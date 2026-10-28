@@ -48,30 +48,27 @@ export const POST: APIRoute = async ({ request, locals }) => {
         return error(`Ya existe una edición con número ${validated.data.edition_number}`, 409);
       }
 
-      if (validated.data.featured) {
-        const { error: featError } = await supabaseAdmin
-          .from("editions")
-          .update({ featured: false })
-          .eq("featured", true);
-        if (featError) {
-          logger.error({ err: featError }, "[editions.create] unset-featured error");
-        }
-      }
     }
 
+    // Se crea siempre SIN destacar: la anterior solo se reemplaza cuando la nueva ya quedó
+    // guardada completa. Antes se desmarcaba primero y un fallo dejaba el sitio sin destacada.
     const { data: issue, error: insertError } = await supabaseAdmin
       .from("editions")
       .insert({
         kind: validated.data.kind,
         edition_number: validated.data.edition_number,
-        featured: validated.data.featured,
+        featured: false,
       })
       .select("id")
       .single();
 
     if (insertError) {
       logger.error({ err: insertError }, "[editions.create] insert error");
-      return error(insertError.message, 500);
+      // 23505 = otra admin creó ese número entre la verificación y el alta.
+      if ((insertError as { code?: string }).code === "23505") {
+        return error(`Ya existe una edición con número ${validated.data.edition_number}`, 409);
+      }
+      return error("No se pudo crear la edición. Intentá de nuevo.", 500);
     }
 
     const versions = validated.data.versions;
@@ -93,14 +90,31 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (langError) {
       logger.error({ err: langError }, "[editions.create] languages insert error");
-      return error(langError.message, 500);
+      // Se deshace el alta: si no, la edición queda vacía y ocupa el número para siempre.
+      await supabaseAdmin.from("editions").delete().eq("id", issue.id);
+      return error("No se pudo crear la edición. No quedó nada guardado: intentá de nuevo.", 500);
+    }
+
+    if (validated.data.kind === "magazine" && validated.data.featured) {
+      const { error: unsetError } = await supabaseAdmin
+        .from("editions")
+        .update({ featured: false })
+        .eq("featured", true)
+        .neq("id", issue.id);
+      const { error: setError } = unsetError
+        ? { error: unsetError }
+        : await supabaseAdmin.from("editions").update({ featured: true }).eq("id", issue.id);
+      if (unsetError || setError) {
+        logger.error({ err: unsetError ?? setError }, "[editions.create] feature swap error");
+        return error("La edición se creó, pero no se pudo marcar como destacada. Abrila y guardala de nuevo con 'Ejemplar destacado' activado.", 500);
+      }
     }
 
     // Badge única: se limpia de las demás ediciones y se completa el de la
     // destacada. No bloquea la creación si falla.
     await syncFeaturedBadges();
 
-    logAdminAction(
+    await logAdminAction(
       admin.user.id,
       admin.profile.email,
       "edition.created",
@@ -116,6 +130,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return ok({ id: issue.id });
   } catch (e) {
     logger.error({ err: e }, "[editions.create] unexpected error");
-    return error(e instanceof Error ? e.message : "Error inesperado al crear la edición", 500);
+    return error("No se pudo crear la edición. Intentá de nuevo.", 500);
   }
 };
