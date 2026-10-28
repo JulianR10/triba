@@ -151,7 +151,7 @@ export async function activateSubscription({
 
   const { data: existingSub } = await supabaseAdmin
     .from("subscriptions")
-    .select("id, status")
+    .select("id, status, plan_type")
     .eq("provider", "mercadopago")
     .eq("provider_subscription_id", providerSubscriptionId)
     .maybeSingle();
@@ -181,6 +181,15 @@ export async function activateSubscription({
     return;
   }
 
+  // Solo la primera activación (fila nueva, o Mail Club 'incomplete' que se confirma) manda
+  // bienvenida y revisa duplicadas. Los eventos repetidos de una sub ya activa no.
+  const isFirstActivation =
+    !(existingSub as any)?.id ||
+    (plan === "mail_club" && (existingSub as any)?.status === "incomplete");
+  // El `reason` de MP no cambia con un upgrade/downgrade (solo el monto): en una fila ya activa
+  // el plan lo deciden esos flujos, no este evento, que si no lo revertiría.
+  const planType = isFirstActivation ? plan : ((existingSub as any)?.plan_type ?? plan);
+
   const { data: sub, error: subError } = await supabaseAdmin
     .from("subscriptions")
     .upsert(
@@ -190,7 +199,7 @@ export async function activateSubscription({
         provider_subscription_id: providerSubscriptionId,
         status: "active",
         plan_currency: currency,
-        plan_type: plan,
+        plan_type: planType,
         current_period_start: now,
         current_period_end: periodEnd,
       },
@@ -205,7 +214,7 @@ export async function activateSubscription({
     throw new Error(`activateSubscription upsert failed: ${subError?.message ?? "no row returned"}`);
   }
 
-  if (await blockIfDuplicateCheckout({ id: sub.id, userId, provider: "mercadopago", providerSubscriptionId })) return;
+  if (isFirstActivation && await blockIfDuplicateCheckout({ id: sub.id, userId, provider: "mercadopago", providerSubscriptionId })) return;
 
   // Separar UPDATE desde el upsert: el on_conflict de upsert no garantiza
   // que role/subscription_id se actualicen si la fila ya existe (race condition
@@ -239,12 +248,6 @@ export async function activateSubscription({
     .eq("provider", "migrated");
 
   // Only notify on the first activation; MP can resend events (retries up to 96h).
-  // Digital keeps its original rule (notify only brand-new rows). A mail_club
-  // row in 'incomplete' means this approved payment is the first
-  // confirmation, so it still counts as first activation.
-  const isFirstActivation =
-    !(existingSub as any)?.id ||
-    (plan === "mail_club" && (existingSub as any)?.status === "incomplete");
   if (!isFirstActivation) return;
 
   if (email) {
