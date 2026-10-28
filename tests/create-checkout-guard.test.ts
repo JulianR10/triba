@@ -53,6 +53,24 @@ describe("POST /api/create-checkout (digital) — sin dobles suscripciones", () 
     expect(mocks.createCheckout).not.toHaveBeenCalled();
   });
 
+  it("con la baja programada avisa desde cuándo puede volver a suscribirse", async () => {
+    mocks.from.mockReturnValue(query([{ status: "active", current_period_end: future, cancel_at_period_end: true }]));
+    const res = await call();
+    expect(res.status).toBe(409);
+    const body = await res.json();
+    expect(body.code).toBe("cancellation_scheduled");
+    expect(body.error).toContain("podés volver a suscribirte");
+    expect(mocks.createCheckout).not.toHaveBeenCalled();
+  });
+
+  it("si hay otra suscripción sin baja programada, el mensaje sigue siendo el de gestionar", async () => {
+    mocks.from.mockReturnValue(query([
+      { status: "active", current_period_end: future, cancel_at_period_end: true },
+      { status: "active", current_period_end: future, cancel_at_period_end: false },
+    ]));
+    expect((await (await call()).json()).code).toBe("already_subscribed");
+  });
+
   it("deja pasar si la suscripción está vencida o no hay ninguna", async () => {
     mocks.from.mockReturnValue(query([{ status: "active", current_period_end: past }]));
     expect((await call()).status).toBe(200);

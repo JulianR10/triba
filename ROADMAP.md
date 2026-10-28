@@ -36,13 +36,14 @@ Auditoría funcional completa por segmentos (pagos, cuenta, acceso/PDF, Mail Clu
 **Hecho tras las decisiones de la dueña (28/10/2026)**
 - Sin períodos de prueba: `trialing` ya no cuenta como suscripción vigente (`subscription-guard.ts`).
 - **Segundo checkout bloqueado** (`src/lib/duplicate-checkout.ts`): al activar una suscripción, si ya había otra paga vigente creada antes, la nueva se frena en el proveedor y queda `canceled`; el perfil sigue apuntando a la primera. Se aplica en `checkout.session.completed`, `invoice.paid` (Stripe) y `activateSubscription` (MP). Idempotente en reintentos. **El cobro extra no se reembolsa solo:** queda un `logger.error` "duplicate checkout blocked" y hay que reembolsar a mano. No cubre `reconcile.ts`.
+- **Baja programada y nuevo checkout:** quien intenta suscribirse con la baja ya programada recibe 409 `cancellation_scheduled` con la fecha desde la que puede volver (`getLivePaidSubscription`, `subscription-guard.ts`). Si tiene otra suscripción sin baja, sigue el mensaje de gestionar.
 - **MP: los eventos repetidos ya no pisan el plan ni cancelan duplicadas.** `activateSubscription` corre en cada evento `preapproval` autorizado; antes reescribía `plan_type` desde el `reason` (que no cambia con un upgrade/downgrade, solo el monto) y revisaba duplicadas siempre. Ahora una fila activa conserva su plan y el bloqueo corre solo en la primera activación. Sin esto, las 7 duplicadas existentes habrían perdido una suscripción MP sin pasar por el protocolo de limpieza. Pendiente probarlo con una cuenta MP real.
 - Mail Club al reabrir: solo Argentina, validado en servidor (`MAIL_CLUB_ENABLED_COUNTRIES`, alta y upgrade). Los textos ya lo decían. El formulario sigue listando más países hasta que se reabra.
 - Panel Mail Club: cartel sobre reembolsos posteriores al corte (el lote queda congelado y decide la admin).
 - Política de privacidad (ES/EN) declara Google Fonts; términos y privacidad en voseo y con tildes corregidas.
 
 **Pendiente de la auditoría (retomar acá)**
-- Decisión de la dueña: reactivar una cancelación programada (Stripe sí, MP no) y la salida para quien intenta suscribirse con baja programada; fecha de reapertura del Mail Club (hoy solo `MAIL_CLUB_PAUSED = true`, sin fecha); revisión legal final de los términos.
+- Decisión de la dueña: botón "Reactivar" una cancelación programada (Stripe sí, MP no; hoy se muestra solo la fecha desde la que puede volver a suscribirse); fecha de reapertura del Mail Club (hoy solo `MAIL_CLUB_PAUSED = true`, sin fecha); revisión legal final de los términos.
 - Contraseña por admin no cierra sesiones abiertas (requiere una función SQL que revoque `auth.sessions`).
 - Errores del servidor en español para usuarias EN (falta `code` + traducción en el cliente, cambio transversal).
 - Páginas de edición sin imagen propia para compartir.

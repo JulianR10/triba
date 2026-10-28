@@ -8,7 +8,7 @@ import { getSiteOrigin } from "../../lib/site-url";
 import { getPreferredLocale } from "../../lib/locale-pref";
 import { supabaseAdmin } from "../../lib/supabase-admin";
 import { resolveMailClubZone, isMailClubCountryEnabled, MAIL_CLUB_PAUSED } from "../../lib/mail-club";
-import { hasLivePaidSubscription } from "../../lib/subscription-guard";
+import { getLivePaidSubscription } from "../../lib/subscription-guard";
 import { validateMailClubAddress, saveMailClubAddress } from "../../lib/mail-club-address";
 
 const validProviders = ["stripe", "mercadopago"] as const;
@@ -17,6 +17,25 @@ const validCurrencies = ["EUR", "USD", "ARS"] as const;
 type Currency = (typeof validCurrencies)[number];
 const validPlans = ["digital", "mail_club"] as const;
 type Plan = (typeof validPlans)[number];
+
+// 409 por suscripción vigente. Con la baja ya programada no hay nada que gestionar: se le dice
+// desde cuándo puede volver a suscribirse.
+function alreadySubscribed(live: { endsAt: string | null }, fallback: string) {
+  const when = live.endsAt
+    ? new Date(live.endsAt).toLocaleDateString("es-AR", { day: "numeric", month: "long", year: "numeric" })
+    : null;
+  return new Response(
+    JSON.stringify(
+      when
+        ? {
+            error: `Tu suscripción sigue activa hasta el ${when}, porque ya programaste la baja. Desde ese día podés volver a suscribirte.`,
+            code: "cancellation_scheduled",
+          }
+        : { error: fallback, code: "already_subscribed" },
+    ),
+    { status: 409, headers: { "Content-Type": "application/json" } },
+  );
+}
 
 export const POST: APIRoute = async ({ request }) => {
   const limited = await enforceRateLimit(request, "create-checkout", {
@@ -58,15 +77,8 @@ export const POST: APIRoute = async ({ request }) => {
     }
 
     // Sin dobles cobros: quien ya paga no puede abrir otro checkout.
-    if (await hasLivePaidSubscription(user.id)) {
-      return new Response(
-        JSON.stringify({
-          error: "Ya tenés una suscripción activa. Gestionala desde Mi Cuenta.",
-          code: "already_subscribed",
-        }),
-        { status: 409, headers: { "Content-Type": "application/json" } },
-      );
-    }
+    const live = await getLivePaidSubscription(user.id);
+    if (live) return alreadySubscribed(live, "Ya tenés una suscripción activa. Gestionala desde Mi Cuenta.");
 
     try {
       const paymentProvider = getPaymentProvider(provider);
@@ -113,16 +125,8 @@ export const POST: APIRoute = async ({ request }) => {
   // Sin dobles suscripciones: quien ya tiene una paga vigente (en cualquier
   // fila, no solo la del perfil) debe usar el upgrade desde Mi Cuenta. Las
   // 'migrated' (cortesía) no cuentan: deben poder convertir a Mail Club.
-  if (await hasLivePaidSubscription(user.id)) {
-    return new Response(
-      JSON.stringify({
-        error:
-          "Ya tenés una suscripción activa. Podés pasarte al Mail Club desde Mi Cuenta.",
-        code: "already_subscribed",
-      }),
-      { status: 409, headers: { "Content-Type": "application/json" } },
-    );
-  }
+  const live = await getLivePaidSubscription(user.id);
+  if (live) return alreadySubscribed(live, "Ya tenés una suscripción activa. Podés pasarte al Mail Club desde Mi Cuenta.");
 
   try {
     const saved = await saveMailClubAddress(supabaseAdmin, user.id, address);

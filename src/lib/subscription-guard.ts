@@ -43,11 +43,22 @@ export async function getActiveSubscriptionForUser(
 // no solo la del puntero del perfil. Las 'migrated' (cortesía) no cuentan:
 // esas personas deben poder suscribirse para convertir.
 export async function hasLivePaidSubscription(userId: string): Promise<boolean> {
+  return (await getLivePaidSubscription(userId)) !== null;
+}
+
+// La suscripción paga vigente a mostrar al rechazar un checkout. Si hay varias, gana una sin baja
+// programada: con esa no hay nada que esperar. `endsAt` solo viene cuando TODAS tienen la baja programada.
+export async function getLivePaidSubscription(
+  userId: string,
+): Promise<{ endsAt: string | null } | null> {
   const { data } = await supabaseAdmin
     .from("subscriptions")
-    .select("status, current_period_end")
+    .select("status, current_period_end, cancel_at_period_end")
     .eq("user_id", userId)
     .in("provider", ["stripe", "mercadopago"])
     .eq("status", "active");
-  return (data || []).some((s: any) => isActiveSubscription(s.status, s.current_period_end));
+  const live = (data || []).filter((s: any) => isActiveSubscription(s.status, s.current_period_end));
+  if (live.length === 0) return null;
+  if (live.some((s: any) => !s.cancel_at_period_end)) return { endsAt: null };
+  return { endsAt: live[0].current_period_end ?? null };
 }
