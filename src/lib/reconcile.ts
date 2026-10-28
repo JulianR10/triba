@@ -10,6 +10,7 @@ import { sendMailClubActivation } from "./mail-club-activation";
 import { stripe } from "./stripe";
 import { periodRange } from "./stripe-period";
 import { roleAfterPayment } from "./profile-role";
+import { blockIfDuplicateCheckout } from "./duplicate-checkout";
 import {
   activateSubscription,
   mpGet,
@@ -131,6 +132,14 @@ async function activateStripeCandidate(c: ReconcileCandidate): Promise<void> {
     .select("id");
   if (flipError) throw new Error(`subscription activation failed: ${flipError.message}`);
   if (!flipped || (flipped as any[]).length === 0) return;
+
+  // Misma regla que el webhook: la recuperación no puede dejar dos cobros vivos ni repuntar el perfil.
+  if (await blockIfDuplicateCheckout({
+    id: c.subscription_id,
+    userId: c.user_id,
+    provider: "stripe",
+    providerSubscriptionId: c.provider_subscription_id,
+  })) return;
 
   const { error: linkError } = await supabaseAdmin.from("profiles").upsert({
     id: c.user_id,

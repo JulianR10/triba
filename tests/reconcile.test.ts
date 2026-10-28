@@ -12,6 +12,7 @@ const mocks = vi.hoisted(() => ({
   loggerError: vi.fn(),
   loggerInfo: vi.fn(),
   loggerWarn: vi.fn(),
+  blockIfDuplicateCheckout: vi.fn(),
 }));
 
 vi.mock("../src/lib/supabase-admin", () => ({ supabaseAdmin: { from: mocks.from } }));
@@ -20,6 +21,7 @@ vi.mock("../src/lib/mercadopago-activation", () => ({
   activateSubscription: mocks.activateSubscription,
   mpGet: mocks.mpGet,
 }));
+vi.mock("../src/lib/duplicate-checkout", () => ({ blockIfDuplicateCheckout: mocks.blockIfDuplicateCheckout }));
 vi.mock("../src/lib/sender", () => ({ syncPaidSubscriber: mocks.syncPaidSubscriber }));
 vi.mock("../src/lib/email", () => ({ sendWelcomeEmail: mocks.sendWelcomeEmail }));
 vi.mock("../src/lib/locale-pref", () => ({ getPreferredLocale: mocks.getPreferredLocale }));
@@ -40,6 +42,7 @@ describe("reconcile Stripe candidates", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localSubscriptionStatus = "incomplete";
+    mocks.blockIfDuplicateCheckout.mockResolvedValue(false);
     updatePayloads = [];
     profileUpserts = [];
     mocks.stripeRetrieve.mockResolvedValue({
@@ -139,5 +142,13 @@ describe("reconcile Stripe candidates", () => {
     expect(repeated.activated).toEqual([]);
     expect(mocks.stripeRetrieve).toHaveBeenCalledTimes(2);
     expect(profileUpserts).toHaveLength(1);
+  });
+
+  it("si ya había otra suscripción paga vigente, no repunta el perfil ni da la bienvenida", async () => {
+    mocks.blockIfDuplicateCheckout.mockResolvedValue(true);
+    const result = await applyReconcileCandidates();
+    expect(result.failed).toEqual([]);
+    expect(profileUpserts).toEqual([]);
+    expect(mocks.sendWelcomeEmail).not.toHaveBeenCalled();
   });
 });
