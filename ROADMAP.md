@@ -49,7 +49,7 @@ Auditoría funcional completa por segmentos (pagos, cuenta, acceso/PDF, Mail Clu
 - Contraseña por admin no cierra sesiones abiertas (requiere una función SQL que revoque `auth.sessions`).
 - Errores del servidor en español para usuarias EN (falta `code` + traducción en el cliente, cambio transversal).
 - Páginas de edición sin imagen propia para compartir.
-- Tests faltantes: `portal`, `upgrade-checkout`, `creators`, `feedback`, `api/pdf`, middleware, webhook de Mercado Pago.
+- Tests faltantes: `creators`, `feedback`, `api/pdf`, middleware, webhook de Mercado Pago completo. (Ya cubiertos: `portal`, `upgrade-checkout` con los bloqueos, cobro hecho => pending y tarjeta rechazada => 402.)
 
 ## En curso: limpiar suscripciones duplicadas (27/10/2026)
 
