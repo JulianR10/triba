@@ -1,6 +1,7 @@
 ---
 import { t, type Locale } from "../i18n/ui";
 import { localizePath } from "../i18n/locale";
+import { SUPPORT_EMAIL } from "../lib/contact";
 
 const { lang = "es" } = Astro.props as { lang?: Locale };
 const dict = t(lang);
@@ -14,11 +15,12 @@ const dict = t(lang);
     <div class="flex items-center gap-x-5 md:order-1">
       <a href={localizePath("/privacidad", lang)} class="text-triba-brown/70 hover:text-triba-red transition-colors">{dict.footer.privacy}</a>
       <a href={localizePath("/terminos", lang)} class="text-triba-brown/70 hover:text-triba-red transition-colors">{dict.footer.terms}</a>
+      <a href={`mailto:${SUPPORT_EMAIL}`} class="text-triba-brown/70 hover:text-triba-red transition-colors">{dict.footer.contact}</a>
     </div>
     <div class="flex items-center gap-[5px] md:order-3">
       <h3 class="font-heading text-xs uppercase tracking-wider text-triba-brown">{dict.footer.madeBy}</h3>
       <a href="https://julianrecarte.dev/es/" target="_blank" rel="noopener noreferrer" class="inline-flex">
-        <img src="/firma.png" alt="Firma" class="h-[22px]" />
+        <img src="/firma.png" alt={dict.footer.signatureAlt} class="h-[22px]" />
       </a>
     </div>
   </div>

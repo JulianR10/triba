@@ -4,11 +4,12 @@ import Button from "../components/Button.astro";
 import { t } from "../i18n/ui";
 import { getLocaleFromUrl } from "../i18n/locale";
 
-const lang = getLocaleFromUrl(Astro.url.pathname);
+// Una ruta inexistente no dice el idioma: la URL en inglés manda y, si no, la cookie del selector.
+const lang = getLocaleFromUrl(Astro.url.pathname) === "en" || Astro.cookies.get("triba_locale")?.value === "en" ? "en" : "es";
 const dict = t(lang);
 ---
 
-<Layout title={dict.notFound.title} canonical="/404" navLogoAlways lang={lang}>
+<Layout title={dict.notFound.title} noindex navLogoAlways lang={lang}>
   <section class="page-shell page-gutter bg-triba-bone">
     <div class="max-w-lg mx-auto text-center pt-12 md:pt-24">
       <h1 class="font-heading text-6xl md:text-8xl text-triba-red mb-4">404</h1>

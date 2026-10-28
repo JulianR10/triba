@@ -577,14 +577,26 @@ const mailClubTermsHref = localizePath("/terminos", lang) + "#mail-club";
           body: JSON.stringify(payload),
         });
         var data = await res.json().catch(function () { return {}; });
-        if (!res.ok) throw new Error(data.error || messages.error);
-        if (data.url) {
+        if (res.ok && data.url) {
           window.location.href = data.url;
           return;
         }
-        throw new Error(data.error || messages.error);
+        // Sesión vencida: volver a iniciar sesión (la dirección no se guarda en el navegador).
+        if (res.status === 401) {
+          var isEn401 = window.location.pathname.startsWith("/en/");
+          window.location.href = (isEn401 ? "/en/iniciar-sesion" : "/iniciar-sesion") +
+            "?signup=true&redirect=" + encodeURIComponent(window.location.pathname + "?plan=mail_club");
+          return;
+        }
+        // 4xx: mensaje escrito para la usuaria (falta un dato, ya tenés suscripción).
+        // 5xx o respuesta rara: mensaje genérico, nunca texto técnico.
+        var userError: any = new Error(
+          res.status >= 400 && res.status < 500 && data.error ? data.error : messages.error,
+        );
+        userError.userFacing = true;
+        throw userError;
       } catch (err: any) {
-        showMsg(err && err.message ? err.message : messages.networkError);
+        showMsg(err && err.userFacing ? err.message : err instanceof TypeError ? messages.networkError : messages.error);
         if (submitBtn) {
           submitBtn.disabled = false;
           submitBtn.textContent = originalBtnText;

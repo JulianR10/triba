@@ -6,7 +6,7 @@ import { SITE_URL } from "../lib/site-url";
 import { t, type Locale } from "../i18n/ui";
 import { isEnRoute, localizePath, toEsPath } from "../i18n/locale";
 
-const { title, description, image, canonical, navLogoAlways, lang, alternateLanguages } = Astro.props as {
+const { title, description, image, canonical, navLogoAlways, lang, alternateLanguages, noindex } = Astro.props as {
   title?: string;
   description?: string;
   image?: string;
@@ -14,6 +14,7 @@ const { title, description, image, canonical, navLogoAlways, lang, alternateLang
   navLogoAlways?: boolean;
   lang?: Locale;
   alternateLanguages?: { es: string; en: string } | false;
+  noindex?: boolean;
 };
 
 const locale = lang ?? "es";
@@ -67,6 +68,7 @@ const jsonLdText = JSON.stringify(jsonLd).replace(/</g, "\\u003c");
     <title>{siteTitle}</title>
     <meta name="description" content={siteDescription} />
 
+    {noindex && <meta name="robots" content="noindex, nofollow" />}
     {canonical && <link rel="canonical" href={pageUrl} />}
     {hreflangAlternates && (
       <>

@@ -3,5 +3,8 @@ Allow: /
 Disallow: /admin
 Disallow: /api
 Disallow: /iniciar-sesion
+Disallow: /en/iniciar-sesion
+Disallow: /mi-cuenta
+Disallow: /en/mi-cuenta
 
 Sitemap: https://www.universotriba.com/sitemap.xml
