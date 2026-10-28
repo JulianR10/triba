@@ -31,7 +31,11 @@ Push a `main` despliega en Vercel. Antes de deployar, aplicar las migraciones SQ
 1. `node scripts/smoke-prod.mjs`.
 2. `GET /api/cron/reconcile` sin autorización debe responder 401 (no 500). Requiere `CRON_SECRET` en Vercel Production.
 
-Webhooks: `/api/webhook/stripe` y `/api/webhook/mercadopago`. Mantener las firmas y secretos fuera del repo.
+Webhooks: `/api/webhook/stripe` y `/api/webhook/mercadopago`. Mantener las firmas y secretos fuera del repo. Si no pueden guardar en la base responden 500 a propósito: el proveedor reintenta; revisar los logs antes de tocar nada a mano.
+
+Migraciones pendientes de aplicar a mano en Supabase (en orden): `032_least_privilege_writes.sql` y `033_edition_notified_at.sql`. El código funciona antes de aplicarlas, salvo "Notificar suscriptoras" (necesita la 033).
+
+Contacto de soporte para mensajes al público: `src/lib/contact.ts` (los textos legales y las FAQ lo repiten a mano).
 
 ## Operación Mail Club
 

@@ -33,6 +33,13 @@ Operación, deploy y scripts: [`README.md`](./README.md). Trabajo en curso y mej
 - Cancelar (usuaria o admin): `scheduleProviderCancels` frena la recurrencia de **todas** las filas vigentes en el proveedor antes de la RPC; un error real corta sin marcar nada.
 - Downgrade a digital idempotente: si Stripe ya tiene un schedule hacia el precio digital se reutiliza; si falla el armado se libera el schedule creado.
 - Contraseña por admin (`POST /api/admin/subscribers/[id]/password`): solo `requireAdmin`, con rate limit y auditoría sin la clave, y nunca sobre otra admin.
+- Webhooks y activaciones: `supabase-js` no lanza; chequear siempre `error` de upsert/update y lanzar para responder 500 (el proveedor reintenta). Nunca responder 200 con la suscripción sin guardar. El rol de una admin no se degrada ni se pisa: usar `roleAfterPayment` al conceder y `.neq("role","admin")` al liberar.
+- Cobro confirmado = nunca error al usuario: tras cobrar un upgrade, un fallo posterior responde `pending` (no 500) y no marca `failed`; completa el webhook o el reintento admin.
+- Mensajes al público: sin texto técnico de proveedores ni de la base (detalle al log). Un 4xx puede mostrar su texto; 5xx/red muestran uno genérico. Contacto único en `src/lib/contact.ts` (`SUPPORT_EMAIL`).
+- HTML de mails: todo dato escrito por personas pasa por `escapeHtmlText` (`src/lib/html-escape.ts`; `escape.ts` solo sirve en el navegador).
+- Ediciones: PDF con nombre único por subida; borrar de Storage lo reemplazado solo después de guardar bien (`removeStoredFiles`). Aviso a suscriptoras con reclamo atómico en `editions.notified_at`.
+- Identidad en rutas admin, `/api/pdf` y Mi Cuenta: el middleware la verifica con `auth.getUser()` (no confiar en la cookie de `getSession`).
+- Las tablas de formularios y de Mail Club no tienen permisos para `anon`/`authenticated` (migración 032): toda escritura pasa por el servidor con `service_role`.
 - Cron y webhooks requieren secreto/firma. Revisar el README (Producción y Operación) antes de tocar producción.
 
 ## UI, navegación e i18n
