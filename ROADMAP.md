@@ -46,6 +46,7 @@ Auditoría funcional completa por segmentos (pagos, cuenta, acceso/PDF, Mail Clu
 
 **Pendiente de la auditoría (retomar acá)**
 - Decisión de la dueña: botón "Reactivar" una cancelación programada (Stripe sí, MP no; hoy se muestra solo la fecha desde la que puede volver a suscribirse); fecha de reapertura del Mail Club (hoy solo `MAIL_CLUB_PAUSED = true`, sin fecha); revisión legal final de los términos.
+- **Posible falla desde la 030 (sin verificar):** `handle_new_user()` (migración 012) actualiza `profiles.subscription_id` al registrarse alguien con registro en `subscriber_migrations`. Ese UPDATE pasa por el trigger de la 030 (`block_privileged_profile_columns`), que exige `auth.jwt() ->> 'role' = 'service_role'`; en un alta GoTrue no trae ese claim, así que el registro de esas personas podría fallar con "Database error saving new user". Probar un alta con un email de `subscriber_migrations` y, si falla, permitir el caso con `pg_trigger_depth() > 1` en esa función (la 032 la redefine, así que conviene resolverlo antes de aplicarla).
 - Contraseña por admin no cierra sesiones abiertas (requiere una función SQL que revoque `auth.sessions`).
 - Errores del servidor en español para usuarias EN (falta `code` + traducción en el cliente, cambio transversal).
 - Páginas de edición sin imagen propia para compartir.
