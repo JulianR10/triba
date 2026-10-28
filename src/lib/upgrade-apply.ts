@@ -35,13 +35,18 @@ export async function applyUpgrade(upgradeId: string): Promise<{ applied: boolea
   };
 
   try {
+    // Acepta también una fila ya pasada a mail_club: un reintento tras un fallo parcial
+    // (el plan se aplicó pero el upgrade quedó sin cerrar) debe poder completarse. La
+    // actualización del proveedor es idempotente. limit(1): dos filas activas no deben romper.
     const { data: sub } = await supabaseAdmin
       .from("subscriptions")
       .select("id, provider_subscription_id")
       .eq("user_id", userId)
       .eq("provider", provider)
-      .eq("plan_type", "digital")
+      .in("plan_type", ["digital", "mail_club"])
       .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
       .maybeSingle();
     if (!sub) throw new Error("No active digital subscription to upgrade");
 
@@ -73,26 +78,37 @@ export async function applyUpgrade(upgradeId: string): Promise<{ applied: boolea
       });
     }
 
-    await supabaseAdmin
-      .from("mail_club_upgrades")
-      .update({ status: "recurrence_updated", error: null, updated_at: new Date().toISOString() })
-      .eq("id", upgradeId);
-    await supabaseAdmin
+    // Primero el plan (lo que la clienta ve y lo que habilita el lote), con el error chequeado:
+    // si falla, el upgrade queda 'failed' y se puede reintentar sin cobrar de nuevo.
+    const { error: planError } = await supabaseAdmin
       .from("subscriptions")
       .update({ plan_type: "mail_club", updated_at: new Date().toISOString() })
       .eq("id", (sub as any).id);
+    if (planError) throw new Error(`plan_type update failed: ${planError.message}`);
 
-    const { data: profile } = await supabaseAdmin
-      .from("profiles")
-      .select("email")
-      .eq("id", userId)
-      .maybeSingle();
-    const email = (profile as any)?.email as string | undefined;
-    if (email) {
-      syncPaidSubscriber(email).catch((err) =>
-        logger.error({ err, userId, upgradeId }, "Sender sync error (upgrade)"),
-      );
-      await sendMailClubActivation(userId, email);
+    // El plan ya está aplicado: si este registro falla no se revierte nada, solo queda en el log.
+    const { error: markError } = await supabaseAdmin
+      .from("mail_club_upgrades")
+      .update({ status: "recurrence_updated", error: null, updated_at: new Date().toISOString() })
+      .eq("id", upgradeId);
+    if (markError) logger.error({ err: markError, upgradeId, userId }, "upgrade applied but status update failed");
+
+    // Los avisos son posteriores al cambio: su fallo no debe marcar como fallido un upgrade que salió bien.
+    try {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("email")
+        .eq("id", userId)
+        .maybeSingle();
+      const email = (profile as any)?.email as string | undefined;
+      if (email) {
+        syncPaidSubscriber(email).catch((err) =>
+          logger.error({ err, userId, upgradeId }, "Sender sync error (upgrade)"),
+        );
+        await sendMailClubActivation(userId, email);
+      }
+    } catch (err) {
+      logger.error({ err, userId, upgradeId }, "upgrade applied but welcome failed");
     }
     return { applied: true };
   } catch (err: any) {

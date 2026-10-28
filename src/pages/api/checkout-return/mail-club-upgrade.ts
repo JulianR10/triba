@@ -1,5 +1,6 @@
 import type { APIRoute } from "astro";
 import { getSiteOrigin } from "../../../lib/site-url";
+import { localizePath } from "../../../i18n/locale";
 
 export const prerender = false;
 
@@ -17,7 +18,9 @@ export const GET: APIRoute = ({ request }) => {
         ? "pending"
         : "success";
 
-  const destination = new URL("/mi-cuenta", getSiteOrigin());
+  // MP vuelve sin sesión: el idioma sale de la cookie que setea el selector.
+  const locale = /(?:^|;\s*)triba_locale=en(?:;|$)/.test(request.headers.get("cookie") || "") ? "en" : "es";
+  const destination = new URL(localizePath("/mi-cuenta", locale), getSiteOrigin());
   destination.searchParams.set("checkout", outcome);
   destination.searchParams.set("flow", "mail_club_upgrade");
 

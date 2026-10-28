@@ -7,7 +7,7 @@ import { getSiteOrigin } from "../../lib/site-url";
 import { supabaseAdmin } from "../../lib/supabase-admin";
 import { getActiveSubscriptionForUser } from "../../lib/subscription-guard";
 import { validateMailClubAddress, saveMailClubAddress } from "../../lib/mail-club-address";
-import { getPlanType, MAIL_CLUB_PAUSED, MAIL_CLUB_UPGRADE_DIFF_CENTS, isUpgradeZoneCompatible, resolveMailClubZone } from "../../lib/mail-club";
+import { getPlanType, MAIL_CLUB_PAUSED, MAIL_CLUB_UPGRADE_DIFF_CENTS, isUpgradeZoneCompatible, isMailClubCountryEnabled, resolveMailClubZone } from "../../lib/mail-club";
 import {
   buildUpgradePaymentIntentParams,
   getSubscriptionSavedCard,
@@ -17,6 +17,9 @@ import {
 } from "../../lib/upgrade-payment";
 import { applyUpgrade } from "../../lib/upgrade-apply";
 import { expireStalePendingUpgrades } from "../../lib/upgrade-recovery";
+import { SUPPORT_EMAIL } from "../../lib/contact";
+import { getPreferredLocale } from "../../lib/locale-pref";
+import { localizePath } from "../../i18n/locale";
 
 // Upgrade voluntario digital -> Mail Club: cobra UNA vez la diferencia del
 // mes en curso. La tarifa recurrente cambia solo cuando ese pago se confirma
@@ -51,7 +54,7 @@ export const POST: APIRoute = async ({ request }) => {
     return error("Ya estás en el Mail Club.", 409);
   }
   if (current.provider !== "stripe" && current.provider !== "mercadopago") {
-    return error("Tu suscripción actual no admite upgrade directo. Escribinos.", 409);
+    return error(`Tu suscripción actual no admite upgrade directo. Escribinos a ${SUPPORT_EMAIL} y lo resolvemos.`, 409);
   }
 
   const validated = validateMailClubAddress(body);
@@ -65,6 +68,9 @@ export const POST: APIRoute = async ({ request }) => {
   // una dirección AR (ARS/Mercado Pago) y quedar con precio/zona incoherentes.
   // Mismatch = paso obligado: se devuelve código + zona esperada para que
   // el frontend ofrezca corregir dirección o cambiar de zona (baja + alta).
+  if (!isMailClubCountryEnabled(validated.address.country_iso)) {
+    return error("Por ahora el Mail Club envía solo a Argentina.", 400);
+  }
   if (!isUpgradeZoneCompatible(currency, provider, validated.address.country_iso)) {
     const expected = resolveMailClubZone(validated.address.country_iso);
     logger.warn(
@@ -139,6 +145,7 @@ export const POST: APIRoute = async ({ request }) => {
 
   try {
     const origin = getSiteOrigin();
+    const account = `${origin}${localizePath("/mi-cuenta", await getPreferredLocale(user.id))}`;
     if (provider === "stripe") {
       const { stripe } = await import("../../lib/stripe");
       if (!stripe) throw new Error("Stripe not configured");
@@ -159,8 +166,8 @@ export const POST: APIRoute = async ({ request }) => {
           ],
           customer_email: user.email || "",
           client_reference_id: user.id,
-          success_url: `${origin}/mi-cuenta?checkout=success&flow=mail_club_upgrade`,
-          cancel_url: `${origin}/mi-cuenta?checkout=canceled`,
+          success_url: `${account}?checkout=success&flow=mail_club_upgrade`,
+          cancel_url: `${account}?checkout=canceled`,
           metadata: { user_id: user.id, upgrade_id: upgradeId, plan: "mail_club_upgrade" },
         });
         await supabaseAdmin
@@ -197,7 +204,9 @@ export const POST: APIRoute = async ({ request }) => {
               { idempotencyKey: upgradeIdempotencyKey(upgradeId) },
             );
             if (pi.status === "succeeded") {
-              await supabaseAdmin
+              // El cobro YA salió. Desde acá no se responde error ni se marca 'failed':
+              // un mensaje de error hace que la usuaria reintente y pague dos veces.
+              const { error: confirmError } = await supabaseAdmin
                 .from("mail_club_upgrades")
                 .update({
                   provider_payment_ref: pi.id,
@@ -205,8 +214,18 @@ export const POST: APIRoute = async ({ request }) => {
                   updated_at: new Date().toISOString(),
                 })
                 .eq("id", upgradeId);
-              await applyUpgrade(upgradeId);
-              return ok({ applied: true });
+              if (confirmError) {
+                logger.error({ err: confirmError, upgradeId }, "upgrade payment_confirmed update failed");
+              }
+              try {
+                await applyUpgrade(upgradeId);
+                return ok({ applied: true });
+              } catch (applyErr) {
+                // La activación se completa sola (webhook payment_intent.succeeded) o con el
+                // reintento admin. La usuaria ve "estamos confirmando" y no vuelve a pagar.
+                logger.error({ err: applyErr, upgradeId, userId: user.id }, "upgrade charged but apply failed");
+                return ok({ applied: false, pending: true });
+              }
             }
             logger.warn({ upgradeId, piStatus: pi.status }, "upgrade PI not succeeded — checkout fallback");
           }
@@ -250,8 +269,8 @@ export const POST: APIRoute = async ({ request }) => {
         payer: { email: user.email || "" },
         back_urls: {
           success: `${origin}/api/checkout-return/mail-club-upgrade`,
-          failure: `${origin}/mi-cuenta?checkout=canceled`,
-          pending: `${origin}/mi-cuenta?checkout=pending`,
+          failure: `${account}?checkout=canceled`,
+          pending: `${account}?checkout=pending`,
         },
         auto_return: "approved",
         external_reference: `mailclub-upgrade:${upgradeId}`,
@@ -266,6 +285,10 @@ export const POST: APIRoute = async ({ request }) => {
   } catch (err: any) {
     logger.error({ err, userId: user.id, upgradeId }, "upgrade-checkout error");
     await failUpgrade(err.message || "provider error");
-    return error(err.message || "Internal server error", 500);
+    // El detalle técnico queda en el log y en la fila del upgrade (visible para admin), no en pantalla.
+    return error(
+      `No pudimos completar el cambio de plan. Antes de volver a intentar, revisá tu cuenta: si ves un cobro y el plan no cambió, escribinos a ${SUPPORT_EMAIL}.`,
+      500,
+    );
   }
 };

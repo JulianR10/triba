@@ -78,15 +78,23 @@ function resetCheckoutButtons() {
         (btn as HTMLButtonElement).disabled = true;
         btn.textContent = messages.processing;
 
+        const goToLogin = () => {
+          saveCheckoutIntent(provider!, currency!);
+          const isEn = window.location.pathname.startsWith("/en/");
+          const loginPath = isEn ? "/en/iniciar-sesion" : "/iniciar-sesion";
+          const redirect = encodeURIComponent(window.location.pathname + "?currency=" + currency);
+          window.location.href = loginPath + "?signup=true&redirect=" + redirect;
+        };
+
+        // Solo este tipo de error llega a la pantalla con su texto; cualquier otro
+        // (red caída, 5xx, respuesta que no es JSON) muestra el mensaje genérico.
+        class UserFacingError extends Error {}
+
         try {
           if (!supabase) throw new Error("Supabase no configurado");
           const { data: { session } } = await supabase.auth.getSession();
           if (!session) {
-            saveCheckoutIntent(provider!, currency!);
-            const isEn = window.location.pathname.startsWith("/en/");
-            const loginPath = isEn ? "/en/iniciar-sesion" : "/iniciar-sesion";
-            const redirect = encodeURIComponent(window.location.pathname + "?currency=" + currency);
-            window.location.href = loginPath + "?signup=true&redirect=" + redirect;
+            goToLogin();
             return;
           }
 
@@ -98,13 +106,25 @@ function resetCheckoutButtons() {
             },
             body: JSON.stringify({ provider, currency }),
           });
-          const data = await res.json();
-          if (data.url) window.location.href = data.url;
-          else throw new Error(data.error || "Error creando checkout");
+          const data = await res.json().catch(() => ({}));
+          if (res.ok && data.url) {
+            window.location.href = data.url;
+            return;
+          }
+          // Sesión vencida: volver a iniciar sesión conserva la intención de pago.
+          if (res.status === 401) {
+            goToLogin();
+            return;
+          }
+          // 4xx: el servidor escribió el mensaje para la usuaria (ya tenés suscripción, demasiados intentos).
+          if (res.status >= 400 && res.status < 500 && typeof data.error === "string" && data.error) {
+            throw new UserFacingError(data.error);
+          }
+          throw new Error("checkout failed");
         } catch (err: any) {
           const errorEl = btn.parentElement?.querySelector("[data-checkout-error]");
           if (errorEl) {
-            errorEl.textContent = err.message || messages.error;
+            errorEl.textContent = err instanceof UserFacingError ? err.message : messages.error;
             errorEl.classList.remove("hidden");
           }
           btn.textContent = originalText;

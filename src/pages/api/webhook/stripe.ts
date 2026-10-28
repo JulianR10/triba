@@ -11,6 +11,9 @@ import { getPreferredLocale } from "../../../lib/locale-pref";
 import { sendMailClubActivation } from "../../../lib/mail-club-activation";
 import { applyUpgrade } from "../../../lib/upgrade-apply";
 import { STRIPE_PRICE_IDS, MAIL_CLUB_STRIPE_PRICE_IDS } from "../../../lib/stripe";
+import { periodRange } from "../../../lib/stripe-period";
+import { roleAfterPayment } from "../../../lib/profile-role";
+import { blockIfDuplicateCheckout } from "../../../lib/duplicate-checkout";
 
 const VERIFY_SIGNATURES = true;
 
@@ -54,21 +57,7 @@ export function mapStripeSubscriptionStatus(status: string): LocalSubscriptionSt
   }
 }
 
-export function periodRange(sub: Stripe.Subscription) {
-  // This Stripe account (API 2026-06-24.dahlia) exposes the period per item, not on the
-  // subscription object; the +30d fallback is stale after the first renewal.
-  const item = sub.items?.data?.[0] as { current_period_start?: number; current_period_end?: number } | undefined;
-  const startSec =
-    item?.current_period_start ?? (sub as any).current_period_start ?? (sub as any).start_date ?? sub.created;
-  const endSec =
-    item?.current_period_end ??
-    (sub as any).current_period_end ??
-    (startSec ? startSec + 30 * 24 * 60 * 60 : undefined);
-  return {
-    start: startSec ? new Date(startSec * 1000).toISOString() : undefined,
-    end: endSec ? new Date(endSec * 1000).toISOString() : undefined,
-  };
-}
+export { periodRange };
 
 async function supersedeMigratedSub(userId: string) {
   if (!userId) return;
@@ -175,13 +164,19 @@ export const POST: APIRoute = async ({ request }) => {
             await handleMailClubUpgradePayment(session);
           }
           break;
-        }        if (session.mode !== "subscription") break;
+        }
+        if (session.mode !== "subscription") break;
 
         const stripeSub = (await stripe.subscriptions.retrieve(
           session.subscription as string,
         )) as unknown as StripeSubWithPeriod;
         const period = periodRange(stripeSub);
         const userId = session.client_reference_id || session.metadata?.user_id || "";
+        if (!userId) {
+          // Sin usuaria no hay nada que reintentar: se deja registro y se responde 200.
+          logger.error({ sessionId: session.id, subId: stripeSub.id }, "stripe checkout completed without user id — needs manual review");
+          break;
+        }
 
         let email = session.customer_email || session.customer_details?.email || undefined;
         if (!email && userId) {
@@ -205,31 +200,43 @@ export const POST: APIRoute = async ({ request }) => {
           .eq("provider_subscription_id", stripeSub.id)
           .maybeSingle();
 
-        const { data: subs } = await supabaseAdmin.from("subscriptions").upsert({
+        // Estado explícito: uno desconocido no da acceso hasta que invoice.paid / reconcile lo confirmen.
+        const mappedStatus = mapStripeSubscriptionStatus(stripeSub.status);
+        const { data: subs, error: subUpsertError } = await supabaseAdmin.from("subscriptions").upsert({
           user_id: userId,
           provider: "stripe",
           provider_subscription_id: stripeSub.id,
           status: (plan === "mail_club" && !mailClubPaid
             ? "incomplete"
-            : stripeSub.status) as "active" | "canceled" | "past_due" | "trialing" | "incomplete" | "migrated",
+            : mappedStatus === "unknown"
+              ? "incomplete"
+              : mappedStatus) as LocalSubscriptionStatus,
           plan_currency: (session.metadata?.currency || "USD") as "EUR" | "USD" | "ARS",
           plan_type: plan,
           ...(period.start ? { current_period_start: period.start } : {}),
           ...(period.end ? { current_period_end: period.end } : {}),
         }, { onConflict: "provider, provider_subscription_id" }).select("id").single();
+        // supabase-js no lanza: sin este chequeo el webhook respondía 200 con la suscripción sin guardar
+        // y Stripe nunca reintentaba. Lanzar devuelve 500 y Stripe reintenta el evento.
+        if (subUpsertError || !subs?.id) {
+          throw new Error(`subscription upsert failed: ${subUpsertError?.message ?? "no row returned"}`);
+        }
 
         if (!mailClubPaid) {
           logger.info({ userId, subId: stripeSub.id }, "mail club checkout pending payment — waiting invoice.paid");
           break;
         }
 
-          await supabaseAdmin.from("profiles").upsert({
+        if (await blockIfDuplicateCheckout({ id: subs.id, userId, provider: "stripe", providerSubscriptionId: stripeSub.id })) break;
+
+          const { error: profileError } = await supabaseAdmin.from("profiles").upsert({
             id: userId,
             ...(email ? { email } : {}),
-            role: "subscriber",
-            subscription_id: subs?.id || null,
+            role: await roleAfterPayment(userId),
+            subscription_id: subs.id,
             updated_at: new Date().toISOString(),
           } as Database["public"]["Tables"]["profiles"]["Insert"], { onConflict: "id" });
+          if (profileError) throw new Error(`profile link failed: ${profileError.message}`);
 
           await supersedeMigratedSub(userId);
 
@@ -312,13 +319,15 @@ export const POST: APIRoute = async ({ request }) => {
           .neq("status", "active")
           .select("id");
         if (!flipped || (flipped as any[]).length === 0) break;
+        if (await blockIfDuplicateCheckout({ id: (row as any).id, userId, provider: "stripe", providerSubscriptionId: stripeSubId })) break;
 
-        await supabaseAdmin.from("profiles").upsert({
+        const { error: invoiceProfileError } = await supabaseAdmin.from("profiles").upsert({
           id: userId,
-          role: "subscriber",
+          role: await roleAfterPayment(userId),
           subscription_id: (row as any).id,
           updated_at: new Date().toISOString(),
         } as Database["public"]["Tables"]["profiles"]["Insert"], { onConflict: "id" });
+        if (invoiceProfileError) throw new Error(`profile link failed: ${invoiceProfileError.message}`);
 
         await supersedeMigratedSub(userId);
 
@@ -366,7 +375,7 @@ export const POST: APIRoute = async ({ request }) => {
 
         // El downgrade programado se completa cuando el precio pasa a digital;
         // con precio Mail Club vigente NO se tocan los flags programados.
-        await supabaseAdmin.from("subscriptions").update({
+        const { error: syncError } = await supabaseAdmin.from("subscriptions").update({
           status: mappedStatus,
           cancel_at_period_end: !!(sub as any).cancel_at_period_end,
           ...(planFromPrice ? { plan_type: planFromPrice } : {}),
@@ -377,6 +386,7 @@ export const POST: APIRoute = async ({ request }) => {
           ...(period.end ? { current_period_end: period.end } : {}),
           updated_at: new Date().toISOString(),
         }).eq("provider_subscription_id", sub.id).eq("provider", "stripe");
+        if (syncError) throw new Error(`subscription sync failed: ${syncError.message}`);
 
         // past_due NO revoca el acceso ni el rol: Stripe reintenta el cobro y
         // el gate ya corta por estado/fecha. Solo la cancelación definitiva
@@ -402,19 +412,19 @@ export const POST: APIRoute = async ({ request }) => {
               .limit(1)
               .maybeSingle();
 
-            if (fallback) {
-              await supabaseAdmin.from("profiles").update({
-                role: "subscriber",
-                subscription_id: (fallback as any).id,
-                updated_at: new Date().toISOString(),
-              }).eq("id", userId);
-            } else {
-              await supabaseAdmin.from("profiles").update({
-                role: "free",
-                subscription_id: null,
-                updated_at: new Date().toISOString(),
-              }).eq("id", userId);
-            }
+            // .neq("role","admin"): cancelar una suscripción nunca le quita el rol a una admin.
+            const { error: releaseError } = fallback
+              ? await supabaseAdmin.from("profiles").update({
+                  role: "subscriber",
+                  subscription_id: (fallback as any).id,
+                  updated_at: new Date().toISOString(),
+                }).eq("id", userId).neq("role", "admin")
+              : await supabaseAdmin.from("profiles").update({
+                  role: "free",
+                  subscription_id: null,
+                  updated_at: new Date().toISOString(),
+                }).eq("id", userId).neq("role", "admin");
+            if (releaseError) throw new Error(`profile release failed: ${releaseError.message}`);
           }
         }
 

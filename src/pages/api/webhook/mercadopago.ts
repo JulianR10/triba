@@ -179,16 +179,22 @@ async function handleAuthorizedPaymentEvent(dataId: string): Promise<void> {
       !!currentEnd && new Date(currentEnd).getTime() > Date.now() + 28 * 24 * 60 * 60 * 1000;
     if (alreadyExtended && !downgradeDue) return;
 
-    // Extender desde el vencimiento vigente (no desde "ahora"): evita el
-    // corrimiento acumulativo si el webhook llega tarde.
-    const base =
-      currentEnd && new Date(currentEnd).getTime() > Date.now()
-        ? new Date(currentEnd)
-        : new Date();
-    await supabaseAdmin
+    // Fuente de verdad: el próximo cobro que informa MP (mismo día de cada mes).
+    // Sumar 30 días fijos va corriendo la fecha y en meses de 31 días corta el
+    // acceso antes del cobro real. El +30d queda solo si MP no responde.
+    const mpPreapproval = await mpGet<MpPreapproval>(`/preapproval/${preapprovalId}`);
+    const mpNext = mpPreapproval?.next_payment_date ? new Date(mpPreapproval.next_payment_date) : null;
+    const nextEnd =
+      mpNext && !isNaN(mpNext.getTime()) && mpNext.getTime() > Date.now()
+        ? mpNext
+        : new Date(
+            (currentEnd && new Date(currentEnd).getTime() > Date.now() ? new Date(currentEnd) : new Date()).getTime() +
+              30 * 24 * 60 * 60 * 1000,
+          );
+    const { error: renewError } = await supabaseAdmin
       .from("subscriptions")
       .update({
-        current_period_end: new Date(base.getTime() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+        current_period_end: nextEnd.toISOString(),
         status: "active",
         // El nuevo cobro ya vino con el importe digital: se completa acá.
         ...(downgradeDue
@@ -197,6 +203,8 @@ async function handleAuthorizedPaymentEvent(dataId: string): Promise<void> {
         updated_at: new Date().toISOString(),
       })
       .eq("id", existingId);
+    // Sin esto una renovación pagada que no se registra deja a la clienta sin acceso y sin reintento.
+    if (renewError) throw new Error(`renewal update failed: ${renewError.message}`);
     return;
   }
 

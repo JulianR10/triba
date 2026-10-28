@@ -1,5 +1,7 @@
 import { MONTHLY_PRICE_CENTS } from "./pricing";
 import { MAIL_CLUB_PRICE_CENTS } from "./mail-club";
+import { localizePath } from "../i18n/locale";
+import type { Locale } from "../i18n/ui";
 
 export interface CheckoutParams {
   userId: string;
@@ -8,6 +10,7 @@ export interface CheckoutParams {
   origin: string;
   plan?: "digital" | "mail_club";
   countryIso?: string;
+  locale?: Locale;
 }
 
 export interface CheckoutResult {
@@ -39,7 +42,7 @@ export interface PaymentProvider {
     currency: "EUR" | "USD" | "ARS",
     periodEndIso?: string | null,
   ): Promise<DowngradeResult>;
-  getPortalUrl(providerSubscriptionId: string, origin: string): Promise<PortalResult>;
+  getPortalUrl(providerSubscriptionId: string, origin: string, locale?: Locale): Promise<PortalResult>;
 }
 
 class StripePaymentProvider implements PaymentProvider {
@@ -61,7 +64,7 @@ class StripePaymentProvider implements PaymentProvider {
         : STRIPE_PRICE_IDS[params.currency];
     if (!priceId) throw new Error(`No Stripe price ID for ${plan} ${params.currency}`);
 
-    const successUrl = new URL(`${params.origin}/mi-cuenta`);
+    const successUrl = new URL(`${params.origin}${localizePath("/mi-cuenta", params.locale ?? "es")}`);
     successUrl.searchParams.set("checkout", "success");
     if (plan === "mail_club") successUrl.searchParams.set("flow", "mail_club");
 
@@ -72,7 +75,7 @@ class StripePaymentProvider implements PaymentProvider {
       customer_email: params.userEmail,
       client_reference_id: params.userId,
       success_url: successUrl.toString(),
-      cancel_url: `${params.origin}/suscribirme?checkout=canceled`,
+      cancel_url: `${params.origin}${localizePath("/suscribirme", params.locale ?? "es")}?checkout=canceled`,
       metadata: {
         user_id: params.userId,
         currency: params.currency,
@@ -162,7 +165,7 @@ class StripePaymentProvider implements PaymentProvider {
     return { effectiveAt: new Date(periodEndSec * 1000).toISOString() };
   }
 
-  async getPortalUrl(providerSubscriptionId: string, origin: string): Promise<PortalResult> {
+  async getPortalUrl(providerSubscriptionId: string, origin: string, locale: Locale = "es"): Promise<PortalResult> {
     const { stripe } = await import("./stripe");
     if (!stripe) throw new Error("Stripe not configured");
 
@@ -172,7 +175,7 @@ class StripePaymentProvider implements PaymentProvider {
 
     const portal = await stripe.billingPortal.sessions.create({
       customer: customerId,
-      return_url: `${origin}/mi-cuenta`,
+      return_url: `${origin}${localizePath("/mi-cuenta", locale)}`,
     });
 
     return { url: portal.url, provider: "stripe" };
@@ -205,7 +208,7 @@ class MercadoPagoPaymentProvider implements PaymentProvider {
     const result = await preApproval.create({
       body: {
         payer_email: params.userEmail,
-        back_url: `${params.origin}/mi-cuenta?checkout=success`,
+        back_url: `${params.origin}${localizePath("/mi-cuenta", params.locale ?? "es")}?checkout=success`,
         reason:
           plan === "mail_club"
             ? `Suscripción Triba Mail Club (${params.currency})`

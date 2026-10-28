@@ -9,6 +9,8 @@ import { sendWelcomeEmail } from "./email";
 import { getPreferredLocale } from "./locale-pref";
 import { sendMailClubActivation } from "./mail-club-activation";
 import { isActivationBlocked, planFromPreapproval } from "./mercadopago-status";
+import { roleAfterPayment } from "./profile-role";
+import { blockIfDuplicateCheckout } from "./duplicate-checkout";
 
 const MP_API_BASE = "https://api.mercadopago.com";
 
@@ -173,11 +175,13 @@ export async function activateSubscription({
     );
     if (pendingError) {
       logger.error({ err: pendingError, userId, providerSubscriptionId }, "[MP] mail club pending upsert failed");
+      // Propagar: el webhook responde 500 y MP reintenta; la reconciliación lo registra como fallo.
+      throw new Error(`mail club pending upsert failed: ${pendingError.message}`);
     }
     return;
   }
 
-  const { data: sub } = await supabaseAdmin
+  const { data: sub, error: subError } = await supabaseAdmin
     .from("subscriptions")
     .upsert(
       {
@@ -195,23 +199,27 @@ export async function activateSubscription({
     .select("id")
     .single();
 
-  if (!sub?.id) {
-    logger.error({ userId, providerSubscriptionId }, "[MP] activateSubscription upsert failed");
-    return;
+  if (subError || !sub?.id) {
+    logger.error({ err: subError, userId, providerSubscriptionId }, "[MP] activateSubscription upsert failed");
+    // Antes se hacía `return` y el webhook respondía 200: la clienta pagaba sin acceso y MP no reintentaba.
+    throw new Error(`activateSubscription upsert failed: ${subError?.message ?? "no row returned"}`);
   }
+
+  if (await blockIfDuplicateCheckout({ id: sub.id, userId, provider: "mercadopago", providerSubscriptionId })) return;
 
   // Separar UPDATE desde el upsert: el on_conflict de upsert no garantiza
   // que role/subscription_id se actualicen si la fila ya existe (race condition
   // con handle_new_user que crea el profile en "free" antes del webhook).
   // UPDATE explícito fuerza el linkeo.
-  await supabaseAdmin
+  const { error: linkError } = await supabaseAdmin
     .from("profiles")
     .update({
-      role: "subscriber",
+      role: await roleAfterPayment(userId),
       subscription_id: sub.id,
       updated_at: now,
     })
     .eq("id", userId);
+  if (linkError) throw new Error(`profile link failed: ${linkError.message}`);
 
   if (email) {
     const { error: emailErr } = await supabaseAdmin

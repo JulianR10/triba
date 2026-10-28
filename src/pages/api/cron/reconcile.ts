@@ -4,6 +4,7 @@ import { logger } from "../../../lib/logger";
 import { logAdminAction } from "../../../lib/admin/audit";
 import { applyReconcileCandidates } from "../../../lib/reconcile";
 import { sendMailClubOperationsReminder } from "../../../lib/admin/mail-club-reminders";
+import { supabaseAdmin } from "../../../lib/supabase-admin";
 
 export const prerender = false;
 
@@ -20,6 +21,11 @@ export const GET: APIRoute = async ({ request }) => {
   if (request.headers.get("authorization") !== `Bearer ${secret}`) {
     return error("Unauthorized", 401);
   }
+
+  // Housekeeping: cada petición protegida inserta una fila en rate_limits y nadie las borraba.
+  // No es crítico: un fallo se registra pero no hace fallar el cron.
+  const { error: cleanupError } = await supabaseAdmin.rpc("cleanup_rate_limits");
+  if (cleanupError) logger.warn({ err: cleanupError }, "[cron/reconcile] rate_limits cleanup failed");
 
   let reconciliation: Awaited<ReturnType<typeof applyReconcileCandidates>> | null = null;
   let reconcileFailed = false;
@@ -41,7 +47,7 @@ export const GET: APIRoute = async ({ request }) => {
 
   const activated = reconciliation?.activated ?? [];
   if (activated.length > 0) {
-    logAdminAction("cron", "cron", "subscriber.reconciled", "subscriber", undefined, {
+    await logAdminAction("cron", "cron", "subscriber.reconciled", "subscriber", undefined, {
       via: "cron",
       count: activated.length,
       emails: activated,

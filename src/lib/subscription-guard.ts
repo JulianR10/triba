@@ -12,8 +12,8 @@ export interface ActiveSubscription {
 }
 
 // Devuelve la suscripción vigente de la usuaria (si tiene) para evitar
-// dobles suscripciones. Considera activa: active/trialing siempre, y
-// migrated solo si el período de cortesía aún no venció.
+// dobles suscripciones. Triba no ofrece períodos de prueba: active y migrated
+// cuentan solo con el período vigente.
 export async function getActiveSubscriptionForUser(
   userId: string,
 ): Promise<ActiveSubscription | null> {
@@ -34,9 +34,7 @@ export async function getActiveSubscriptionForUser(
 
   const status = (sub as any).status as string;
   const end = (sub as any).current_period_end as string | null;
-  // Misma regla que el gate: active/trialing con período vigente; migrated
-  // con cortesía vigente. Expiradas no habilitan upgrade/downgrade.
-  if (status === "trialing") return sub as ActiveSubscription;
+  // Misma regla que el gate. Expiradas no habilitan upgrade/downgrade.
   if (isActiveSubscription(status, end)) return sub as ActiveSubscription;
   return null;
 }
@@ -50,8 +48,6 @@ export async function hasLivePaidSubscription(userId: string): Promise<boolean> 
     .select("status, current_period_end")
     .eq("user_id", userId)
     .in("provider", ["stripe", "mercadopago"])
-    .in("status", ["active", "trialing"]);
-  return (data || []).some(
-    (s: any) => s.status === "trialing" || isActiveSubscription(s.status, s.current_period_end),
-  );
+    .eq("status", "active");
+  return (data || []).some((s: any) => isActiveSubscription(s.status, s.current_period_end));
 }

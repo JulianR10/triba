@@ -5,9 +5,10 @@ import { getPaymentProvider } from "../../lib/payment-provider";
 import { enforceRateLimit } from "../../lib/rate-limit";
 import { logger } from "../../lib/logger";
 import { getSiteOrigin } from "../../lib/site-url";
+import { getPreferredLocale } from "../../lib/locale-pref";
 import { supabaseAdmin } from "../../lib/supabase-admin";
-import { resolveMailClubZone, MAIL_CLUB_PAUSED } from "../../lib/mail-club";
-import { getActiveSubscriptionForUser, hasLivePaidSubscription } from "../../lib/subscription-guard";
+import { resolveMailClubZone, isMailClubCountryEnabled, MAIL_CLUB_PAUSED } from "../../lib/mail-club";
+import { hasLivePaidSubscription } from "../../lib/subscription-guard";
 import { validateMailClubAddress, saveMailClubAddress } from "../../lib/mail-club-address";
 
 const validProviders = ["stripe", "mercadopago"] as const;
@@ -75,12 +76,14 @@ export const POST: APIRoute = async ({ request }) => {
         userEmail: user.email || "",
         currency,
         origin,
+        locale: await getPreferredLocale(user.id),
         plan: "digital",
       });
       return ok(result);
     } catch (err: any) {
       logger.error({ err, userId: user.id, provider, currency }, "create-checkout error");
-      return error(err.message || "Internal server error", 500);
+      // El detalle (precio faltante, proveedor sin configurar) queda en el log, no en pantalla.
+      return error("No pudimos iniciar el pago. Intentá de nuevo en unos minutos.", 500);
     }
   }
 
@@ -89,6 +92,10 @@ export const POST: APIRoute = async ({ request }) => {
   if (!validated.ok) return error(validated.error, 400);
   const { address } = validated;
   const countryIso = address.country_iso;
+
+  if (!isMailClubCountryEnabled(countryIso)) {
+    return error("Por ahora el Mail Club envía solo a Argentina.", 400);
+  }
 
   const resolved = resolveMailClubZone(countryIso);
   const requestedProvider = body.provider as Provider | undefined;
@@ -103,10 +110,10 @@ export const POST: APIRoute = async ({ request }) => {
   }
   const currency: Currency = resolved.currency;
 
-  // Sin dobles suscripciones: quien ya tiene una vigente debe usar el
-  // upgrade voluntario desde Mi Cuenta, no un checkout nuevo.
-  const current = await getActiveSubscriptionForUser(user.id);
-  if (current) {
+  // Sin dobles suscripciones: quien ya tiene una paga vigente (en cualquier
+  // fila, no solo la del perfil) debe usar el upgrade desde Mi Cuenta. Las
+  // 'migrated' (cortesía) no cuentan: deben poder convertir a Mail Club.
+  if (await hasLivePaidSubscription(user.id)) {
     return new Response(
       JSON.stringify({
         error:
@@ -131,12 +138,13 @@ export const POST: APIRoute = async ({ request }) => {
       userEmail: user.email || "",
       currency,
       origin,
+      locale: await getPreferredLocale(user.id),
       plan: "mail_club",
       countryIso,
     });
     return ok({ ...result, currency, provider, zone: resolved.zone });
   } catch (err: any) {
     logger.error({ err, userId: user.id, provider, currency }, "create-checkout mail club error");
-    return error(err.message || "Internal server error", 500);
+    return error("No pudimos iniciar el pago. Intentá de nuevo en unos minutos.", 500);
   }
 };

@@ -35,7 +35,10 @@ const STATUS_LABELS: Record<string, { es: string; en: string }> = {
   past_due: { es: "Tu último cobro falló", en: "Your last payment failed" },
   incomplete: { es: "Pago en proceso", en: "Payment processing" },
   trialing: { es: "Período de prueba", en: "Trial period" },
+  canceled: { es: "Suscripción cancelada", en: "Subscription canceled" },
 };
+
+const EXPIRED_LABEL = { es: "Tu suscripción venció", en: "Your subscription has expired" };
 
 const STATUS_ACTIONS: Record<string, { es: string; en: string }> = {
   past_due: { es: "Actualizar medio de pago", en: "Update payment method" },
@@ -43,7 +46,8 @@ const STATUS_ACTIONS: Record<string, { es: string; en: string }> = {
 
 export function subscriptionStatusInfo(
   status?: string | null,
-  locale: "es" | "en" = "es"
+  locale: "es" | "en" = "es",
+  currentPeriodEnd?: string | null,
 ): SubscriptionStatusInfo {
   if (!status) {
     return {
@@ -53,7 +57,13 @@ export function subscriptionStatusInfo(
     };
   }
 
-  const label = STATUS_LABELS[status]?.[locale] ?? status;
+  // 'active' con el período ya vencido no da acceso (cancelación diferida / MP sin renovar):
+  // decir "activa" contradice lo que la usuaria ve (sin acceso).
+  if (status === "active" && currentPeriodEnd && !isActiveSubscription(status, currentPeriodEnd)) {
+    return { active: false, label: EXPIRED_LABEL[locale], action: null };
+  }
+
+  const label = STATUS_LABELS[status]?.[locale] ?? (locale === "en" ? "Subscription status unavailable" : "Estado de suscripción no disponible");
   const action = STATUS_ACTIONS[status]?.[locale] ?? null;
   // P7: active coherente con isActiveSubscription para migrated (requiere no expirada); callers con fecha usan hasActiveSub aparte
   const active = isActiveSubscription(status);

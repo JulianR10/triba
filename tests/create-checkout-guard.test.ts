@@ -12,6 +12,7 @@ vi.mock("../src/lib/supabase-admin", () => ({ supabaseAdmin: { from: mocks.from 
 vi.mock("../src/lib/payment-provider", () => ({ getPaymentProvider: mocks.getPaymentProvider }));
 vi.mock("../src/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn() } }));
 vi.mock("../src/lib/site-url", () => ({ getSiteOrigin: () => "https://x.test" }));
+vi.mock("../src/lib/locale-pref", () => ({ getPreferredLocale: async () => "es" }));
 
 import { POST } from "../src/pages/api/create-checkout";
 

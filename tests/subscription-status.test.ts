@@ -1,5 +1,23 @@
 import { describe, expect, it } from "vitest";
-import { isActiveSubscription } from "../src/lib/subscription-status";
+import { isActiveSubscription, subscriptionStatusInfo } from "../src/lib/subscription-status";
+
+describe("subscriptionStatusInfo", () => {
+  it("etiqueta las canceladas en vez de mostrar el estado crudo", () => {
+    expect(subscriptionStatusInfo("canceled", "es").label).toBe("Suscripción cancelada");
+    expect(subscriptionStatusInfo("canceled", "en").label).toBe("Subscription canceled");
+  });
+
+  it("no dice 'activa' cuando el período ya venció", () => {
+    const info = subscriptionStatusInfo("active", "es", "2000-01-01T00:00:00.000Z");
+    expect(info.label).toBe("Tu suscripción venció");
+    expect(info.active).toBe(false);
+    expect(subscriptionStatusInfo("active", "es", "2999-01-01T00:00:00.000Z").label).toBe("Suscripción activa");
+  });
+
+  it("nunca muestra un estado desconocido en inglés técnico", () => {
+    expect(subscriptionStatusInfo("some_new_state", "es").label).not.toContain("some_new_state");
+  });
+});
 
 describe("isActiveSubscription", () => {
   const future = "2999-01-01T00:00:00.000Z";

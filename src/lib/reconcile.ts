@@ -8,6 +8,8 @@ import { sendWelcomeEmail } from "./email";
 import { getPreferredLocale } from "./locale-pref";
 import { sendMailClubActivation } from "./mail-club-activation";
 import { stripe } from "./stripe";
+import { periodRange } from "./stripe-period";
+import { roleAfterPayment } from "./profile-role";
 import {
   activateSubscription,
   mpGet,
@@ -111,31 +113,32 @@ async function activateStripeCandidate(c: ReconcileCandidate): Promise<void> {
   if (stripeSub.status !== "active" && stripeSub.status !== "trialing") {
     throw new Error(`Stripe status is ${stripeSub.status}, not payable`);
   }
-  // Esta cuenta no expone current_period_* en la suscripción: fallback +30d.
-  const startSec = (stripeSub as any).current_period_start ?? (stripeSub as any).start_date ?? stripeSub.created;
-  const endSec = (stripeSub as any).current_period_end ?? (startSec ? startSec + 30 * 24 * 60 * 60 : undefined);
+  // Período real (por ítem en esta cuenta); el +30d de periodRange es solo el último recurso.
+  const period = periodRange(stripeSub);
   const now = new Date().toISOString();
 
   // Transición atómica incomplete -> active (mismo criterio que invoice.paid).
-  const { data: flipped } = await supabaseAdmin
+  const { data: flipped, error: flipError } = await supabaseAdmin
     .from("subscriptions")
     .update({
       status: "active",
-      ...(startSec ? { current_period_start: new Date(startSec * 1000).toISOString() } : {}),
-      ...(endSec ? { current_period_end: new Date(endSec * 1000).toISOString() } : {}),
+      ...(period.start ? { current_period_start: period.start } : {}),
+      ...(period.end ? { current_period_end: period.end } : {}),
       updated_at: now,
     })
     .eq("id", c.subscription_id)
     .neq("status", "active")
     .select("id");
+  if (flipError) throw new Error(`subscription activation failed: ${flipError.message}`);
   if (!flipped || (flipped as any[]).length === 0) return;
 
-  await supabaseAdmin.from("profiles").upsert({
+  const { error: linkError } = await supabaseAdmin.from("profiles").upsert({
     id: c.user_id,
-    role: "subscriber",
+    role: await roleAfterPayment(c.user_id),
     subscription_id: c.subscription_id,
     updated_at: now,
   } as any, { onConflict: "id" });
+  if (linkError) throw new Error(`profile link failed: ${linkError.message}`);
 
   await supabaseAdmin
     .from("subscriptions")
