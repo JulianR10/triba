@@ -34,6 +34,7 @@ export const POST: APIRoute = async ({ request, params, locals }) => {
     return ok(result);
   } catch (err: any) {
     logger.error({ err, id }, "mail club batch dispatch error");
-    return error(err.message || "Internal server error", 500);
+    const status = err.status === 404 || err.status === 409 ? err.status : 500;
+    return error(err.message || "Internal server error", status);
   }
 };

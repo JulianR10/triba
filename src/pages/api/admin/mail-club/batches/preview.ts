@@ -6,6 +6,8 @@ import {
   cutoffAtMadrid,
   listMailClubEligible,
 } from "../../../../../lib/admin/mail-club";
+import { logAdminAction } from "../../../../../lib/admin/audit";
+import { enforceRateLimit } from "../../../../../lib/rate-limit";
 
 export const prerender = false;
 
@@ -14,6 +16,8 @@ export const prerender = false;
 export const POST: APIRoute = async ({ request, locals }) => {
   const admin = requireAdmin(locals);
   if (admin instanceof Response) return admin;
+  const limited = await enforceRateLimit(request, "admin-preview", { maxRequests: 20, windowMs: 60_000 });
+  if (limited) return limited;
 
   let body: { year?: unknown; month?: unknown };
   try {
@@ -29,6 +33,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     const cutoff = cutoffAtMadrid(year, month);
     const { eligible, skipped } = await listMailClubEligible(cutoff);
+    await logAdminAction(admin.user.id, admin.profile.email, "mailclub.batch_previewed", "mail_club", undefined, { year, month });
     return ok({
       cutoff,
       included: eligible.length,

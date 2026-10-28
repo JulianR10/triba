@@ -3,6 +3,8 @@ import { sendEmail } from "./sender";
 import { SITE_URL } from "./site-url";
 import { mailClubWelcomeHtml, type MailClubWelcomeData } from "./email-templates";
 import type { Locale } from "../i18n/ui";
+import { SUPPORT_EMAIL } from "./contact";
+import { escapeHtmlText } from "./html-escape";
 
 export { mailClubWelcomeHtml };
 export type { MailClubWelcomeData };
@@ -91,8 +93,8 @@ function welcomeHtml(showCta: boolean, locale: Locale = "es") {
               <td align="center" style="padding:20px 40px 40px;">
                 <p style="font-family:Montserrat,Arial,sans-serif;font-size:11px;color:#35220A;line-height:1.5;margin:0;">
                   ${en
-                    ? `If you have questions, reply to this email or write to us at <a href="mailto:hola@comunidadtriba.com" style="color:#E91A39;text-decoration:underline;">hola@comunidadtriba.com</a>`
-                    : `Si tenés preguntas, respondé este email o escribinos a <a href="mailto:hola@comunidadtriba.com" style="color:#E91A39;text-decoration:underline;">hola@comunidadtriba.com</a>`}
+                    ? `If you have questions, reply to this email or write to us at <a href="mailto:${SUPPORT_EMAIL}" style="color:#E91A39;text-decoration:underline;">${SUPPORT_EMAIL}</a>`
+                    : `Si tenés preguntas, respondé este email o escribinos a <a href="mailto:${SUPPORT_EMAIL}" style="color:#E91A39;text-decoration:underline;">${SUPPORT_EMAIL}</a>`}
                 </p>
               </td>
             </tr>
@@ -135,7 +137,9 @@ export interface MailClubDispatchData {
   shipmentMonth: string;
 }
 
-export function mailClubDispatchHtml(data: MailClubDispatchData, locale: Locale = "es") {
+export function mailClubDispatchHtml(rawData: MailClubDispatchData, locale: Locale = "es") {
+  // El nombre lo escribe la clienta: se escapa para que no inyecte HTML en un mail de marca.
+  const data = { ...rawData, recipientName: escapeHtmlText(rawData.recipientName) };
   const en = locale === "en";
   const htmlLang = en ? "en" : "es";
   return `<!DOCTYPE html>
@@ -209,7 +213,15 @@ export async function sendDispatchNoticeEmail(
   }
 }
 
-function newEditionHtml(edition: { title: string; edition_number: number | null; cover_url: string; description: string; id: number }, locale: Locale = "es") {
+function newEditionHtml(rawEdition: { title: string; edition_number: number | null; cover_url: string; description: string; id: number }, locale: Locale = "es") {
+  // Título, descripción y portada los carga una admin: un "&", "<" o comilla rompía el HTML
+  // del mail que le llega a todas las suscriptoras.
+  const edition = {
+    ...rawEdition,
+    title: escapeHtmlText(rawEdition.title),
+    description: escapeHtmlText(rawEdition.description),
+    cover_url: escapeHtmlText(rawEdition.cover_url),
+  };
   const en = locale === "en";
   const htmlLang = en ? "en" : "es";
   const editionLabel = edition.edition_number
@@ -269,8 +281,8 @@ function newEditionHtml(edition: { title: string; edition_number: number | null;
               <td align="center" style="padding:20px 40px 40px;">
                 <p style="font-family:Montserrat,Arial,sans-serif;font-size:11px;color:#35220A;line-height:1.5;margin:0;">
                   ${en
-                    ? `If you have questions, reply to this email or write to us at <a href="mailto:hola@comunidadtriba.com" style="color:#E91A39;text-decoration:underline;">hola@comunidadtriba.com</a>`
-                    : `Si tenés preguntas, respondé este email o escribinos a <a href="mailto:hola@comunidadtriba.com" style="color:#E91A39;text-decoration:underline;">hola@comunidadtriba.com</a>`}
+                    ? `If you have questions, reply to this email or write to us at <a href="mailto:${SUPPORT_EMAIL}" style="color:#E91A39;text-decoration:underline;">${SUPPORT_EMAIL}</a>`
+                    : `Si tenés preguntas, respondé este email o escribinos a <a href="mailto:${SUPPORT_EMAIL}" style="color:#E91A39;text-decoration:underline;">${SUPPORT_EMAIL}</a>`}
                 </p>
               </td>
             </tr>

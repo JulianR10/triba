@@ -18,6 +18,15 @@ export const MAIL_CLUB_ADDRESS_RETENTION_DAYS = 60;
 // lista de espera. Las suscripciones existentes no se tocan. Volver a false para reabrir.
 export const MAIL_CLUB_PAUSED = true;
 
+// Países con envíos habilitados al reabrir (ISO). Se ve en el servidor: la web puede ofrecer más
+// países, pero el alta y el upgrade solo aceptan estos. Tras la pausa vuelve solo Argentina;
+// ampliar acá (y los textos de ui.ts) cuando se sumen zonas.
+export const MAIL_CLUB_ENABLED_COUNTRIES: ReadonlySet<string> = new Set(["AR"]);
+
+export function isMailClubCountryEnabled(countryIsoInput: unknown): boolean {
+  return MAIL_CLUB_ENABLED_COUNTRIES.has(normalizeCountryIso(countryIsoInput) ?? "");
+}
+
 export { shouldRetainMailClubAddress } from "./mail-club-retention.mjs";
 
 export type MailClubZone = "europe" | "rest" | "argentina";

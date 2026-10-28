@@ -11,8 +11,18 @@ export interface MailClubAddressInput {
   address_extra: string;
 }
 
+// Los caracteres de control (saltos de línea, tabs) rompen las etiquetas y el CSV de envíos:
+// se reemplazan por un espacio antes de recortar.
 function str(v: unknown, max = 200): string {
-  return typeof v === "string" ? v.trim().slice(0, max) : "";
+  return typeof v === "string" ? v.replace(/[\u0000-\u001F\u007F]+/g, " ").trim().slice(0, max) : "";
+}
+
+// Formatos que conocemos con certeza (España 5 dígitos; Argentina 4 dígitos o CPA). Para el
+// resto, una regla amplia: evita basura sin rechazar formatos reales de otros países.
+export function isValidPostalCode(countryIso: string, postalCode: string): boolean {
+  if (countryIso === "ES") return /^\d{5}$/.test(postalCode);
+  if (countryIso === "AR") return /^(\d{4}|[A-Za-z]\d{4}[A-Za-z]{3})$/.test(postalCode);
+  return /^[A-Za-z0-9][A-Za-z0-9 \-]{1,9}$/.test(postalCode);
 }
 
 // Valida dirección postal + aceptación de condiciones. Misma regla para
@@ -45,6 +55,17 @@ export function validateMailClubAddress(
   if (!region) return { ok: false, error: "Falta la provincia o estado." };
   if (!city) return { ok: false, error: "Falta la ciudad." };
   if (!postalCode) return { ok: false, error: "Falta el código postal." };
+  if (!isValidPostalCode(countryIso, postalCode)) {
+    return {
+      ok: false,
+      error:
+        countryIso === "ES"
+          ? "El código postal de España tiene 5 números (por ejemplo 28013)."
+          : countryIso === "AR"
+            ? "El código postal de Argentina tiene 4 números (por ejemplo 1425) o el formato nuevo (por ejemplo C1425ABC)."
+            : "El código postal no parece válido. Revisalo (solo letras, números, espacios o guiones).",
+    };
+  }
   if (!streetAddress) return { ok: false, error: "Falta la dirección." };
   if (requireTerms && !termsAccepted) {
     return { ok: false, error: "Tenés que aceptar las condiciones del Mail Club." };

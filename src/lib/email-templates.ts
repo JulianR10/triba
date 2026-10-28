@@ -1,6 +1,8 @@
 // Plantillas de email puras (sin `import.meta.env`), para poder reutilizarlas
 // desde scripts de prueba sin duplicar HTML. El envío real vive en `email.ts`.
 
+import { escapeHtmlText } from "./html-escape";
+
 export interface MailClubWelcomeData {
   recipientName: string;
   addressLines: string[];
@@ -18,7 +20,9 @@ export function mailClubWelcomeHtml(
 ) {
   const en = locale === "en";
   const htmlLang = en ? "en" : "es";
-  const address = data.addressLines.map((l) => `<br />${l}`).join("");
+  // Nombre y dirección los escribe la clienta: se escapan para que no puedan inyectar HTML en un mail de marca.
+  const address = data.addressLines.map((l) => `<br />${escapeHtmlText(l)}`).join("");
+  const recipientName = escapeHtmlText(data.recipientName);
   return `<!DOCTYPE html>
 <html lang="${htmlLang}">
   <head>
@@ -45,8 +49,8 @@ export function mailClubWelcomeHtml(
                 </h1>
                 <p style="font-family:Montserrat,Arial,sans-serif;font-size:15px;color:#35220A;line-height:1.6;margin:0 0 24px;">
                   ${en
-                    ? `Hi, ${data.recipientName}! You're part of the Triba Mail Club. Your envelope will go out with the <strong>${data.shipmentMonth}</strong> dispatch and we'll let you know when it's on its way.`
-                    : `¡Hola, ${data.recipientName}! Ya sos parte del Mail Club de Triba. Tu sobre va a salir en el envío de <strong>${data.shipmentMonth}</strong> y te vamos a avisar cuando esté en camino.`}
+                    ? `Hi, ${recipientName}! You're part of the Triba Mail Club. Your envelope will go out with the <strong>${data.shipmentMonth}</strong> dispatch and we'll let you know when it's on its way.`
+                    : `¡Hola, ${recipientName}! Ya sos parte del Mail Club de Triba. Tu sobre va a salir en el envío de <strong>${data.shipmentMonth}</strong> y te vamos a avisar cuando esté en camino.`}
                 </p>
               </td>
             </tr>

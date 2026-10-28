@@ -14,6 +14,7 @@ const messages = {
   processing: copy.processing,
   success: copy.success,
   error: copy.error,
+  rateLimited: copy.rateLimited,
   networkError: copy.networkError,
 };
 ---
@@ -58,9 +59,11 @@ const messages = {
       var msgEl = form.parentElement!.querySelector<HTMLElement>("[data-mc-waitlist-msg]");
       var btn = form.querySelector<HTMLButtonElement>('button[type="submit"]');
 
-      function show(text: string) {
+      function show(text: string, isError = true) {
         if (!msgEl) return;
         msgEl.textContent = text;
+        msgEl.classList.toggle("text-triba-red", isError);
+        msgEl.classList.toggle("text-triba-brown", !isError);
         msgEl.classList.remove("hidden");
       }
 
@@ -68,7 +71,7 @@ const messages = {
         e.preventDefault();
         var email = (new FormData(form).get("email") || "").toString().trim();
         if (btn) btn.disabled = true;
-        show(msgs.processing);
+        show(msgs.processing, false);
         try {
           var res = await fetch("/api/mail-club-waitlist", {
             method: "POST",
@@ -77,10 +80,10 @@ const messages = {
           });
           if (res.ok) {
             form.classList.add("hidden");
-            show(msgs.success);
+            show(msgs.success, false);
             return;
           }
-          show(msgs.error);
+          show(res.status === 429 ? msgs.rateLimited : msgs.error);
         } catch {
           show(msgs.networkError);
         }

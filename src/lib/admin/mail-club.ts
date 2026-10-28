@@ -19,6 +19,7 @@ export interface MailClubBatchSummary {
   dispatched_at: string | null;
   status: "open" | "closed" | "dispatched";
   item_count: number;
+  pending_notices: number;
 }
 
 function madridOffsetMinutes(instant: Date): number {
@@ -60,14 +61,20 @@ export async function listMailClubBatches(): Promise<MailClubBatchSummary[]> {
   const batchIds = rows.map((b) => b.id as string);
   const { data: items } = await supabaseAdmin
     .from("mail_club_batch_items")
-    .select("batch_id")
+    .select("batch_id, notice_sent")
     .in("batch_id", batchIds);
   const counts = new Map<string, number>();
+  const pending = new Map<string, number>();
   for (const it of (items as any[]) || []) {
     const id = it.batch_id as string;
     counts.set(id, (counts.get(id) || 0) + 1);
+    if (!it.notice_sent) pending.set(id, (pending.get(id) || 0) + 1);
   }
-  return rows.map((b) => ({ ...b, item_count: counts.get(b.id as string) || 0 }));
+  return rows.map((b) => ({
+    ...b,
+    item_count: counts.get(b.id as string) || 0,
+    pending_notices: pending.get(b.id as string) || 0,
+  }));
 }
 
 interface SkippedRow {
@@ -621,10 +628,14 @@ export async function dispatchMailClubBatch(
 ): Promise<{ sent: number; failed: DispatchFailure[]; alreadyDispatched: boolean }> {
   const { data: batch } = await supabaseAdmin
     .from("mail_club_batches")
-    .select("id, period_year, period_month, status")
+    .select("id, period_year, period_month, status, cutoff_at")
     .eq("id", batchId)
     .maybeSingle();
-  if (!batch) throw new Error("Lote no encontrado");
+  if (!batch) throw Object.assign(new Error("Lote no encontrado"), { status: 404 });
+  // Antes del corte el lote todavía puede cambiar: despachar ahora congelaría uno incompleto.
+  if (new Date((batch as any).cutoff_at).getTime() > Date.now()) {
+    throw Object.assign(new Error("El corte de este lote todavía no pasó"), { status: 409 });
+  }
   const alreadyDispatched = (batch as any).status === "dispatched";
 
   let query = supabaseAdmin
@@ -645,6 +656,21 @@ export async function dispatchMailClubBatch(
   let sent = 0;
   const failed: DispatchFailure[] = [];
   for (const it of (items as any[]) || []) {
+    // Reclamo condicional ANTES de enviar: un doble clic o dos admins a la vez no mandan
+    // el aviso dos veces. Si Sender falla se devuelve el reclamo para poder reintentar.
+    const { data: claimed, error: claimError } = await supabaseAdmin
+      .from("mail_club_batch_items")
+      .update({ notice_sent: true })
+      .eq("id", it.id)
+      .eq("notice_sent", false)
+      .select("id");
+    if (claimError) {
+      logger.error({ err: claimError, itemId: it.id }, "dispatch notice claim error");
+      failed.push({ email: it.email, error: "no se pudo reservar el aviso" });
+      continue;
+    }
+    if (!claimed || (claimed as any[]).length === 0) continue; // otra ejecución ya lo tomó
+
     try {
       const locale = await getPreferredLocale(it.user_id).catch(() => "es" as const);
       const snap = (it.address_snapshot as any) || {};
@@ -653,15 +679,12 @@ export async function dispatchMailClubBatch(
         { recipientName: snap.recipient_name || it.email, shipmentMonth: monthLabel(locale) },
         locale,
       );
-      await supabaseAdmin
-        .from("mail_club_batch_items")
-        .update({ notice_sent: true })
-        .eq("id", it.id);
       sent++;
     } catch (err: any) {
       const message = err.message || "send error";
       logger.error({ err, itemId: it.id }, "dispatch notice error");
       failed.push({ email: it.email, error: message.slice(0, 200) });
+      await supabaseAdmin.from("mail_club_batch_items").update({ notice_sent: false }).eq("id", it.id);
     }
   }
 

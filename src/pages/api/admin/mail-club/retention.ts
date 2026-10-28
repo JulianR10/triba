@@ -39,7 +39,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
   const days = Number((body as any)?.days || 60);
   try {
     const report = await purgeMailClubRetention(days, true);
-    logAdminAction(admin.user.id, admin.profile.email, "mailclub.retention_purged", "mail_club", undefined, {
+    await logAdminAction(admin.user.id, admin.profile.email, "mailclub.retention_purged", "mail_club", undefined, {
       days: report.days,
       snapshots: report.snapshotsPurged,
       addresses: report.addressesDeleted,
