@@ -26,13 +26,13 @@ if (session?.user) {
   const localsHasActive = (Astro.locals as any).hasActiveSub as boolean | undefined;
   if (localsSub !== undefined || localsHasActive !== undefined) {
     hasActiveSub = localsHasActive ?? isActiveSubscription(localsSub?.status as any, (localsSub as any)?.current_period_end ?? undefined);
-    subInfo = subscriptionStatusInfo((localsSub as any)?.status ?? null, lang);
+    subInfo = subscriptionStatusInfo((localsSub as any)?.status ?? null, lang, (localsSub as any)?.current_period_end ?? null);
   } else {
     const { data: p } = await supabase.from("profiles").select("subscription_id").eq("id", session.user.id).single();
     if (p?.subscription_id) {
       const { data: s } = await supabase.from("subscriptions").select("status, current_period_end").eq("id", p.subscription_id).single();
       hasActiveSub = isActiveSubscription(s?.status, s?.current_period_end);
-      subInfo = subscriptionStatusInfo(s?.status, lang);
+      subInfo = subscriptionStatusInfo(s?.status, lang, s?.current_period_end);
     }
   }
 }

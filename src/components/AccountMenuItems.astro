@@ -10,6 +10,7 @@ interface Sub {
   plan_currency?: string | null;
   plan_type?: string | null;
   current_period_end?: string | null;
+  cancel_at_period_end?: boolean | null;
 }
 
 interface Props {
@@ -23,7 +24,7 @@ const { role, sub, periodEndLabel, lang = "es" } = Astro.props;
 const dict = t(lang);
 
 const isActiveSub = isActiveSubscription(sub?.status, sub?.current_period_end ?? undefined);
-const info = subscriptionStatusInfo(sub?.status, lang);
+const info = subscriptionStatusInfo(sub?.status, lang, sub?.current_period_end);
 const isAdmin = role === "admin";
 
 let label = info.label;
@@ -39,6 +40,8 @@ const planLabel = dict.accountMenu.planVia
   .replace("{currency}", sub?.plan_currency ?? "")
   .replace("{provider}", sub?.provider ?? "");
 const expiresLabel = dict.accountMenu.expires.replace("{date}", periodEndLabel);
+const cancelScheduled = !!sub?.cancel_at_period_end;
+const cancelScheduledLabel = dict.accountMenu.cancelScheduled.replace("{date}", periodEndLabel);
 const mercadoPagoAccountUrl = "https://www.mercadopago.com.ar/";
 const externalAccountLinkClass = "block w-full text-left font-sans text-xs text-triba-brown hover:text-triba-red hover:underline py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded";
 
@@ -75,7 +78,11 @@ const externalAccountLinkClass = "block w-full text-left font-sans text-xs text-
               </div>
             : <p class="font-sans text-[10px] text-triba-brown/50 mb-1">{dict.accountMenu.manageMigrated}</p>
       }
-      <button type="button" class="cancel-sub-btn block w-full text-left font-sans text-xs text-triba-red hover:underline py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded">{dict.accountMenu.cancelSubscription}</button>
+      {
+        cancelScheduled
+          ? <p class="font-sans text-[11px] text-triba-brown/80 leading-snug py-1.5">{cancelScheduledLabel}</p>
+          : <button type="button" class="cancel-sub-btn block w-full text-left font-sans text-xs text-triba-red hover:underline py-1.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded">{dict.accountMenu.cancelSubscription}</button>
+      }
       <hr class="border-triba-black/10 my-2" />
       <button type="button" class="logout-dropdown-btn block w-full text-left font-heading text-xs uppercase tracking-wider text-triba-red hover:text-triba-brown py-2 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-triba-red focus-visible:ring-offset-2 rounded">{dict.accountMenu.signOut}</button>
     </>

@@ -4,6 +4,7 @@ import AccountMenuItems from "./AccountMenuItems.astro";
 import MailClubWaveLink from "./MailClubWaveLink.astro";
 import { t, type Locale } from "../i18n/ui";
 import { localizePath, switchPath } from "../i18n/locale";
+import { SUPPORT_EMAIL } from "../lib/contact";
 
 const { showLogoAlways = false, lang = "es" } = Astro.props as {
   showLogoAlways?: boolean;
@@ -36,6 +37,7 @@ if (user) {
           plan_currency: localsSubscription.plan_currency,
           plan_type: localsSubscription.plan_type,
           current_period_end: localsSubscription.current_period_end,
+          cancel_at_period_end: localsSubscription.cancel_at_period_end,
         }
       : null;
   } else {
@@ -44,7 +46,7 @@ if (user) {
     if (p?.subscription_id) {
       const { data: s } = await supabase
         .from("subscriptions")
-        .select("status, provider, plan_currency, plan_type, current_period_end")
+        .select("status, provider, plan_currency, plan_type, current_period_end, cancel_at_period_end")
         .eq("id", p.subscription_id)
         .single();
       accountSub = s;
@@ -88,6 +90,25 @@ const isMailClubLink = (href: string) => href.includes("mail-club");
 
 const esHref = switchPath(currentPath, "es");
 const enHref = switchPath(currentPath, "en");
+
+// Textos de las acciones de cuenta (gestionar / cancelar) en el idioma de la página.
+const am = dict.accountMenu;
+const accountMessages = {
+  loginPath: localizePath("/iniciar-sesion", lang),
+  cancelConfirmTitle: am.cancelConfirmTitle,
+  cancelConfirmBody: periodEndLabel
+    ? am.cancelConfirmBody.replace("{date}", periodEndLabel)
+    : am.cancelConfirmBodyNoDate,
+  cancelLabel: am.cancelSubscription,
+  cancelBusy: am.cancelBusy,
+  cancelDone: am.cancelDone,
+  cancelAlready: am.cancelAlready,
+  cancelProviderNote: am.cancelProviderNote,
+  cancelError: am.cancelError.replace("{email}", SUPPORT_EMAIL),
+  manageError: am.manageError.replace("{email}", SUPPORT_EMAIL),
+  connectionError: am.connectionError,
+  sessionExpired: am.sessionExpired,
+};
 ---
 
 <style>
@@ -132,7 +153,7 @@ const enHref = switchPath(currentPath, "en");
 
 </style>
 
-<nav id="navbar" data-logo-always={showLogoAlways ? "1" : "0"} data-mp-portal-note={dict.accountMenu.mpNoPortal} class="hidden md:flex fixed top-0 left-0 right-0 z-40 items-center px-4 lg:px-8 bg-triba-bone/80 backdrop-blur-sm py-4">
+<nav id="navbar" data-logo-always={showLogoAlways ? "1" : "0"} data-mp-portal-note={dict.accountMenu.mpNoPortal} data-account-messages={JSON.stringify(accountMessages)} class="hidden md:flex fixed top-0 left-0 right-0 z-40 items-center px-4 lg:px-8 bg-triba-bone/80 backdrop-blur-sm py-4">
   <div class="grid grid-cols-[1fr_auto_1fr] items-center gap-4 w-full max-w-[1400px] mx-auto">
     <div class="flex items-center">
       <span></span>
@@ -461,10 +482,47 @@ interface Window {
     window.location.href = "/";
   }
 
-  async function openManage() {
-    var { data: { session } } = await supabase!.auth.getSession();
-    if (!session) return;
+  // Textos en el idioma de la página (los arma el servidor en Navbar.astro).
+  function accountMessages(): Record<string, string> {
+    var defaults: Record<string, string> = {
+      loginPath: "/iniciar-sesion",
+      cancelConfirmTitle: "Cancelar suscripción",
+      cancelConfirmBody: "Tu suscripción se cancela al final del período ya pagado y conservás el acceso hasta entonces. ¿Querés cancelarla?",
+      cancelLabel: "Cancelar suscripción",
+      cancelBusy: "Cancelando...",
+      cancelDone: "Listo: tu suscripción se cancela al final del período ya pagado.",
+      cancelAlready: "Tu suscripción ya estaba programada para cancelarse.",
+      cancelProviderNote: "La renovación ya estaba frenada en tu medio de pago.",
+      cancelError: "No pudimos cancelar tu suscripción. No se cambió nada: intentá de nuevo en unos minutos.",
+      manageError: "No pudimos abrir la gestión de tu suscripción. Intentá de nuevo en unos minutos.",
+      connectionError: "No hay conexión con el servidor. Revisá tu internet e intentá de nuevo.",
+      sessionExpired: "Tu sesión venció. Iniciá sesión de nuevo para continuar.",
+    };
     try {
+      return Object.assign(defaults, JSON.parse(document.getElementById("navbar")?.dataset.accountMessages || "{}"));
+    } catch {
+      return defaults;
+    }
+  }
+
+  // Mensaje del servidor solo si es un 4xx pensado para la usuaria; el resto, texto genérico claro.
+  function userMessage(res: Response, data: { error?: string }, fallback: string): string {
+    return res.status >= 400 && res.status < 500 && res.status !== 401 && data.error ? data.error : fallback;
+  }
+
+  var manageBusy = false;
+
+  async function openManage() {
+    var m = accountMessages();
+    if (manageBusy) return; // doble clic: abría dos sesiones de portal
+    manageBusy = true;
+    try {
+      var { data: { session } } = await supabase!.auth.getSession();
+      if (!session) {
+        showToast(m.sessionExpired, "error");
+        setTimeout(function () { window.location.href = m.loginPath; }, 1200);
+        return;
+      }
       var res = await fetch("/api/portal", {
         method: "POST",
         headers: {
@@ -472,34 +530,42 @@ interface Window {
           Authorization: "Bearer " + session.access_token,
         },
       });
-      var data = await res.json();
-      if (data.url) { window.location.href = data.url; return; }
-      if (data.note) {
+      var data = await res.json().catch(function () { return {}; });
+      if (res.ok && data.url) { window.location.href = data.url; return; }
+      if (res.ok && data.note) {
         const message = data.provider === "mercadopago"
           ? document.getElementById("navbar")?.dataset.mpPortalNote || data.note
           : data.note;
         showToast(message, "info");
         return;
       }
-      if (data.error) { alert(data.error); return; }
-      throw new Error(data.error || "Error");
+      if (res.status === 401) {
+        showToast(m.sessionExpired, "error");
+        setTimeout(function () { window.location.href = m.loginPath; }, 1200);
+        return;
+      }
+      showToast(userMessage(res, data, m.manageError), "error");
     } catch (e) {
-      alert("Error al abrir el portal de gestión");
+      showToast(m.connectionError, "error");
+    } finally {
+      manageBusy = false;
     }
   }
 
   async function cancelSub(btn: HTMLButtonElement) {
-    var confirmed = await showConfirm(
-      "Cancelar suscripción",
-      "¿Estás segura? Perderás el acceso a la revista al final del período actual."
-    );
+    var m = accountMessages();
+    var confirmed = await showConfirm(m.cancelConfirmTitle, m.cancelConfirmBody);
     if (!confirmed) return;
 
     var { data: { session } } = await supabase!.auth.getSession();
-    if (!session) return;
+    if (!session) {
+      showToast(m.sessionExpired, "error");
+      setTimeout(function () { window.location.href = m.loginPath; }, 1200);
+      return;
+    }
 
     btn.disabled = true;
-    btn.textContent = "Cancelando...";
+    btn.textContent = m.cancelBusy;
     try {
       var res = await fetch("/api/cancel-subscription", {
         method: "POST",
@@ -512,21 +578,24 @@ interface Window {
       // Contrato src/lib/response.ts: el éxito lo define el HTTP status,
       // nunca un flag del cuerpo (data.ok no existe en todos los payloads).
       if (res.ok) {
-        showToast(data.message || "Suscripción cancelada", "success");
+        showToast(data.alreadyScheduled ? m.cancelAlready : m.cancelDone, "success");
+        // Aviso tranquilizador, no alarmante: la baja SÍ quedó registrada.
         if (data.providerWarnings && data.providerWarnings.length > 0) {
-          var warnMsg = "Cancelada en Triba, pero hubo un problema con el proveedor de pago: " + data.providerWarnings.join(". ");
-          setTimeout(function () { alert(warnMsg); }, 500);
+          setTimeout(function () { showToast(m.cancelProviderNote, "info"); }, 600);
         }
-        setTimeout(function () { window.location.reload(); }, 1500);
+        setTimeout(function () { window.location.reload(); }, 2200);
+      } else if (res.status === 401) {
+        showToast(m.sessionExpired, "error");
+        setTimeout(function () { window.location.href = m.loginPath; }, 1200);
       } else {
-        alert(data.error || "Error al cancelar");
+        showToast(userMessage(res, data, m.cancelError), "error");
         btn.disabled = false;
-        btn.textContent = "Cancelar suscripción";
+        btn.textContent = m.cancelLabel;
       }
     } catch (e) {
-      alert("Error de conexión");
+      showToast(m.connectionError, "error");
       btn.disabled = false;
-      btn.textContent = "Cancelar suscripción";
+      btn.textContent = m.cancelLabel;
     }
   }
 

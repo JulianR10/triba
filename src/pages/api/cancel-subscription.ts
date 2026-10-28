@@ -5,6 +5,7 @@ import { supabaseAdmin } from "../../lib/supabase-admin";
 import { scheduleProviderCancels } from "../../lib/cancel-providers";
 import { logger } from "../../lib/logger";
 import { enforceRateLimit } from "../../lib/rate-limit";
+import { SUPPORT_EMAIL } from "../../lib/contact";
 
 // Cancelación diferida: frena la recurrencia en el proveedor y marca el fin
 // del período en la base. Si el proveedor falla con un error real, NO se
@@ -51,7 +52,7 @@ export const POST: APIRoute = async ({ request }) => {
     const providerResult = await scheduleProviderCancels(user.id, subs);
     if (providerResult.failed) {
       return error(
-        "No pudimos cancelar la recurrencia con el proveedor de pago. No se cambió nada; intentá de nuevo o escribinos.",
+        `No pudimos cancelar la recurrencia con el proveedor de pago. No se cambió nada: intentá de nuevo en unos minutos o escribinos a ${SUPPORT_EMAIL}.`,
         502,
       );
     }
@@ -93,7 +94,7 @@ export const POST: APIRoute = async ({ request }) => {
 
     logger.warn({ userId: user.id, status: current?.status }, "cancel-subscription rpc no-op");
     return error(
-      "Tu suscripción cambió de estado y ya no se puede cancelar desde acá. Escribinos y la gestionamos.",
+      `Tu suscripción cambió de estado y ya no se puede cancelar desde acá. Escribinos a ${SUPPORT_EMAIL} y la gestionamos.`,
       409,
     );
   } catch (err: any) {

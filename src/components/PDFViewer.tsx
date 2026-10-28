@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { createPortal } from "react-dom";
 import { Document, Page, pdfjs } from "react-pdf";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import { SUPPORT_EMAIL } from "../lib/contact";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -47,7 +48,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
   const [aspectRatio, setAspectRatio] = useState(0.707);
   const [pageHeight, setPageHeight] = useState<number>(0);
   const [err, setErr] = useState<string>("");
-  const [errType, setErrType] = useState<"generic" | "expired" | "timeout">("generic");
+  const [errType, setErrType] = useState<"generic" | "expired" | "timeout" | "login" | "subscribe">("generic");
   const [retryKey, setRetryKey] = useState(0);
   const visible = useIsVisible(containerRef);
   const [inView, setInView] = useState(false);
@@ -55,9 +56,25 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
 
   const msg = {
     expiredTitle: lang === "en" ? "Link expired" : "El enlace expiró",
-    expiredBody: lang === "en" ? "Your viewing session lasts 30 minutes. Reload the page to generate a new link." : "Tu sesión de visualización dura 30 minutos. Recargá la página para generar un nuevo enlace.",
+    expiredBody: lang === "en" ? "Your reading link expired. Reload the page to keep reading." : "Tu enlace de lectura venció. Recargá la página para seguir leyendo.",
     expiredAction: lang === "en" ? "Reload page" : "Recargar página",
     loadErrorTitle: lang === "en" ? "Could not load the magazine" : "No se pudo cargar la revista",
+    loadErrorBody: lang === "en"
+      ? `We couldn't open the file. Try again and, if it keeps happening, write to us at ${SUPPORT_EMAIL}.`
+      : `No pudimos abrir el archivo. Probá de nuevo y, si sigue igual, escribinos a ${SUPPORT_EMAIL}.`,
+    loginTitle: lang === "en" ? "Sign in to read" : "Iniciá sesión para leer",
+    loginBody: lang === "en" ? "This issue is for subscribers. Sign in to your account to keep reading." : "Esta edición es para suscriptoras. Iniciá sesión con tu cuenta para seguir leyendo.",
+    loginAction: lang === "en" ? "Sign in" : "Iniciar sesión",
+    subscribeTitle: lang === "en" ? "Subscribers only" : "Solo para suscriptoras",
+    subscribeBody: lang === "en" ? "Your account doesn't have an active subscription. Subscribe to read the full magazine." : "Tu cuenta no tiene una suscripción activa. Suscribite para leer la revista completa.",
+    subscribeAction: lang === "en" ? "Subscribe" : "Suscribirme",
+    closeAria: lang === "en" ? "Close expanded view" : "Cerrar vista ampliada",
+    prevAria: lang === "en" ? "Previous page" : "Página anterior",
+    nextAria: lang === "en" ? "Next page" : "Página siguiente",
+    zoomOutAria: lang === "en" ? "Zoom out" : "Alejar",
+    zoomInAria: lang === "en" ? "Zoom in" : "Acercar",
+    fullscreenAria: lang === "en" ? "Full screen" : "Pantalla completa",
+    exitFullscreenAria: lang === "en" ? "Exit full screen" : "Salir de pantalla completa",
     retry: lang === "en" ? "Try again" : "Reintentar",
     loading: lang === "en" ? "Loading magazine..." : "Cargando revista...",
     unavailable: lang === "en" ? "PDF not available" : "PDF no disponible",
@@ -74,14 +91,17 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
     return false;
   }
 
+  // El plazo cuenta desde que el visor empieza a cargar (entra en pantalla / reintento), no
+  // desde que se monta la página: en Mi Cuenta el visor está al final y mostraba "tardó
+  // demasiado" a quien todavía no había llegado hasta ahí.
   useEffect(() => {
-    if (err || numPages > 0) return;
+    if (err || numPages > 0 || !visible) return;
     const timer = setTimeout(() => {
       setErr(msg.timeout);
       setErrType("timeout");
     }, 25000);
     return () => clearTimeout(timer);
-  }, [err, numPages, msg.timeout]);
+  }, [err, numPages, visible, retryKey, msg.timeout]);
 
   const resetInline = useCallback(() => {
     setScale(1);
@@ -239,7 +259,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
         <button
           type="button"
           onClick={collapse}
-          aria-label="Cerrar vista ampliada"
+          aria-label={msg.closeAria}
           className="absolute top-6 right-6 md:top-8 md:right-8 z-10 w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red"
         >
           <svg
@@ -268,14 +288,34 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
           {err ? (
             <div className="aspect-[3/4] rounded-xl border-2 border-triba-black bg-triba-red/10 flex flex-col items-center justify-center gap-4 px-6 text-center">
               <p className="font-heading text-base text-triba-red/70">
-                {errType === "expired" ? msg.expiredTitle : msg.loadErrorTitle}
+                {errType === "expired"
+                  ? msg.expiredTitle
+                  : errType === "login"
+                    ? msg.loginTitle
+                    : errType === "subscribe"
+                      ? msg.subscribeTitle
+                      : msg.loadErrorTitle}
               </p>
               {err && (
                 <p className="font-sans text-xs text-triba-brown/60 max-w-[260px]">
                   {errType === "expired" ? msg.expiredBody : err}
                 </p>
               )}
-              {errType === "expired" ? (
+              {errType === "login" ? (
+                <a
+                  href={`${lang === "en" ? "/en/iniciar-sesion" : "/iniciar-sesion"}?redirect=${encodeURIComponent(typeof window !== "undefined" ? window.location.pathname + window.location.search : "/")}`}
+                  className="font-sans text-sm font-semibold text-triba-white bg-triba-red hover:bg-triba-red/90 rounded-full px-5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-triba-red"
+                >
+                  {msg.loginAction}
+                </a>
+              ) : errType === "subscribe" ? (
+                <a
+                  href={lang === "en" ? "/en/suscribirme" : "/suscribirme"}
+                  className="font-sans text-sm font-semibold text-triba-white bg-triba-red hover:bg-triba-red/90 rounded-full px-5 py-2 transition-colors focus-visible:outline-2 focus-visible:outline-triba-red"
+                >
+                  {msg.subscribeAction}
+                </a>
+              ) : errType === "expired" ? (
                 <button
                   type="button"
                   onClick={() => window.location.reload()}
@@ -310,13 +350,22 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
               file={pdfUrl}
               onLoadSuccess={handleDocumentLoadSuccess}
               onLoadError={(e: unknown) => {
-                const raw = e instanceof Error ? e.message : "No se pudo abrir la revista";
+                const raw = e instanceof Error ? e.message : "";
                 const age = Date.now() - mountTimeRef.current;
-                if (isExpiredError(raw, age)) {
+                // El servidor responde 401 (sin sesión) / 403 (sin suscripción): pdf.js lo informa
+                // como "Unexpected server response (401)". Se traduce a una acción concreta.
+                if (/\(401\)/.test(raw)) {
+                  setErr(msg.loginBody);
+                  setErrType("login");
+                } else if (/\(403\)/.test(raw) && age < 25 * 60 * 1000) {
+                  setErr(msg.subscribeBody);
+                  setErrType("subscribe");
+                } else if (isExpiredError(raw, age)) {
                   setErr(msg.expiredBody);
                   setErrType("expired");
                 } else {
-                  setErr(raw);
+                  // El texto crudo de pdf.js ("Invalid PDF structure"...) no es para la usuaria.
+                  setErr(msg.loadErrorBody);
                   setErrType("generic");
                 }
               }}
@@ -368,7 +417,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
             onClick={() => changePage(-1)}
             disabled={pageNumber <= 1}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-triba-red shrink-0"
-            aria-label="Página anterior"
+            aria-label={msg.prevAria}
           >
             <span className="text-xl font-heading text-triba-brown -mt-0.5">
               ‹
@@ -384,7 +433,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
             onClick={() => changePage(1)}
             disabled={pageNumber >= numPages}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform disabled:opacity-30 disabled:cursor-not-allowed focus-visible:outline-2 focus-visible:outline-triba-red shrink-0"
-            aria-label="Página siguiente"
+            aria-label={msg.nextAria}
           >
             <span className="text-xl font-heading text-triba-brown -mt-0.5">
               ›
@@ -400,7 +449,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
             onClick={zoomOut}
             disabled={scale <= 0.5}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-            aria-label="Alejar"
+            aria-label={msg.zoomOutAria}
           >
             <span className="text-xl font-heading text-triba-brown -mt-0.5">
               −
@@ -416,7 +465,7 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
             onClick={zoomIn}
             disabled={scale >= 3}
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform disabled:opacity-30 disabled:cursor-not-allowed shrink-0"
-            aria-label="Acercar"
+            aria-label={msg.zoomInAria}
           >
             <span className="text-xl font-heading text-triba-brown -mt-0.5">
               +
@@ -433,8 +482,8 @@ export default function PDFViewer({ pdfUrl, className = "", lang = "es" }: Props
             className="w-10 h-10 rounded-full bg-triba-white border-2 border-triba-black flex items-center justify-center shadow-md hover:scale-110 transition-transform focus-visible:outline-2 focus-visible:outline-triba-red shrink-0"
             aria-label={
               expanded
-                ? "Salir de pantalla completa"
-                : "Pantalla completa"
+                ? msg.exitFullscreenAria
+                : msg.fullscreenAria
             }
           >
             <svg

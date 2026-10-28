@@ -98,7 +98,6 @@ export const GET: APIRoute = async ({ params, request, url, locals }) => {
   // P7: preferir gate centralizado del middleware (locals) si está disponible
   const localsHasActive = (locals as any)?.hasActiveSub as boolean | undefined;
   const localsProfile = (locals as any)?.profile as import("../../../lib/types").Profile | null | undefined;
-  const localsSub = (locals as any)?.subscription as import("../../../lib/types").Subscription | null | undefined;
   if (localsProfile !== undefined) {
     if (localsProfile?.role === "admin") allowed = true;
     else if (localsHasActive) allowed = true;
@@ -128,16 +127,33 @@ export const GET: APIRoute = async ({ params, request, url, locals }) => {
   }
 
   if (!allowed) {
+    const lang = url.searchParams.get("lang") === "en" ? "en" : "es";
+    // El visor pide el PDF por fetch (no navega): un 302 a una página HTML terminaba en
+    // "Invalid PDF structure". Para pedidos de datos se responde un error con código; la
+    // navegación directa (botón "Descargar") sigue redirigiendo al login / a suscribirse.
+    const isNavigation =
+      request.headers.get("sec-fetch-mode") === "navigate" || request.headers.get("sec-fetch-dest") === "document";
+    if (!isNavigation && request.headers.has("sec-fetch-mode")) {
+      return new Response(
+        JSON.stringify(
+          user
+            ? { error: "Necesitás una suscripción activa para leer este archivo.", code: "subscription_required" }
+            : { error: "Iniciá sesión para leer este archivo.", code: "login_required" },
+        ),
+        { status: user ? 403 : 401, headers: { "Content-Type": "application/json", "Cache-Control": "no-store" } },
+      );
+    }
     if (!user) {
       const original = `${url.pathname}${url.search}`;
+      const loginPath = lang === "en" ? "/en/iniciar-sesion" : "/iniciar-sesion";
       return new Response(null, {
         status: 302,
-        headers: { Location: `/iniciar-sesion?redirect=${encodeURIComponent(original)}` },
+        headers: { Location: `${loginPath}?redirect=${encodeURIComponent(original)}` },
       });
     }
     return new Response(null, {
       status: 302,
-      headers: { Location: "/suscribirme" },
+      headers: { Location: lang === "en" ? "/en/suscribirme" : "/suscribirme" },
     });
   }
 

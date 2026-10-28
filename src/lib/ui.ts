@@ -18,10 +18,11 @@ export function showToast(message: string, type: "success" | "error" | "info" = 
     toast.classList.add("triba-toast-visible");
   });
 
+  // Los errores explican qué hacer: necesitan más tiempo de lectura que un "listo".
   setTimeout(() => {
     toast.classList.remove("triba-toast-visible");
     setTimeout(() => toast.remove(), 300);
-  }, 3500);
+  }, type === "error" ? 7000 : 3500);
 }
 
 export function showConfirm(title: string, message: string): Promise<boolean> {

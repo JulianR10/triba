@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { requireUser } from "../../lib/auth";
-import { ok, error } from "../../lib/response";
+import { ok } from "../../lib/response";
 import { supabaseAdmin } from "../../lib/supabase-admin";
 
 export const prerender = false;

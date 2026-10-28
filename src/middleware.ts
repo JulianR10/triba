@@ -50,9 +50,24 @@ export const onRequest = defineMiddleware(async (context, next) => {
   const {
     data: { session },
   } = await supabase.auth.getSession();
-  const user = session?.user ?? null;
+  let user = session?.user ?? null;
 
   const pathname = context.url.pathname;
+
+  // getSession() lee la cookie SIN verificar su firma: con una cookie armada a mano alcanzaba
+  // conocer un UUID para pasar por esa persona. En las rutas donde la identidad decide acceso
+  // (panel admin, PDF, Mi Cuenta) se verifica contra Supabase Auth; si falla, se trata como
+  // sin sesión (falla cerrada). El resto de las páginas solo la usa para mostrar el menú.
+  const needsVerifiedUser =
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/api/admin") ||
+    pathname.startsWith("/api/pdf/") ||
+    pathname === "/mi-cuenta" ||
+    pathname === "/en/mi-cuenta";
+  if (user && needsVerifiedUser) {
+    const { data: verified, error: verifyError } = await supabase.auth.getUser();
+    user = verifyError ? null : (verified.user ?? null);
+  }
   const isAdminRoute =
     pathname.startsWith("/admin") || pathname.startsWith("/api/admin");
 
@@ -114,6 +129,16 @@ export const onRequest = defineMiddleware(async (context, next) => {
       }
       return context.redirect("/", 302);
     }
+  }
+
+  // Mi Cuenta sin sesión (vencida, marcador): antes mostraba "Aún no estás suscripta" y un botón
+  // de suscribirse, como si hubiera perdido la suscripción. Se pide iniciar sesión y se vuelve acá.
+  if ((pathname === "/mi-cuenta" || pathname === "/en/mi-cuenta") && !user) {
+    const loginPath = pathname.startsWith("/en/") ? "/en/iniciar-sesion" : "/iniciar-sesion";
+    return context.redirect(
+      `${loginPath}?redirect=${encodeURIComponent(pathname + context.url.search)}`,
+      302,
+    );
   }
 
   const response = await next();

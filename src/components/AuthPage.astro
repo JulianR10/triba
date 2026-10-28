@@ -23,6 +23,13 @@ const authMessages = {
   passwordMismatch: dict.auth.passwordMismatch,
   passwordTooShort: dict.auth.passwordTooShort,
   emailExists: dict.auth.emailExists,
+  invalidCredentials: dict.auth.invalidCredentials,
+  emailNotConfirmed: dict.auth.emailNotConfirmed,
+  rateLimited: dict.auth.rateLimited,
+  weakPassword: dict.auth.weakPassword,
+  samePassword: dict.auth.samePassword,
+  linkExpired: dict.auth.linkExpired,
+  genericAuthError: dict.auth.genericAuthError,
   enterEmail: dict.auth.enterEmail,
   recoveryPath: lang === "en" ? "/en/iniciar-sesion?recovery=true" : "/iniciar-sesion?recovery=true",
   accountPath: lang === "en" ? "/en/mi-cuenta" : "/mi-cuenta",
@@ -36,7 +43,7 @@ const authMessages = {
   }
 </style>
 
-<Layout title={dict.auth.title} description={dict.auth.description} canonical={canonical} lang={lang} navLogoAlways>
+<Layout title={dict.auth.title} description={dict.auth.description} canonical={canonical} lang={lang} navLogoAlways noindex>
   <section class="flex-1 flex items-center justify-center page-gutter bg-triba-bone py-10" data-auth-messages={JSON.stringify(authMessages)}>
     <div class="w-full max-w-md">
 
@@ -142,6 +149,13 @@ const authMessages = {
     passwordMismatch: "Las contraseñas no coinciden",
     passwordTooShort: "La contraseña debe tener al menos 6 caracteres",
     emailExists: "Ya existe una cuenta con este email. Iniciá sesión para continuar.",
+    invalidCredentials: "El email o la contraseña no son correctos.",
+    emailNotConfirmed: "Tu email todavía no está confirmado.",
+    rateLimited: "Hiciste muchos intentos seguidos. Esperá un minuto y volvé a probar.",
+    weakPassword: "Esa contraseña es muy débil.",
+    samePassword: "La contraseña nueva tiene que ser distinta a la anterior.",
+    linkExpired: "El enlace venció o ya se usó. Pedí uno nuevo.",
+    genericAuthError: "No pudimos completar la acción. Intentá de nuevo en unos minutos.",
     enterEmail: "Ingresá tu email",
     recoveryPath: "/iniciar-sesion?recovery=true",
     accountPath: "/mi-cuenta",
@@ -201,6 +215,20 @@ const authMessages = {
     });
     if (recoverySuccess) recoverySuccess.classList.add("hidden");
     if (card) card.classList.remove("hidden");
+  }
+
+  // Los mensajes de Supabase vienen en inglés técnico ("Invalid login credentials"): se traducen por código.
+  function authErrorMessage(err: { code?: string; status?: number; message?: string } | null): string {
+    const code = err?.code || "";
+    const text = (err?.message || "").toLowerCase();
+    if (code === "invalid_credentials" || text.includes("invalid login credentials")) return messages.invalidCredentials;
+    if (code === "email_not_confirmed" || text.includes("email not confirmed")) return messages.emailNotConfirmed;
+    if (code === "user_already_exists" || /already registered|already exists/.test(text)) return messages.emailExists;
+    if (code === "weak_password") return messages.weakPassword;
+    if (code === "same_password" || text.includes("different from the old")) return messages.samePassword;
+    if (code === "session_not_found" || code === "session_expired" || text.includes("session missing") || text.includes("expired")) return messages.linkExpired;
+    if (err?.status === 429 || code.includes("rate_limit") || text.includes("security purposes") || text.includes("rate limit")) return messages.rateLimited;
+    return messages.genericAuthError;
   }
 
   function isSafeRedirect(url: string | null) {
@@ -267,7 +295,7 @@ const authMessages = {
       try {
         const { error: authError } = await supabase!.auth.signInWithPassword({ email, password });
         if (authError) {
-          loginError.textContent = authError.message;
+          loginError.textContent = authErrorMessage(authError);
           loginError.classList.remove("hidden");
           return;
         }
@@ -349,9 +377,7 @@ const authMessages = {
       }
 
       if (error) {
-        signupError.textContent = /already registered|already exists/i.test(error.message)
-          ? messages.emailExists
-          : error.message;
+        signupError.textContent = authErrorMessage(error);
         signupError.classList.remove("hidden");
         return;
       }
@@ -395,16 +421,25 @@ const authMessages = {
         return;
       }
 
-      const { error } = await supabase!.auth.resetPasswordForEmail(email, {
-        redirectTo: window.location.origin + messages.recoveryPath,
-      });
-      if (error) {
-        forgotError.textContent = error.message;
+      const forgotBtnSubmit = forgotForm.querySelector("button[type=submit]") as HTMLButtonElement | null;
+      if (forgotBtnSubmit) forgotBtnSubmit.disabled = true; // evita el doble envío (y el límite de Supabase)
+      try {
+        const { error } = await supabase!.auth.resetPasswordForEmail(email, {
+          redirectTo: window.location.origin + messages.recoveryPath,
+        });
+        if (error) {
+          forgotError.textContent = authErrorMessage(error);
+          forgotError.classList.remove("hidden");
+          return;
+        }
+        showCard(null);
+        recoverySuccess.classList.remove("hidden");
+      } catch {
+        forgotError.textContent = messages.connectionError;
         forgotError.classList.remove("hidden");
-        return;
+      } finally {
+        if (forgotBtnSubmit) forgotBtnSubmit.disabled = false;
       }
-      showCard(null);
-      recoverySuccess.classList.remove("hidden");
     });
   }
 
@@ -429,14 +464,22 @@ const authMessages = {
         return;
       }
 
-      const { error } = await supabase!.auth.updateUser({ password });
-      if (error) {
-        resetError.textContent = error.message;
+      const resetBtn = resetForm.querySelector("button[type=submit]") as HTMLButtonElement | null;
+      if (resetBtn) resetBtn.disabled = true;
+      try {
+        const { error } = await supabase!.auth.updateUser({ password });
+        if (error) {
+          resetError.textContent = authErrorMessage(error);
+          resetError.classList.remove("hidden");
+          return;
+        }
+        window.location.href = messages.accountPath;
+      } catch {
+        resetError.textContent = messages.connectionError;
         resetError.classList.remove("hidden");
-        return;
+      } finally {
+        if (resetBtn) resetBtn.disabled = false;
       }
-
-      window.location.href = messages.accountPath;
     });
   }
 

@@ -14,6 +14,7 @@ import { getCheckoutOutcome } from "../lib/checkout-status";
 import { getPlanType, MAIL_CLUB_PAUSED, MAIL_CLUB_TERMS_VERSION } from "../lib/mail-club";
 import MailClubWaitlist from "../components/MailClubWaitlist.astro";
 import { COUNTRIES } from "../lib/countries";
+import { SUPPORT_EMAIL } from "../lib/contact";
 import type { Profile, Subscription } from "../lib/types";
 
 const { lang = "es" } = Astro.props as { lang?: Locale };
@@ -31,7 +32,6 @@ if (user) {
   // P7: preferir locals centralizados (middleware), fallback a queries directas
   const localsProfile = (Astro.locals as any).profile as Profile | null | undefined;
   const localsSubscription = (Astro.locals as any).subscription as Subscription | null | undefined;
-  const localsHasActive = (Astro.locals as any).hasActiveSub as boolean | undefined;
   if (localsProfile !== undefined) {
     profile = localsProfile;
     subscription = localsSubscription ?? null;
@@ -53,7 +53,7 @@ const hasActiveSub =
         subscription?.current_period_end ?? undefined,
       );
 
-const subscriptionInfo = subscriptionStatusInfo(subscription?.status, lang);
+const subscriptionInfo = subscriptionStatusInfo(subscription?.status, lang, subscription?.current_period_end);
 
 const isAdmin = profile?.role === "admin";
 
@@ -187,14 +187,14 @@ const miCuentaMessages = {
   feedbackError: dict.miCuenta.feedbackError,
   feedbackThanks: dict.miCuenta.feedbackThanks,
   feedbackConn: dict.miCuenta.feedbackConn,
-  processingNote2: dict.miCuenta.processingNote2,
+  processingNote2: dict.miCuenta.processingNote2.replace("{email}", SUPPORT_EMAIL),
   processingNetworkError: dict.miCuenta.processingNetworkError,
   comingSoon: comingSoonLabel,
   badgeEn: "EN",
 };
 ---
 
-<Layout title={dict.miCuenta.title} description={dict.miCuenta.description} canonical={canonical} lang={lang} navLogoAlways>
+<Layout title={dict.miCuenta.title} description={dict.miCuenta.description} canonical={canonical} lang={lang} navLogoAlways noindex>
   <section class="pt-0 md:pt-[max(1rem,var(--nav-height,64px))]" data-mi-cuenta-messages={JSON.stringify(miCuentaMessages)}>
     <div class="max-w-6xl mx-auto">
 
@@ -565,9 +565,14 @@ const miCuentaMessages = {
                   <>
                     <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">{dict.miCuenta.processingTitle}</h2>
                     <p data-processing-note class="font-sans text-base text-triba-brown/70 mb-6 leading-relaxed">{dict.miCuenta.processingNote}</p>
-                    <div class="flex justify-center">
+                    <div class="flex justify-center" data-processing-spinner>
                       <div class="w-6 h-6 border-2 border-triba-red border-t-2 border-t-transparent rounded-full animate-spin"></div>
                     </div>
+                  </>
+                ) : subscription?.status === "incomplete" ? (
+                  <>
+                    <h2 class="font-heading text-base uppercase tracking-wider text-triba-brown mb-2">{dict.miCuenta.incompleteTitle}</h2>
+                    <p class="font-sans text-base text-triba-brown/70 leading-relaxed">{dict.miCuenta.incompleteBody.replace("{email}", SUPPORT_EMAIL)}</p>
                   </>
                 ) : (
                   <>
@@ -644,7 +649,7 @@ const miCuentaMessages = {
     feedbackError: "Error al enviar. Intentalo de nuevo.",
     feedbackThanks: "¡Gracias por tu feedback!",
     feedbackConn: "Error de conexión. Intentalo de nuevo.",
-    processingNote2: "Todavía estamos confirmando tu pago. Si se demora más de un minuto, actualizá la página.",
+    processingNote2: "Todavía estamos confirmando tu pago. No hace falta que pagues de nuevo: si pasan unas horas y no se activó, escribinos.",
     processingNetworkError: "Conexión inestable, seguimos intentando...",
     comingSoon: "EN coming soon",
     badgeEn: "EN",
@@ -679,6 +684,8 @@ const miCuentaMessages = {
     }, function () {
       var note = document.querySelector("[data-processing-note]");
       if (note) note.textContent = messages.processingNote2;
+      // Se agotó la espera: el spinner infinito sugiere que algo sigue pasando. Se frena.
+      document.querySelectorAll("[data-processing-spinner]").forEach(function (s) { s.remove(); });
     }, function () {
       var note = document.querySelector("[data-processing-note]");
       if (note) note.textContent = messages.processingNetworkError;
@@ -1055,7 +1062,9 @@ const miCuentaMessages = {
           throw new Error(data.error || messages.error);
         }
         // Cobro off-session aplicado: éxito sin salir de la página.
-        if (data.applied) {
+        if (data.applied || data.pending) {
+          // pending = cobrado pero todavía activándose: la página de destino muestra
+          // "estamos confirmando" y consulta el estado hasta que cambie el plan.
           window.location.href = successHref;
           return;
         }
