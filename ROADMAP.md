@@ -2,9 +2,42 @@
 
 Próximas mejoras, trabajo en curso y registro de cambios grandes. Convenciones y reglas de código: [`AGENTS.md`](./AGENTS.md). Cómo correr, deployar y operar: [`README.md`](./README.md). No guardar claves, contraseñas, datos de suscriptoras ni tokens.
 
+## Estado al 02/11/2026 (resumen)
+
+**Hecho y en `main`** (último commit `a9c4f8c`; `npm run check` 0 errores, `npm test` 203 tests, build OK al 02/11): todas las reparaciones de la auditoría QA, las decisiones de la dueña (sin pruebas gratis, solo Argentina al reabrir el Mail Club, bloqueo del segundo checkout, aviso de baja programada, Google Fonts en privacidad, voseo), la corrección de MP que pisaba el plan, el guard de duplicadas también en reconcile, el script de limpieza listo y los tests de `portal` y `upgrade-checkout`.
+
+**Hecho el 02/11/2026 (renovaciones MP)**
+- Incidente: ~37 suscriptoras MP quedaron con `active` y el período vencido aunque MP les cobró. Causa: `resolveAuthorizedPayment` solo buscaba entre las `incomplete`, así que el webhook de renovación era no-op. Arreglado (`/authorized_payments/{id}` resuelve el `preapproval_id`) y datos reparados con `scripts/resync-mp-periods.mjs` (dry-run por defecto; `--real` escribe).
+- Red de seguridad: el cron diario (`renewExpiredMpSubscriptions`, `src/lib/reconcile.ts`) renueva las MP `active` vencidas con preapproval `authorized` y un cobro posterior al vencimiento, usando `applyMpRenewal` (compartida con el webhook). Si renueva alguna deja `logger.warn` y auditoría `subscriber.renewed`: es señal de que el webhook falló. Las canceladas/pausadas no se tocan.
+- Stripe digital ya espera pago confirmado (`payment_status`) igual que Mail Club; `invoice.paid` confirma ambos planes.
+- Tests nuevos: webhook de MP completo (`tests/mercadopago-webhook.test.ts`), renovación por cron, Stripe digital pendiente. Suite: 203 tests (ver abajo).
+- Carrera del upgrade (P1) revisada y descartada: dos `applyUpgrade` concurrentes aplican el mismo precio (idempotente en Stripe y MP) y la bienvenida ya es at-most-once. Cerrarla del todo exigiría un estado nuevo y migración.
+- Panel admin: una suscripción `active` con el período pasado se muestra "Vencida" (lista, ficha y CSV).
+- Contraseña por admin cierra las sesiones abiertas de la usuaria (migración `034_revoke_user_sessions.sql`, **aplicar a mano después de la 032/033**; sin ella la clave igual cambia y la respuesta avisa). La admin que se cambia la propia clave conserva su sesión.
+- Errores de la API en inglés: el middleware traduce el `error` de los endpoints públicos (`src/lib/error-i18n.ts`) según el `Referer` o la cookie `triba_locale`; `tests/error-i18n.test.ts` falla si un mensaje en español nuevo queda sin traducción.
+- Imagen para compartir: cada edición (ES y EN) usa su portada como `og:image` (`EditionDetail.astro` → `Layout.astro`, tarjeta `summary` porque las portadas son de 225×300). Para un banner 1200×630 hay que subir portadas más grandes o generar una tarjeta por edición (dependencia nueva).
+- Accesibilidad revisada: el skip link existe (`Layout.astro`), `FlipCover` gira con `:focus-within` y respeta `prefers-reduced-motion`, y no quedan `alert()` fuera del admin. Esos ítems estaban desactualizados.
+- Tests nuevos de `creators`, `feedback`, `api/pdf` y middleware (acceso admin, verificación de identidad, gate de suscripción, idioma, cabeceras). Se comprobó que fallan si se rompe el control de acceso.
+- `/api/pdf`: una URL externa en `pdf_url` ya pasa por el control de acceso (antes se redirigía sin revisar la suscripción).
+- Sesión una sola vez por request: `Navbar`, `MagazinePage` y `MyAccountPage` usan `Astro.locals` del middleware (antes cada uno creaba su cliente y releía la sesión, con riesgo de renovaciones de token duplicadas). **Falta probarlo con una sesión iniciada en el navegador** (menú, `/revista`, `/mi-cuenta`); si algo falla: `git revert 536299d`.
+- `planFromPreapproval`: el `reason` de MP se escribe y se lee en un solo lugar (`preapprovalReason` / `planFromPreapproval`, `mercadopago-status.ts`) con test de ida y vuelta. Revisadas las 71 suscripciones MP: 70 coinciden; la única distinta (`cf7265c0`) es un upgrade posterior, que el código ya conserva.
+- Verificar tras la primera renovación real: `node --env-file=.env scripts/resync-mp-periods.mjs` debe dar 0 pendientes.
+
+**Pendiente: decide la dueña / hay que hacerlo a mano**
+1. Aplicar en Supabase, en orden, `033_edition_notified_at.sql`, `032_least_privilege_writes.sql` y `034_revoke_user_sessions.sql` (esta última cierra las sesiones al cambiar la contraseña desde el admin); después verificar con la clave pública que `feedback`, `creator_applications` y `mail_club_upgrades` no aceptan escrituras. Revisado en código: la 032 no rompe ninguna pantalla (todo pasa por `supabaseAdmin`).
+2. Antes de la 032: probar un alta con un email de `subscriber_migrations` (posible falla del trigger de la 030, ver abajo) y decidir si se agrega el bypass `pg_trigger_depth() > 1`.
+3. **Pospuesto por decisión del 02/11** (se actúa si alguien reclama): limpiar las 7 duplicadas (decidir también Karen: `--keep=`; necesita OK de la dueña). Cobros dobles: 02/11 abrilsollosqui, 03/11 segsierra, 10/11 pedrosubils21. Reembolsos de lo cobrado de más: decisión aparte.
+4. Vercel: `VERIFY_MP_SIGNATURES` no debe ser "false"; `CRON_SECRET` existe y `GET /api/cron/reconcile` sin autorización da 401. En Mercado Pago (Webhooks) confirmar que está suscripto el tópico `subscription_authorized_payment` y mirar el historial de entregas.
+5. Fecha de reapertura del Mail Club (1/12 estimado): cambiar `MAIL_CLUB_PAUSED` a mano cuando se confirme.
+6. Validar en producción con cuentas reales: altas EUR/USD/ARS, upgrade/downgrade en MP sin que `plan_type` se revierta, segundo checkout bloqueado, cancelar/portal, panel Mail Club, visor PDF, `/en/triba-creators`.
+
+**Pendiente: trabajo de código (sin orden de prioridad fijo)**
+- Botón "Reactivar" una baja programada (solo Stripe) y revisión legal de términos: esperan decisión de la dueña.
+- Rendimiento (medir antes: caché del HTML público, archivo propio para Mi Cuenta) y deuda menor: ver "Próximas mejoras". El invariante de `profiles.subscription_id` conviene resolverlo junto con la limpieza de duplicadas.
+
 ## En curso: reparaciones de la auditoría QA (27/10/2026)
 
-Auditoría funcional completa por segmentos (pagos, cuenta, acceso/PDF, Mail Club, formularios, admin suscriptoras/ediciones/Mail Club, transversal, base y tests) y reparaciones en tandas. **Todo lo hecho está en el árbol de trabajo sin commit**; `npm run check`, `npm test` (105 tests) y `npm run build` pasan. Falta revisar el diff, commitear y desplegar.
+Auditoría funcional completa por segmentos (pagos, cuenta, acceso/PDF, Mail Club, formularios, admin suscriptoras/ediciones/Mail Club, transversal, base y tests) y reparaciones en tandas. **Todo está commiteado y pusheado a `main`**; falta aplicar las migraciones 032, 033 y 034 y validar en producción (ver arriba).
 
 **Antes de desplegar / al desplegar**
 1. Aplicar en Supabase, en orden: `032_least_privilege_writes.sql` (cierra escrituras directas desde el navegador y el cambio de `profiles.email`) y `033_edition_notified_at.sql` (columna `editions.notified_at`). Sin la 033, "Notificar suscriptoras" responde un error claro (no envía nada).
@@ -35,7 +68,7 @@ Auditoría funcional completa por segmentos (pagos, cuenta, acceso/PDF, Mail Clu
 
 **Hecho tras las decisiones de la dueña (28/10/2026)**
 - Sin períodos de prueba: `trialing` ya no cuenta como suscripción vigente (`subscription-guard.ts`).
-- **Segundo checkout bloqueado** (`src/lib/duplicate-checkout.ts`): al activar una suscripción, si ya había otra paga vigente creada antes, la nueva se frena en el proveedor y queda `canceled`; el perfil sigue apuntando a la primera. Se aplica en `checkout.session.completed`, `invoice.paid` (Stripe) y `activateSubscription` (MP). Idempotente en reintentos. **El cobro extra no se reembolsa solo:** queda un `logger.error` "duplicate checkout blocked" y hay que reembolsar a mano. No cubre `reconcile.ts`.
+- **Segundo checkout bloqueado** (`src/lib/duplicate-checkout.ts`): al activar una suscripción, si ya había otra paga vigente creada antes, la nueva se frena en el proveedor y queda `canceled`; el perfil sigue apuntando a la primera. Se aplica en `checkout.session.completed`, `invoice.paid` (Stripe) y `activateSubscription` (MP). Idempotente en reintentos. **El cobro extra no se reembolsa solo:** queda un `logger.error` "duplicate checkout blocked" y hay que reembolsar a mano. También lo aplica `reconcile.ts` (ver abajo).
 - **Baja programada y nuevo checkout:** quien intenta suscribirse con la baja ya programada recibe 409 `cancellation_scheduled` con la fecha desde la que puede volver (`getLivePaidSubscription`, `subscription-guard.ts`). Si tiene otra suscripción sin baja, sigue el mensaje de gestionar.
 - **Reconciliación (Stripe) también bloquea el segundo cobro:** `activateStripeCandidate` pasaba `incomplete` → `active` y repuntaba el perfil sin mirar si ya había otra paga; ahora usa el mismo `blockIfDuplicateCheckout` que el webhook.
 - **Webhook de Mercado Pago, revisado sin cambios:** la firma está activa por defecto (solo se apaga con `VERIFY_MP_SIGNATURES=false`; **confirmar que esa variable no existe en Vercel**). El barrido de hasta 50 filas `incomplete` y la paginación de `listUsers` solo corren con un evento firmado, así que es costo operativo, no hueco de seguridad; queda como mejora de rendimiento.
@@ -47,10 +80,7 @@ Auditoría funcional completa por segmentos (pagos, cuenta, acceso/PDF, Mail Clu
 **Pendiente de la auditoría (retomar acá)**
 - Decisión de la dueña: botón "Reactivar" una cancelación programada (Stripe sí, MP no; hoy se muestra solo la fecha desde la que puede volver a suscribirse); fecha de reapertura del Mail Club (hoy solo `MAIL_CLUB_PAUSED = true`, sin fecha); revisión legal final de los términos.
 - **Posible falla desde la 030 (sin verificar):** `handle_new_user()` (migración 012) actualiza `profiles.subscription_id` al registrarse alguien con registro en `subscriber_migrations`. Ese UPDATE pasa por el trigger de la 030 (`block_privileged_profile_columns`), que exige `auth.jwt() ->> 'role' = 'service_role'`; en un alta GoTrue no trae ese claim, así que el registro de esas personas podría fallar con "Database error saving new user". Probar un alta con un email de `subscriber_migrations` y, si falla, permitir el caso con `pg_trigger_depth() > 1` en esa función (la 032 la redefine, así que conviene resolverlo antes de aplicarla).
-- Contraseña por admin no cierra sesiones abiertas (requiere una función SQL que revoque `auth.sessions`).
-- Errores del servidor en español para usuarias EN (falta `code` + traducción en el cliente, cambio transversal).
-- Páginas de edición sin imagen propia para compartir.
-- Tests faltantes: `creators`, `feedback`, `api/pdf`, middleware, webhook de Mercado Pago completo. (Ya cubiertos: `portal`, `upgrade-checkout` con los bloqueos, cobro hecho => pending y tarjeta rechazada => 402.)
+- Tests que siguen sin existir: ninguno de los listados en la auditoría. (Cubiertos: `creators`, `feedback`, `api/pdf`, middleware, webhook de Mercado Pago, `portal`, `upgrade-checkout` con los bloqueos, cobro hecho => pending y tarjeta rechazada => 402.)
 
 ## En curso: limpiar suscripciones duplicadas (27/10/2026)
 
@@ -80,19 +110,18 @@ Fuera de alcance: reembolsos de lo ya cobrado de más (se decide aparte).
 Resumen de la auditoría de octubre; ítems marcados *(verificar)* no se revisaron tras los fixes de hoy.
 
 **P1 — riesgo concreto**
-- Digital se activa con cualquier `status` de Stripe, incluido `incomplete`, y la bienvenida digital no es idempotente. Mail Club ya espera pago confirmado. *(`webhook/stripe.ts`)*
+- ~~Digital se activa con cualquier `status` de Stripe~~ **Hecho (02/11):** espera pago confirmado; la bienvenida sale una sola vez por la transición atómica de `invoice.paid`.
 - Webhook de Mercado Pago: un evento sin match barre hasta 50 `incomplete` y pagina `listUsers` (hasta 12.000); la firma se apaga con `VERIFY_MP_SIGNATURES=false`.
-- Carrera en el upgrade: dos eventos concurrentes pueden aplicar dos veces el cambio de tarifa. *(verificar)*
+- Carrera en el upgrade: revisada el 02/11, riesgo bajo (el cambio de tarifa es idempotente); sin código.
 - Rendimiento: SSR sin caché en páginas públicas y la sesión se resuelve varias veces por request (middleware, Navbar, Mi Cuenta, `/api/pdf`); Mi Cuenta es un archivo de ~1.100 líneas dentro del layout público.
 - Emails en logs sin regla de retención. *(verificar)*
 - Tests que no cubren el dinero: agregar casos de upgrade/webhooks y de Mercado Pago.
 
 **P2 — deuda**
-- `planFromPreapproval` decide el plan por el texto "Mail Club" del `reason` de MP.
-- El cron de reconcile solo mira `status = incomplete`: un pago de Stripe digital sin fila local no lo ve nadie.
+- ~~`planFromPreapproval` decide por texto~~ **Hecho (02/11):** el texto vive en un solo helper con test; sigue siendo el `reason` la única señal del plan en MP.
+- El cron de reconcile mira `incomplete` (y ahora renueva MP vencidas): un pago de Stripe digital sin fila local no lo ve nadie.
 - Puntero `profiles.subscription_id` sin invariante en la base (origen de ambigüedad con duplicadas).
 - Tipos desfasados, N+1 en lotes y dashboard, purga que borra morosos, CSV y despacho sin auditoría, uploads autodeclarados.
-- Accesibilidad: flips sin teclado, sin skip link, portal MP en `alert()`.
 - DMARC en `p=none` (mantener hasta tener reportes), un solo proveedor de mail, OG en SVG, scripts de migración junto a los de producción, doble logger, sin alertas.
 
 **P3 — cuando se toque el archivo**
