@@ -52,9 +52,21 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
     return error("No se pudo cambiar la contraseña. Intentá de nuevo.", 500);
   }
 
+  // Quien tenía la cuenta abierta (o quien la tomó) no debe seguir adentro con la clave vieja.
+  // La propia admin conserva su sesión. Si la función aún no existe (migración 034 sin aplicar)
+  // la clave ya cambió: se avisa en vez de fallar.
+  let sessionsRevoked = profile.id === admin.user.id;
+  if (!sessionsRevoked) {
+    const { error: revokeErr } = await supabaseAdmin.rpc("revoke_user_sessions", { p_user_id: profile.id });
+    if (revokeErr) logger.error({ err: revokeErr, targetUserId: profile.id }, "admin set password: revoke sessions failed");
+    else sessionsRevoked = true;
+  }
+
   await logAdminAction(admin.user.id, admin.profile.email, "subscriber.password_set", "subscriber", profile.id, {
     target_email: profile.email,
+    sessions_revoked: sessionsRevoked,
   });
 
-  return ok({ message: "Contraseña actualizada. Pasásela a la usuaria por un canal seguro." });
+  const note = sessionsRevoked ? "" : " No se pudieron cerrar sus sesiones abiertas.";
+  return ok({ message: `Contraseña actualizada. Pasásela a la usuaria por un canal seguro.${note}` });
 };

@@ -622,6 +622,10 @@ export interface Database {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
       };
+      revoke_user_sessions: {
+        Args: { p_user_id: string };
+        Returns: number;
+      };
     };
     Enums: {
       [_ in never]: never;
