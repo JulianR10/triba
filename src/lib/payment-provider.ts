@@ -1,6 +1,7 @@
 import { MONTHLY_PRICE_CENTS } from "./pricing";
 import { MAIL_CLUB_PRICE_CENTS } from "./mail-club";
 import { localizePath } from "../i18n/locale";
+import { preapprovalReason } from "./mercadopago-status";
 import type { Locale } from "../i18n/ui";
 
 export interface CheckoutParams {
@@ -209,10 +210,7 @@ class MercadoPagoPaymentProvider implements PaymentProvider {
       body: {
         payer_email: params.userEmail,
         back_url: `${params.origin}${localizePath("/mi-cuenta", params.locale ?? "es")}?checkout=success`,
-        reason:
-          plan === "mail_club"
-            ? `Suscripción Triba Mail Club (${params.currency})`
-            : `Suscripción Triba (${params.currency})`,
+        reason: preapprovalReason(plan, params.currency),
         external_reference: params.userId,
         auto_recurring: {
           frequency: 1,
