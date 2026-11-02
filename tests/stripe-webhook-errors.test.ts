@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   event: { current: null as any },
+  welcome: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock("../src/lib/supabase-admin", () => ({
@@ -26,24 +27,36 @@ vi.mock("../src/lib/stripe", () => ({
 }));
 vi.mock("../src/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() } }));
 vi.mock("../src/lib/sender", () => ({ syncPaidSubscriber: vi.fn().mockResolvedValue(undefined) }));
-vi.mock("../src/lib/email", () => ({ sendWelcomeEmail: vi.fn().mockResolvedValue(undefined) }));
+vi.mock("../src/lib/email", () => ({ sendWelcomeEmail: mocks.welcome }));
 vi.mock("../src/lib/locale-pref", () => ({ getPreferredLocale: vi.fn().mockResolvedValue("es") }));
 vi.mock("../src/lib/mail-club-activation", () => ({ sendMailClubActivation: vi.fn() }));
 vi.mock("../src/lib/upgrade-apply", () => ({ applyUpgrade: vi.fn() }));
 
 import { POST } from "../src/pages/api/webhook/stripe";
 
+const welcome = mocks.welcome;
+
 // Cada tabla/operación devuelve lo que se le pida; el resto responde vacío sin error.
-function fakeDb(overrides: { subscriptionsUpsert?: { data: unknown; error: unknown }; profilesUpsert?: { error: unknown } }) {
+function fakeDb(overrides: {
+  subscriptionsUpsert?: { data: unknown; error: unknown };
+  profilesUpsert?: { error: unknown };
+  subscriptionRow?: unknown;
+}) {
   mocks.from.mockImplementation((table: string) => {
     let op = "select";
     const q: Record<string, any> = {};
-    for (const m of ["select", "eq", "neq", "in", "order", "limit", "update", "delete", "insert"]) q[m] = vi.fn(() => q);
+    for (const m of ["select", "eq", "neq", "in", "order", "limit", "delete", "insert"]) q[m] = vi.fn(() => q);
     q.upsert = vi.fn(() => {
       op = "upsert";
       return q;
     });
+    q.update = vi.fn(() => {
+      op = "update";
+      return q;
+    });
     const result = () => {
+      if (op === "update" && table === "subscriptions") return { data: [{ id: "s1" }], error: null };
+      if (op === "select" && table === "subscriptions" && overrides.subscriptionRow) return { data: overrides.subscriptionRow, error: null };
       if (op === "upsert" && table === "subscriptions" && overrides.subscriptionsUpsert) return overrides.subscriptionsUpsert;
       if (op === "upsert" && table === "profiles" && overrides.profilesUpsert) return overrides.profilesUpsert;
       return { data: null, error: null };
@@ -111,5 +124,30 @@ describe("webhook Stripe — errores de base de datos", () => {
     };
     fakeDb({});
     expect((await call()).status).toBe(200);
+  });
+
+  it("digital con pago aún no confirmado queda incomplete: no enlaza el perfil ni da la bienvenida", async () => {
+    mocks.event.current = {
+      ...completedEvent(),
+      data: { object: { ...completedEvent().data.object, payment_status: "unpaid" } },
+    };
+    fakeDb({ subscriptionsUpsert: { data: { id: "s1" }, error: null } });
+    expect((await call()).status).toBe(200);
+    expect(mocks.from.mock.calls.some(([t]) => t === "profiles")).toBe(false);
+    expect(welcome).not.toHaveBeenCalled();
+  });
+
+  it("invoice.paid confirma un digital incomplete: enlaza el perfil y da la bienvenida", async () => {
+    mocks.event.current = {
+      type: "invoice.paid",
+      data: { object: { subscription: "sub_1", customer_email: "a@b.com" } },
+    };
+    fakeDb({
+      subscriptionRow: { id: "s1", user_id: "u1", plan_type: "digital", status: "incomplete" },
+      profilesUpsert: { error: null },
+    });
+    expect((await call()).status).toBe(200);
+    expect(mocks.from.mock.calls.some(([t]) => t === "profiles")).toBe(true);
+    await vi.waitFor(() => expect(welcome).toHaveBeenCalledTimes(1));
   });
 });

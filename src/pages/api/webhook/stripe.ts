@@ -185,11 +185,10 @@ export const POST: APIRoute = async ({ request }) => {
         }
 
         const plan = session.metadata?.plan === "mail_club" ? "mail_club" : "digital";
-        // En Mail Club, checkout.session.completed puede llegar con el pago
-        // aún en proceso: solo se activa con cobro confirmado. Si no, la
+        // checkout.session.completed puede llegar con el pago aún en proceso:
+        // solo se activa con cobro confirmado (digital y Mail Club). Si no, la
         // suscripción queda 'incomplete' hasta que invoice.paid la confirme.
-        const mailClubPaid =
-          plan !== "mail_club" ||
+        const paymentConfirmed =
           session.payment_status === "paid" ||
           session.payment_status === "no_payment_required";
 
@@ -206,7 +205,7 @@ export const POST: APIRoute = async ({ request }) => {
           user_id: userId,
           provider: "stripe",
           provider_subscription_id: stripeSub.id,
-          status: (plan === "mail_club" && !mailClubPaid
+          status: (!paymentConfirmed
             ? "incomplete"
             : mappedStatus === "unknown"
               ? "incomplete"
@@ -222,8 +221,8 @@ export const POST: APIRoute = async ({ request }) => {
           throw new Error(`subscription upsert failed: ${subUpsertError?.message ?? "no row returned"}`);
         }
 
-        if (!mailClubPaid) {
-          logger.info({ userId, subId: stripeSub.id }, "mail club checkout pending payment — waiting invoice.paid");
+        if (!paymentConfirmed) {
+          logger.info({ userId, subId: stripeSub.id, plan }, "checkout pending payment — waiting invoice.paid");
           break;
         }
 
@@ -283,7 +282,7 @@ export const POST: APIRoute = async ({ request }) => {
       }
 
       case "invoice.paid": {
-        // Primera confirmación de un Mail Club que quedó 'incomplete' en el
+        // Primera confirmación de una suscripción (digital o Mail Club) que quedó 'incomplete' en el
         // checkout (pago asincrónico). Las renovaciones (status active) se
         // ignoran: invoice repetidos no reactivan ni reenvían bienvenida.
         const invoice = event.data.object as any;
@@ -297,7 +296,8 @@ export const POST: APIRoute = async ({ request }) => {
           .eq("provider", "stripe")
           .eq("provider_subscription_id", stripeSubId)
           .maybeSingle();
-        if (!row || (row as any).plan_type !== "mail_club" || (row as any).status === "active") break;
+        if (!row || (row as any).status === "active") break;
+        const rowPlan = (row as any).plan_type as string;
 
         const stripeSub = (await stripe.subscriptions.retrieve(
           stripeSubId,
@@ -340,10 +340,18 @@ export const POST: APIRoute = async ({ request }) => {
           syncPaidSubscriber(email).catch((err) =>
             logger.error({ err, userId, subscriptionId: (row as any).id }, "Sender sync error (stripe invoice)"),
           );
-          try {
-            await sendMailClubActivation(userId, email);
-          } catch (err) {
-            logger.error({ err, userId, subscriptionId: (row as any).id }, "Mail Club welcome email error (stripe invoice)");
+          if (rowPlan === "mail_club") {
+            try {
+              await sendMailClubActivation(userId, email);
+            } catch (err) {
+              logger.error({ err, userId, subscriptionId: (row as any).id }, "Mail Club welcome email error (stripe invoice)");
+            }
+          } else {
+            getPreferredLocale(userId).then((locale) =>
+              sendWelcomeEmail(email, false, locale),
+            ).catch((err) =>
+              logger.error({ err, userId, subscriptionId: (row as any).id }, "Welcome email error (stripe invoice)"),
+            );
           }
         }
         break;
