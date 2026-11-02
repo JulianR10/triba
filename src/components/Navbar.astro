@@ -1,5 +1,4 @@
 ---
-import { createSupabaseServerClient } from "../lib/supabase-server";
 import AccountMenuItems from "./AccountMenuItems.astro";
 import MailClubWaveLink from "./MailClubWaveLink.astro";
 import { t, type Locale } from "../i18n/ui";
@@ -14,44 +13,26 @@ const { showLogoAlways = false, lang = "es" } = Astro.props as {
 const dict = t(lang);
 const currentPath = Astro.url.pathname;
 
-const supabase = createSupabaseServerClient(Astro.request);
-const {
-  data: { session },
-} = await supabase.auth.getSession();
-const isLoggedIn = !!session;
-
-const user = session?.user ?? null;
+// La sesión la resuelve el middleware una sola vez por request (evita clientes y renovaciones de token duplicadas).
+const user = Astro.locals.user ?? null;
+const isLoggedIn = !!user;
 
 let profileRole: string | null = null;
 let accountSub: any = null;
 if (user) {
-  // P7: preferir gate centralizado del middleware (locals), fallback a query directa
-  const localsProfile = (Astro.locals as any).profile as import("../lib/types").Profile | null | undefined;
-  const localsSubscription = (Astro.locals as any).subscription as import("../lib/types").Subscription | null | undefined;
-  if (localsProfile !== undefined) {
-    profileRole = localsProfile?.role ?? null;
-    accountSub = localsSubscription
-      ? {
-          status: localsSubscription.status,
-          provider: localsSubscription.provider,
-          plan_currency: localsSubscription.plan_currency,
-          plan_type: localsSubscription.plan_type,
-          current_period_end: localsSubscription.current_period_end,
-          cancel_at_period_end: localsSubscription.cancel_at_period_end,
-        }
-      : null;
-  } else {
-    const { data: p } = await supabase.from("profiles").select("role, subscription_id").eq("id", user.id).single();
-    profileRole = p?.role ?? null;
-    if (p?.subscription_id) {
-      const { data: s } = await supabase
-        .from("subscriptions")
-        .select("status, provider, plan_currency, plan_type, current_period_end, cancel_at_period_end")
-        .eq("id", p.subscription_id)
-        .single();
-      accountSub = s;
-    }
-  }
+  // Gate centralizado del middleware: perfil y suscripción ya vienen cargados.
+  const localsSubscription = Astro.locals.subscription;
+  profileRole = Astro.locals.profile?.role ?? null;
+  accountSub = localsSubscription
+    ? {
+        status: localsSubscription.status,
+        provider: localsSubscription.provider,
+        plan_currency: localsSubscription.plan_currency,
+        plan_type: localsSubscription.plan_type,
+        current_period_end: localsSubscription.current_period_end,
+        cancel_at_period_end: localsSubscription.cancel_at_period_end,
+      }
+    : null;
 }
 
 function formatPeriodEnd(iso?: string | null) {

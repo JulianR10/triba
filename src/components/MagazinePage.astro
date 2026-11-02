@@ -13,28 +13,15 @@ const dict = t(lang);
 const canonical = lang === "en" ? "/en/revista" : "/revista";
 
 import { getEditions, getFreeArticle } from "../lib/editions";
-import { createSupabaseServerClient } from "../lib/supabase-server";
-import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
+import { subscriptionStatusInfo } from "../lib/subscription-status";
 
-const supabase = createSupabaseServerClient(Astro.request);
-const { data: { session } } = await supabase.auth.getSession();
+// Sesión, perfil y suscripción los resuelve el middleware una sola vez por request.
 let hasActiveSub = false;
 let subInfo: { active: boolean; label: string; action?: string | null } | null = null;
-if (session?.user) {
-  // P7: preferir locals centralizados
-  const localsSub = (Astro.locals as any).subscription as import("../lib/types").Subscription | null | undefined;
-  const localsHasActive = (Astro.locals as any).hasActiveSub as boolean | undefined;
-  if (localsSub !== undefined || localsHasActive !== undefined) {
-    hasActiveSub = localsHasActive ?? isActiveSubscription(localsSub?.status as any, (localsSub as any)?.current_period_end ?? undefined);
-    subInfo = subscriptionStatusInfo((localsSub as any)?.status ?? null, lang, (localsSub as any)?.current_period_end ?? null);
-  } else {
-    const { data: p } = await supabase.from("profiles").select("subscription_id").eq("id", session.user.id).single();
-    if (p?.subscription_id) {
-      const { data: s } = await supabase.from("subscriptions").select("status, current_period_end").eq("id", p.subscription_id).single();
-      hasActiveSub = isActiveSubscription(s?.status, s?.current_period_end);
-      subInfo = subscriptionStatusInfo(s?.status, lang, s?.current_period_end);
-    }
-  }
+if (Astro.locals.user) {
+  const sub = Astro.locals.subscription;
+  hasActiveSub = Astro.locals.hasActiveSub;
+  subInfo = subscriptionStatusInfo(sub?.status ?? null, lang, sub?.current_period_end ?? null);
 }
 
 const allEditions = await getEditions(lang);

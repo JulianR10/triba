@@ -6,10 +6,9 @@ import PatchTitle from "../components/PatchTitle.astro";
 import { t, type Locale } from "../i18n/ui";
 import { localizePath } from "../i18n/locale";
 
-import { createSupabaseServerClient } from "../lib/supabase-server";
 import { supabaseAdmin } from "../lib/supabase-admin";
 import { getEditions, getFeaturedEdition } from "../lib/editions";
-import { isActiveSubscription, subscriptionStatusInfo } from "../lib/subscription-status";
+import { subscriptionStatusInfo } from "../lib/subscription-status";
 import { getCheckoutOutcome } from "../lib/checkout-status";
 import { getPlanType, MAIL_CLUB_PAUSED, MAIL_CLUB_TERMS_VERSION } from "../lib/mail-club";
 import MailClubWaitlist from "../components/MailClubWaitlist.astro";
@@ -21,37 +20,11 @@ const { lang = "es" } = Astro.props as { lang?: Locale };
 const dict = t(lang);
 const canonical = lang === "en" ? "/en/mi-cuenta" : "/mi-cuenta";
 
-const supabase = createSupabaseServerClient(Astro.request);
-const { data: { session } } = await supabase.auth.getSession();
-const user = session?.user ?? null;
-
-let profile: Profile | null = null;
-let subscription: Subscription | null = null;
-
-if (user) {
-  // P7: preferir locals centralizados (middleware), fallback a queries directas
-  const localsProfile = (Astro.locals as any).profile as Profile | null | undefined;
-  const localsSubscription = (Astro.locals as any).subscription as Subscription | null | undefined;
-  if (localsProfile !== undefined) {
-    profile = localsProfile;
-    subscription = localsSubscription ?? null;
-  } else {
-    const { data: p } = await supabase.from("profiles").select("*").eq("id", user.id).single();
-    profile = p;
-    if (profile?.subscription_id) {
-      const { data: s } = await supabase.from("subscriptions").select("*").eq("id", profile.subscription_id).single();
-      subscription = s;
-    }
-  }
-}
-
-const hasActiveSub =
-  typeof (Astro.locals as any).hasActiveSub === "boolean"
-    ? (Astro.locals as any).hasActiveSub
-    : isActiveSubscription(
-        subscription?.status ?? null,
-        subscription?.current_period_end ?? undefined,
-      );
+// Sesión (verificada en esta ruta), perfil y suscripción los resuelve el middleware una sola vez por request.
+const user = Astro.locals.user;
+const profile: Profile | null = user ? Astro.locals.profile : null;
+const subscription: Subscription | null = user ? Astro.locals.subscription : null;
+const hasActiveSub = Astro.locals.hasActiveSub;
 
 const subscriptionInfo = subscriptionStatusInfo(subscription?.status, lang, subscription?.current_period_end);
 
