@@ -16,7 +16,7 @@ vi.mock("../src/lib/mail-club-activation", () => ({ sendMailClubActivation: vi.f
 vi.mock("../src/lib/profile-role", () => ({ roleAfterPayment: vi.fn(async () => "subscriber") }));
 vi.mock("../src/lib/duplicate-checkout", () => ({ blockIfDuplicateCheckout: mocks.blockIfDuplicateCheckout }));
 
-import { activateSubscription } from "../src/lib/mercadopago-activation";
+import { activateSubscription, resolveAuthorizedPayment } from "../src/lib/mercadopago-activation";
 
 const digitalPreapproval = {
   status: "authorized",
@@ -71,5 +71,22 @@ describe("activateSubscription (MP): eventos repetidos", () => {
     await run();
     expect(mocks.upserts[0]).toMatchObject({ plan_type: "digital" });
     expect(mocks.blockIfDuplicateCheckout).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("resolveAuthorizedPayment (MP): renovaciones", () => {
+  it("un authorized_payment aprobado de una sub activa resuelve a su preapproval", async () => {
+    // /v1/payments/{id} da 404 para ids de authorized_payment (caso real 22-oct-2026).
+    vi.stubGlobal("fetch", vi.fn(async (url: string) =>
+      url.includes("/authorized_payments/7033189394")
+        ? { ok: true, json: async () => ({ preapproval_id: "pre_1", external_reference: "u1", payment: { id: 55, status: "approved" } }) }
+        : { ok: false, status: 404, text: async () => "" },
+    ));
+    await expect(resolveAuthorizedPayment("7033189394")).resolves.toMatchObject({
+      preapprovalId: "pre_1",
+      paymentId: "55",
+      userId: "u1",
+    });
+    vi.unstubAllGlobals();
   });
 });
