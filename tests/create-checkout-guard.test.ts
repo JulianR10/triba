@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock("../src/lib/auth", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../src/lib/supabase-admin", () => ({ supabaseAdmin: { from: mocks.from } }));
+vi.mock("../src/lib/rate-limit", () => ({ enforceRateLimit: vi.fn(async () => null) }));
 vi.mock("../src/lib/payment-provider", () => ({ getPaymentProvider: mocks.getPaymentProvider }));
 vi.mock("../src/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn() } }));
 vi.mock("../src/lib/site-url", () => ({ getSiteOrigin: () => "https://x.test" }));

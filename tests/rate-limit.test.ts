@@ -2,11 +2,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({
   from: vi.fn(),
+  rpc: vi.fn(),
   loggerError: vi.fn(),
   loggerWarn: vi.fn(),
 }));
 
-vi.mock("../src/lib/supabase-admin", () => ({ supabaseAdmin: { from: mocks.from } }));
+vi.mock("../src/lib/supabase-admin", () => ({ supabaseAdmin: { from: mocks.from, rpc: mocks.rpc } }));
 vi.mock("../src/lib/logger", () => ({ logger: { error: mocks.loggerError, warn: mocks.loggerWarn } }));
 
 import { checkRateLimit, clientIpFromRequest, enforceRateLimit, rateLimitKey } from "../src/lib/rate-limit";
@@ -33,7 +34,11 @@ function queryResult(result: unknown) {
 }
 
 describe("rate limit", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    // Sin la migración 035 la función no existe: se prueba el camino de dos consultas.
+    mocks.rpc.mockResolvedValue({ data: null, error: { code: "PGRST202", message: "function not found" } });
+  });
 
   it("keeps the complete IPv6 address separate from the endpoint", () => {
     expect(rateLimitKey(" 2001:DB8::ABCD ", "checkout")).toEqual({

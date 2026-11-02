@@ -13,6 +13,7 @@ vi.mock("../src/lib/auth", () => ({ requireUser: mocks.requireUser }));
 vi.mock("../src/lib/supabase-admin", () => ({
   supabaseAdmin: { from: mocks.from, rpc: mocks.rpc },
 }));
+vi.mock("../src/lib/rate-limit", () => ({ enforceRateLimit: vi.fn(async () => null) }));
 vi.mock("../src/lib/payment-provider", () => ({ getPaymentProvider: mocks.getPaymentProvider }));
 vi.mock("../src/lib/logger", () => ({
   logger: { error: mocks.loggerError, warn: mocks.loggerWarn },

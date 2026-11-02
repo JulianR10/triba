@@ -622,6 +622,10 @@ export interface Database {
         Args: Record<PropertyKey, never>;
         Returns: undefined;
       };
+      rate_limit_hit: {
+        Args: { p_ip: string; p_endpoint: string; p_window_ms: number; p_max: number };
+        Returns: { allowed: boolean; retry_after_ms: number }[];
+      };
       revoke_user_sessions: {
         Args: { p_user_id: string };
         Returns: number;

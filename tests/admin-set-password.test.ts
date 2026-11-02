@@ -10,6 +10,7 @@ const mocks = vi.hoisted(() => ({
 vi.mock("../src/lib/supabase-admin", () => ({
   supabaseAdmin: { from: mocks.from, rpc: mocks.rpc, auth: { admin: { updateUserById: mocks.updateUserById } } },
 }));
+vi.mock("../src/lib/rate-limit", () => ({ enforceRateLimit: vi.fn(async () => null) }));
 vi.mock("../src/lib/admin/audit", () => ({ logAdminAction: mocks.logAdminAction }));
 vi.mock("../src/lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn() } }));
 

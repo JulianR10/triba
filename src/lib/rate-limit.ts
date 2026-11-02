@@ -17,6 +17,37 @@ export type RateLimitResult =
   | { allowed: false; retryAfterMs: number; unavailable?: false }
   | { allowed: false; retryAfterMs: 0; unavailable: true };
 
+// Migración 035 sin aplicar: se recuerda para no pagar un viaje a la base fallido en cada pedido.
+let rpcUnavailable = false;
+
+// Camino rápido: contar y registrar en una sola llamada (función rate_limit_hit). Devuelve null
+// cuando la función no existe todavía, para seguir con las dos consultas de siempre.
+async function checkViaRpc(key: RateLimitKey, config: RateLimitConfig): Promise<RateLimitResult | null> {
+  if (rpcUnavailable) return null;
+  const { data, error: rpcError } = await supabaseAdmin.rpc("rate_limit_hit", {
+    p_ip: key.ip,
+    p_endpoint: key.endpoint,
+    p_window_ms: config.windowMs,
+    p_max: config.maxRequests,
+  });
+  if (rpcError) {
+    if (rpcError.code === "PGRST202" || rpcError.code === "42883") {
+      rpcUnavailable = true;
+      return null;
+    }
+    logger.error({ endpoint: key.endpoint, code: rpcError.code }, "rate limit rpc failed");
+    return { allowed: false, retryAfterMs: 0, unavailable: true };
+  }
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row || typeof row.allowed !== "boolean") {
+    logger.error({ endpoint: key.endpoint }, "rate limit rpc returned no result");
+    return { allowed: false, retryAfterMs: 0, unavailable: true };
+  }
+  return row.allowed
+    ? { allowed: true, retryAfterMs: 0 }
+    : { allowed: false, retryAfterMs: Math.max(1, Number(row.retry_after_ms) || config.windowMs) };
+}
+
 export async function checkRateLimit(
   key: RateLimitKey,
   config: RateLimitConfig,
@@ -25,6 +56,9 @@ export async function checkRateLimit(
   const since = new Date(Date.now() - config.windowMs).toISOString();
 
   try {
+    const viaRpc = await checkViaRpc(key, config);
+    if (viaRpc) return viaRpc;
+
     const { count, error: countError } = await supabaseAdmin
       .from("rate_limits")
       .select("*", { count: "exact", head: true })
