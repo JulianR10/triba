@@ -28,16 +28,21 @@ async function triggerReveals(page) {
   await page.goto(`${BASE}/`, { waitUntil: "networkidle" });
   await page.waitForTimeout(2500);
   const popup = page.locator("#mailclub-popup");
-  const popupVisible = await popup.isVisible().catch(() => false);
-  popupVisible ? ok("Home: popup aparece") : fail("Home: popup no apareció");
+  // El popup solo existe cuando el Mail Club no está pausado (Home.astro: !MAIL_CLUB_PAUSED).
+  if ((await popup.count()) === 0) {
+    ok("Home: sin popup (Mail Club pausado)");
+  } else {
+    const popupVisible = await popup.isVisible().catch(() => false);
+    popupVisible ? ok("Home: popup aparece") : fail("Home: popup no apareció");
 
-  const dismiss = popup.locator('button:has-text("Seguir explorando")');
-  if ((await dismiss.count()) > 0) {
-    await dismiss.click();
-    await page.waitForTimeout(600);
-    const closed = await popup.evaluate((el) => el.dataset.open === "0");
-    closed ? ok("Home: popup se cierra") : fail("Home: popup no se cierra");
-  } else fail("Home: no hay botón de cierre");
+    const dismiss = popup.locator('button:has-text("Seguir explorando")');
+    if ((await dismiss.count()) > 0) {
+      await dismiss.click();
+      await page.waitForTimeout(600);
+      const closed = await popup.evaluate((el) => el.dataset.open === "0");
+      closed ? ok("Home: popup se cierra") : fail("Home: popup no se cierra");
+    } else fail("Home: no hay botón de cierre");
+  }
 
   // ── 2. Suscribirme ──
   await page.goto(`${BASE}/suscribirme`, { waitUntil: "networkidle" });

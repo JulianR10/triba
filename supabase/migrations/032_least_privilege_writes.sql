@@ -50,7 +50,10 @@ begin
   if (old.role is distinct from new.role
       or old.subscription_id is distinct from new.subscription_id
       or old.email is distinct from new.email) then
-    if coalesce(auth.jwt() ->> 'role', '') <> 'service_role' then
+    -- pg_trigger_depth() > 1: el UPDATE lo hizo otro trigger (handle_new_user en el alta de una
+    -- persona migrada, ver 036); una edición directa de la usuaria tiene profundidad 1.
+    if pg_trigger_depth() <= 1
+       and coalesce(auth.jwt() ->> 'role', '') <> 'service_role' then
       raise exception 'not allowed to change role, subscription_id or email';
     end if;
   end if;
