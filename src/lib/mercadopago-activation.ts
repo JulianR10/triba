@@ -22,6 +22,7 @@ export interface MpPreapproval {
   payer_email?: string;
   next_payment_date?: string;
   auto_recurring?: { currency_id?: string };
+  summarized?: { last_charged_date?: string };
 }
 
 export interface MpPayment {
@@ -134,6 +135,53 @@ export async function mpGet<T>(path: string): Promise<T | null> {
     return null;
   }
   return res.json();
+}
+
+// Renovación de una suscripción MP ya ACTIVA tras un cobro aprobado: extiende el
+// período. Fuente única del webhook y del cron (red de seguridad si el webhook falla).
+// Devuelve true si extendió; lanza si no pudo guardar (el webhook responde 500 y MP reintenta).
+export async function applyMpRenewal(subId: string, preapprovalId: string): Promise<boolean> {
+  const { data: schedRow } = await supabaseAdmin
+    .from("subscriptions")
+    .select("scheduled_plan_type, current_period_end")
+    .eq("id", subId)
+    .maybeSingle();
+  const downgradeDue = (schedRow as any)?.scheduled_plan_type === "digital";
+  const currentEnd = (schedRow as any)?.current_period_end as string | null;
+  // Webhook repetido: si el período ya fue extendido hace instantes
+  // (> ~28 días por delante) no se vuelve a extender. En la renovación
+  // real el vencimiento está cerca o vencido, así que la guarda no aplica.
+  const alreadyExtended =
+    !!currentEnd && new Date(currentEnd).getTime() > Date.now() + 28 * 24 * 60 * 60 * 1000;
+  if (alreadyExtended && !downgradeDue) return false;
+
+  // Fuente de verdad: el próximo cobro que informa MP (mismo día de cada mes).
+  // Sumar 30 días fijos va corriendo la fecha y en meses de 31 días corta el
+  // acceso antes del cobro real. El +30d queda solo si MP no responde.
+  const mpPreapproval = await mpGet<MpPreapproval>(`/preapproval/${preapprovalId}`);
+  const mpNext = mpPreapproval?.next_payment_date ? new Date(mpPreapproval.next_payment_date) : null;
+  const nextEnd =
+    mpNext && !isNaN(mpNext.getTime()) && mpNext.getTime() > Date.now()
+      ? mpNext
+      : new Date(
+          (currentEnd && new Date(currentEnd).getTime() > Date.now() ? new Date(currentEnd) : new Date()).getTime() +
+            30 * 24 * 60 * 60 * 1000,
+        );
+  const { error: renewError } = await supabaseAdmin
+    .from("subscriptions")
+    .update({
+      current_period_end: nextEnd.toISOString(),
+      status: "active",
+      // El nuevo cobro ya vino con el importe digital: se completa acá.
+      ...(downgradeDue
+        ? { plan_type: "digital", scheduled_plan_type: null, scheduled_plan_at: null }
+        : {}),
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", subId);
+  // Sin esto una renovación pagada que no se registra deja a la clienta sin acceso y sin reintento.
+  if (renewError) throw new Error(`renewal update failed: ${renewError.message}`);
+  return true;
 }
 
 // Crea/refresca la suscripción y la linkea al perfil. confirmedPayment=true

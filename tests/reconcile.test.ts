@@ -4,6 +4,7 @@ const mocks = vi.hoisted(() => ({
   from: vi.fn(),
   stripeRetrieve: vi.fn(),
   mpGet: vi.fn(),
+  applyMpRenewal: vi.fn(),
   activateSubscription: vi.fn(),
   syncPaidSubscriber: vi.fn(),
   sendWelcomeEmail: vi.fn(),
@@ -19,6 +20,7 @@ vi.mock("../src/lib/supabase-admin", () => ({ supabaseAdmin: { from: mocks.from 
 vi.mock("../src/lib/stripe", () => ({ stripe: { subscriptions: { retrieve: mocks.stripeRetrieve } } }));
 vi.mock("../src/lib/mercadopago-activation", () => ({
   activateSubscription: mocks.activateSubscription,
+  applyMpRenewal: mocks.applyMpRenewal,
   mpGet: mocks.mpGet,
 }));
 vi.mock("../src/lib/duplicate-checkout", () => ({ blockIfDuplicateCheckout: mocks.blockIfDuplicateCheckout }));
@@ -30,7 +32,7 @@ vi.mock("../src/lib/logger", () => ({
   logger: { error: mocks.loggerError, info: mocks.loggerInfo, warn: mocks.loggerWarn },
 }));
 
-import { applyReconcileCandidates } from "../src/lib/reconcile";
+import { applyReconcileCandidates, renewExpiredMpSubscriptions } from "../src/lib/reconcile";
 
 describe("reconcile Stripe candidates", () => {
   const periodStart = Math.floor(Date.parse("2026-10-01T00:00:00Z") / 1000);
@@ -150,5 +152,44 @@ describe("reconcile Stripe candidates", () => {
     expect(result.failed).toEqual([]);
     expect(profileUpserts).toEqual([]);
     expect(mocks.sendWelcomeEmail).not.toHaveBeenCalled();
+  });
+});
+
+describe("renewExpiredMpSubscriptions (red de seguridad del webhook MP)", () => {
+  const end = "2026-10-22T21:29:41Z";
+  const rows = [{ id: "sub-1", provider_subscription_id: "pre-1", current_period_end: end }];
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.applyMpRenewal.mockResolvedValue(true);
+    mocks.from.mockImplementation(() => {
+      const q: Record<string, any> = {};
+      for (const m of ["select", "eq", "lt", "order", "limit"]) q[m] = vi.fn(() => q);
+      q.then = (resolve: (v: unknown) => unknown) => Promise.resolve({ data: rows, error: null }).then(resolve);
+      return q;
+    });
+  });
+
+  it("renueva si MP sigue authorized y cobró después del vencimiento", async () => {
+    mocks.mpGet.mockResolvedValue({ status: "authorized", summarized: { last_charged_date: "2026-10-22T22:19:03Z" } });
+    await expect(renewExpiredMpSubscriptions()).resolves.toEqual({ renewed: 1, failed: 0 });
+    expect(mocks.applyMpRenewal).toHaveBeenCalledWith("sub-1", "pre-1");
+  });
+
+  it.each([
+    ["cancelada", { status: "cancelled", summarized: { last_charged_date: "2026-10-22T22:19:03Z" } }],
+    ["pausada", { status: "paused", summarized: { last_charged_date: "2026-10-22T22:19:03Z" } }],
+    ["sin cobro posterior (solo el primero)", { status: "authorized", summarized: { last_charged_date: "2026-09-22T21:29:41Z" } }],
+    ["MP no responde", null],
+  ])("no renueva si %s", async (_name, preapproval) => {
+    mocks.mpGet.mockResolvedValue(preapproval);
+    await expect(renewExpiredMpSubscriptions()).resolves.toEqual({ renewed: 0, failed: 0 });
+    expect(mocks.applyMpRenewal).not.toHaveBeenCalled();
+  });
+
+  it("cuenta el fallo al guardar y sigue con las demás", async () => {
+    mocks.mpGet.mockResolvedValue({ status: "authorized", summarized: { last_charged_date: "2026-10-22T22:19:03Z" } });
+    mocks.applyMpRenewal.mockRejectedValue(new Error("renewal update failed"));
+    await expect(renewExpiredMpSubscriptions()).resolves.toEqual({ renewed: 0, failed: 1 });
   });
 });

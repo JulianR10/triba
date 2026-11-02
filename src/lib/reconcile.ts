@@ -13,6 +13,7 @@ import { roleAfterPayment } from "./profile-role";
 import { blockIfDuplicateCheckout } from "./duplicate-checkout";
 import {
   activateSubscription,
+  applyMpRenewal,
   mpGet,
   type MpPreapproval,
 } from "./mercadopago-activation";
@@ -217,4 +218,43 @@ export async function applyReconcileCandidates(
   }
 
   return { activated, failed, skipped };
+}
+
+// Red de seguridad de renovaciones MP: si el webhook no aplicó un cobro aprobado,
+// la fila queda 'active' con el período vencido y la clienta pierde el acceso.
+// Renueva solo con evidencia de MP: preapproval 'authorized' y un cobro posterior
+// al vencimiento. Canceladas/pausadas se omiten (vencieron legítimamente).
+// Un error de MP (429) deja la fila para la corrida siguiente.
+export async function renewExpiredMpSubscriptions(limit = 100): Promise<{ renewed: number; failed: number }> {
+  const { data: subs, error } = await supabaseAdmin
+    .from("subscriptions")
+    .select("id, provider_subscription_id, current_period_end")
+    .eq("provider", "mercadopago")
+    .eq("status", "active")
+    .lt("current_period_end", new Date().toISOString())
+    .order("current_period_end")
+    .limit(limit);
+  if (error) throw new Error(`expired MP subscriptions query failed: ${error.message}`);
+
+  let renewed = 0;
+  let failed = 0;
+  for (const s of (subs as any[]) || []) {
+    try {
+      const preapproval = await mpGet<MpPreapproval>(`/preapproval/${s.provider_subscription_id}`);
+      if (!preapproval || preapproval.status !== "authorized") continue;
+      const lastCharge = preapproval.summarized?.last_charged_date
+        ? new Date(preapproval.summarized.last_charged_date).getTime()
+        : 0;
+      // El primer cobro es ~30 días antes del vencimiento: la tolerancia de 2 días lo descarta.
+      if (lastCharge < new Date(s.current_period_end).getTime() - 2 * 24 * 60 * 60 * 1000) continue;
+      if (await applyMpRenewal(s.id, s.provider_subscription_id)) {
+        renewed++;
+        logger.warn({ subscriptionId: s.id }, "[reconcile] MP renewal recovered — the webhook did not apply it");
+      }
+    } catch (err) {
+      failed++;
+      logger.error({ err, subId: s.id }, "[reconcile] MP renewal error");
+    }
+  }
+  return { renewed, failed };
 }

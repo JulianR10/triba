@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { ok, error } from "../../../lib/response";
 import { logger } from "../../../lib/logger";
 import { logAdminAction } from "../../../lib/admin/audit";
-import { applyReconcileCandidates } from "../../../lib/reconcile";
+import { applyReconcileCandidates, renewExpiredMpSubscriptions } from "../../../lib/reconcile";
 import { sendMailClubOperationsReminder } from "../../../lib/admin/mail-club-reminders";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 
@@ -36,6 +36,22 @@ export const GET: APIRoute = async ({ request }) => {
     logger.error({ err }, "[cron/reconcile] reconciliation error");
   }
 
+  let renewals: Awaited<ReturnType<typeof renewExpiredMpSubscriptions>> | null = null;
+  let renewalsFailed = false;
+  try {
+    renewals = await renewExpiredMpSubscriptions();
+    if (renewals.failed > 0) renewalsFailed = true;
+  } catch (err) {
+    renewalsFailed = true;
+    logger.error({ err }, "[cron/reconcile] MP renewals error");
+  }
+  if (renewals?.renewed) {
+    await logAdminAction("cron", "cron", "subscriber.renewed", "subscriber", undefined, {
+      via: "cron",
+      count: renewals.renewed,
+    });
+  }
+
   let mailClubReminder: Awaited<ReturnType<typeof sendMailClubOperationsReminder>> | null = null;
   let reminderFailed = false;
   try {
@@ -58,11 +74,12 @@ export const GET: APIRoute = async ({ request }) => {
     logger.error({ reminder: mailClubReminder }, "[cron/reconcile] Mail Club reminder delivery incomplete");
   }
 
-  if (reconcileFailed || reminderFailed) {
+  if (reconcileFailed || reminderFailed || renewalsFailed) {
     return error("Daily cron partially failed", 502);
   }
   return ok({
     activated,
+    renewedCount: renewals?.renewed ?? 0,
     failedCount: reconciliation?.failed.length ?? 0,
     skippedCount: reconciliation?.skipped.length ?? 0,
     mailClubReminder,
