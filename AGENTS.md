@@ -27,7 +27,11 @@ Operación, deploy y scripts: [`README.md`](./README.md). Trabajo en curso y mej
 - Ediciones: los archivos grandes se suben directo a Storage con URL firmada; tras el PUT, el servidor verifica tamaño, MIME y firma antes de guardar. Limpiar si falla; no pasarlos por Vercel.
 - `security.checkOrigin: false` es intencional con Astro/Vercel y las rutas multipart; no cambiarlo sin probar los formularios admin.
 - Webhook MP: validar con `WebhookSignatureValidator` del SDK, sin tolerancia propia. Stripe: estados mapeados por `mapStripeSubscriptionStatus` (desconocidos se omiten sin reintento; `deleted` solo libera el perfil sin otra sub con acceso); no sustituir períodos reales por `+30 días` sin revisar la fuente.
-- Rate limiting (`src/lib/rate-limit.ts`, tabla `rate_limits`): fail-closed con 503, claves IPv6-safe vía `enforceRateLimit`. Cubierto en formularios/checkouts, PDF, cuenta y mutaciones admin; webhooks excluidos a propósito y el login vive en Supabase Auth.
+- Rate limiting (`src/lib/rate-limit.ts`, tabla `rate_limits`): fail-closed con 503, claves IPv6-safe vía `enforceRateLimit`. Cubierto en formularios/checkouts, PDF, cuenta y mutaciones admin; webhooks excluidos a propósito y el login vive en Supabase Auth. Usa la función `rate_limit_hit` (migración 035, una sola consulta) y, si no existe, cae a dos consultas; reintenta la función cada 5 minutos.
+- Acceso por cualquier suscripción vigente: el gate (middleware) y el cambio de plan (`getActiveSubscriptionForUser`) usan `pickLiveSubscription` (`src/lib/subscription-guard.ts`) sobre todas las filas de la persona, no solo `profiles.subscription_id`; el cron lo cura con `healProfileSubscriptions`. No volver a decidir el acceso solo por el puntero.
+- Renovaciones de Mercado Pago: `applyMpRenewal` (`src/lib/mercadopago-activation.ts`) es la única forma de extender el período, desde el webhook y desde el cron (`renewExpiredMpSubscriptions`, respaldo si el webhook falla). `resolveAuthorizedPayment` resuelve el id de `authorized_payment` con `/authorized_payments/{id}`. El plan de una preaprobación MP se escribe y se lee solo en `preapprovalReason`/`planFromPreapproval`.
+- Errores de API para quien navega en inglés: se traducen en el middleware (`src/lib/error-i18n.ts`); al agregar un error público en español en un endpoint, sumar su traducción (un test falla si falta).
+- Región: las funciones corren en `dub1` (`vercel.json`), junto a Supabase (eu-west-1). Si cambia la región de la base, cambiar esa línea.
 - PDFViewer: `client:only="react"`; import estático de `react-pdf` y worker `pdfjs-dist/...mjs?url`; ampliar mediante overlay portal, nunca Fullscreen API.
 - Un solo cobro vigente por persona: el checkout digital y el de Mail Club rechazan con 409 (`already_subscribed`, o `cancellation_scheduled` con la fecha si la baja ya está programada) si ya hay una suscripción paga vigente (`hasLivePaidSubscription`, `src/lib/subscription-guard.ts`); las `migrated` (cortesía) no cuentan.
 - Cancelar (usuaria o admin): `scheduleProviderCancels` frena la recurrencia de **todas** las filas vigentes en el proveedor antes de la RPC; un error real corta sin marcar nada.
@@ -39,7 +43,7 @@ Operación, deploy y scripts: [`README.md`](./README.md). Trabajo en curso y mej
 - HTML de mails: todo dato escrito por personas pasa por `escapeHtmlText` (`src/lib/html-escape.ts`; `escape.ts` solo sirve en el navegador).
 - Ediciones: PDF con nombre único por subida; borrar de Storage lo reemplazado solo después de guardar bien (`removeStoredFiles`). Aviso a suscriptoras con reclamo atómico en `editions.notified_at`.
 - Identidad en rutas admin, `/api/pdf` y Mi Cuenta: el middleware la verifica con `auth.getUser()` (no confiar en la cookie de `getSession`).
-- Las tablas de formularios y de Mail Club no tienen permisos para `anon`/`authenticated` (migración 032): toda escritura pasa por el servidor con `service_role`.
+- Las tablas de formularios y de Mail Club se escriben solo desde el servidor con `service_role`; el navegador nunca las usa. La migración 032 (que además les quita los permisos a `anon`/`authenticated`) está **pospuesta y sin aplicar**: hasta entonces esos permisos siguen abiertos en la base y la API es la única barrera (ver ROADMAP). Si se aplica, incluir antes el bypass `pg_trigger_depth() > 1` del trigger de perfiles.
 - Cron y webhooks requieren secreto/firma. Revisar el README (Producción y Operación) antes de tocar producción.
 
 ## UI, navegación e i18n
@@ -51,7 +55,7 @@ Operación, deploy y scripts: [`README.md`](./README.md). Trabajo en curso y mej
 ## Dónde vive cada flujo
 
 - Gate de acceso: `src/middleware.ts`, `src/lib/subscription-status.ts`, `src/lib/subscription-guard.ts`.
-- Checkout y activación: `src/pages/api/create-checkout.ts`, `src/lib/payment-provider.ts`, webhooks en `src/pages/api/webhook/`, recuperación en `src/lib/reconcile.ts` (cron `/api/cron/reconcile`).
+- Checkout y activación: `src/pages/api/create-checkout.ts`, `src/lib/payment-provider.ts`, webhooks en `src/pages/api/webhook/`, recuperación en `src/lib/reconcile.ts` (cron `/api/cron/reconcile`: pagos pendientes, renovaciones MP perdidas y reenlace de perfiles).
 - Cambios de plan: `src/pages/api/upgrade-checkout.ts` y `src/lib/upgrade-apply.ts` (a Mail Club); `src/pages/api/downgrade.ts` (a digital).
 - Cancelación y portal: `src/pages/api/cancel-subscription.ts`, `src/lib/cancel-providers.ts`, `src/pages/api/portal.ts`; admin en `src/pages/api/admin/subscribers/[id]/`.
 - Mail Club: `src/lib/mail-club.ts`, `src/lib/mail-club-activation.ts`, `src/lib/founders.ts`, `src/lib/admin/mail-club.ts` y `mail-club-reminders.ts`.

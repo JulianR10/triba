@@ -33,7 +33,9 @@ Push a `main` despliega en Vercel. Antes de deployar, aplicar las migraciones SQ
 
 Webhooks: `/api/webhook/stripe` y `/api/webhook/mercadopago`. Mantener las firmas y secretos fuera del repo. Si no pueden guardar en la base responden 500 a propósito: el proveedor reintenta; revisar los logs antes de tocar nada a mano.
 
-Migraciones pendientes de aplicar a mano en Supabase (en orden): `032_least_privilege_writes.sql` y `033_edition_notified_at.sql`. El código funciona antes de aplicarlas, salvo "Notificar suscriptoras" (necesita la 033).
+Migraciones: `033`, `034` y `035` están aplicadas (03/11). La `032_least_privilege_writes.sql` está pospuesta y es opcional (mejora de seguridad; ver ROADMAP). El código funciona sin ella. La 034 (cerrar sesiones al cambiar una contraseña) y la 035 (límite de uso en una consulta) tienen respaldo en el código si faltaran.
+
+Las funciones de Vercel corren en `dub1` (`vercel.json`), la región más cercana a la base de Supabase (`eu-west-1`, Irlanda): cada consulta cruzaba el Atlántico cuando estaban en Washington. Si se cambia la región de la base, cambiar también esa línea. `CRON_SECRET` es obligatorio en Production: sin él el cron responde 500 y no corre.
 
 Contacto de soporte para mensajes al público: `src/lib/contact.ts` (los textos legales y las FAQ lo repiten a mano).
 
