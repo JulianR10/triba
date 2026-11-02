@@ -79,8 +79,24 @@ export async function resolveAuthorizedPayment(dataId: string): Promise<MpAuthor
     }
   }
 
-  // Caso 2: dataId es un authorized_payment id (o el pago aún no está
-  // visible): barrer las 'incomplete' y matchear vía search.
+  // Caso 2a: dataId es un authorized_payment id (renovaciones): MP lo resuelve
+  // directo a su preapproval. Sin esto las renovaciones de subs 'active' nunca
+  // se aplicaban (el barrido de abajo solo mira 'incomplete').
+  const authorized = await mpGet<{
+    preapproval_id?: string;
+    external_reference?: string;
+    payment?: { id?: number; status?: string };
+  }>(`/authorized_payments/${dataId}`);
+  if (authorized?.preapproval_id && authorized.payment?.status === "approved") {
+    return {
+      preapprovalId: authorized.preapproval_id,
+      paymentId: String(authorized.payment.id || dataId),
+      payerEmail: null,
+      userId: authorized.external_reference || null,
+    };
+  }
+
+  // Caso 2b: el pago aún no está visible: barrer las 'incomplete' y matchear vía search.
   const { data: pendings } = await supabaseAdmin
     .from("subscriptions")
     .select("user_id, provider_subscription_id")
