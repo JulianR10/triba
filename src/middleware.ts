@@ -5,6 +5,7 @@ import type { Profile, Subscription } from "./lib/types";
 import { isActiveSubscription } from "./lib/subscription-status";
 import { getLocaleFromUrl } from "./i18n/locale";
 import { DEFAULT_LOCALE, type Locale } from "./i18n/ui";
+import { isEnglishApiCall, localizeApiError } from "./lib/error-i18n";
 
 const supabaseUrl =
   import.meta.env.PUBLIC_SUPABASE_URL ||
@@ -142,6 +143,11 @@ export const onRequest = defineMiddleware(async (context, next) => {
   }
 
   const response = await next();
+
+  // Los endpoints públicos responden sus errores en español: quien navega en inglés los recibe traducidos.
+  if (pathname.startsWith("/api/") && !isAdminRoute && isEnglishApiCall(context.request)) {
+    return localizeApiError(response);
+  }
 
   if (response.headers.get("content-type")?.startsWith("text/html")) {
     const ct = response.headers.get("content-type");
