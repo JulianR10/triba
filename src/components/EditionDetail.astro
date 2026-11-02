@@ -54,6 +54,7 @@ const comingSoonLabel = (dict.magazine as { comingSoon?: string }).comingSoon ??
 <Layout
   {title}
   {description}
+  image={edition.cover_url ?? undefined}
   {canonical}
   lang={lang}
   navLogoAlways

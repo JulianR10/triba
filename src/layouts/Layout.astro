@@ -22,8 +22,13 @@ const dict = t(locale);
 
 const siteTitle = title ? `${title} — Triba` : dict.layout.defaultTitle;
 const siteDescription = description || dict.layout.defaultDescription;
-const ogImage = image || "/og-triba.png";
 const siteUrl = SITE_URL;
+// `image` puede ser una ruta del sitio o una URL absoluta (portadas en Storage).
+const ogImage = image
+  ? /^https?:\/\//.test(image) ? image : `${siteUrl}${image}`
+  : `${siteUrl}/og-triba.png`;
+// Una imagen propia (portada vertical y chica) se ve mal recortada como banner: tarjeta chica.
+const twitterCard = image ? "summary" : "summary_large_image";
 const pageUrl = canonical ? `${siteUrl}${canonical}` : siteUrl;
 const esCanonical = canonical ? toEsPath(canonical) : undefined;
 const inferredAlternates = esCanonical &&
@@ -82,16 +87,16 @@ const jsonLdText = JSON.stringify(jsonLd).replace(/</g, "\\u003c");
     <meta property="og:type" content="website" />
     <meta property="og:title" content={siteTitle} />
     <meta property="og:description" content={siteDescription} />
-    <meta property="og:image" content={`${siteUrl}${ogImage}`} />
+    <meta property="og:image" content={ogImage} />
     <meta property="og:url" content={pageUrl} />
     <meta property="og:locale" content={dict.ogLocale} />
     <meta property="og:site_name" content="Triba" />
 
     <!-- Twitter Cards -->
-    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:card" content={twitterCard} />
     <meta name="twitter:title" content={siteTitle} />
     <meta name="twitter:description" content={siteDescription} />
-    <meta name="twitter:image" content={`${siteUrl}${ogImage}`} />
+    <meta name="twitter:image" content={ogImage} />
 
     <!-- Schema.org JSON-LD -->
     <script type="application/ld+json" set:html={jsonLdText}></script>
