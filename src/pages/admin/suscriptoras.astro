@@ -220,7 +220,11 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             canceled: { label: "Cancelada", cls: "bg-triba-bone text-triba-brown/60" },
             migrated: { label: "Migrada", cls: "bg-triba-pink text-triba-brown" },
           };
-          const meta = (s?.status && STATUS_META[s.status]) || null;
+          // 'active' con el período pasado no da acceso: mostrarlo como vencida, no como activa.
+          const expired = s?.status === "active" && !!s?.current_period_end && new Date(s.current_period_end).getTime() <= Date.now();
+          const meta = expired
+            ? { label: "Vencida", cls: "bg-triba-red/20 text-triba-red" }
+            : (s?.status && STATUS_META[s.status]) || null;
           const statusClass = meta?.cls || "";
           const scheduledOff = !!s?.cancel_at_period_end && ["active", "trialing", "past_due", "incomplete"].includes(s?.status);
           const statusLabel = (meta?.label || "—") + (scheduledOff ? " · baja programada" : "");
