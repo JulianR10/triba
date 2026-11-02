@@ -64,8 +64,11 @@ Los que escriben van en dry-run por defecto; revisar antes de añadir `--real`.
 | `node --env-file=.env scripts/cleanup-mp-pending.mjs` | Cancela preaprobaciones MP pendientes. |
 | `node --env-file=.env scripts/update-mp-mailclub-price.mjs --amount <ARS>` | Cambia el precio MP de Mail Club; `--real` solo tras aviso de 30 días. |
 | `node --env-file=.env scripts/resync-stripe-periods.mjs` | Resincroniza los períodos de Stripe con la base. |
+| `node --env-file=.env scripts/resync-mp-periods.mjs` | Renueva las suscripciones de Mercado Pago `active` con el período vencido pero con un cobro reciente (dry-run; `--real` escribe). El cron diario hace lo mismo. |
 | `node --env-file=.env scripts/dedupe-subscriptions.mjs` | Deja una suscripción viva por persona (ver ROADMAP). |
 | `node --env-file=.env scripts/export-newsletters.mjs` | Exporta el newsletter histórico. |
+
+Las migraciones y herramientas de una sola vez ya ejecutadas están en `scripts/archive/` (ver su README).
 | `node --env-file=.env scripts/send-mailclub-preview.mjs --email=<destino> --dry` | Preview; sin `--dry` envía correo real. |
 
 ## Documentación
