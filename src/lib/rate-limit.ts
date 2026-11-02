@@ -18,12 +18,13 @@ export type RateLimitResult =
   | { allowed: false; retryAfterMs: 0; unavailable: true };
 
 // Migración 035 sin aplicar: se recuerda para no pagar un viaje a la base fallido en cada pedido.
-let rpcUnavailable = false;
+// Se reintenta cada 5 minutos: si la migración se aplica después, las instancias en marcha lo notan solas.
+let rpcRetryAt = 0;
 
 // Camino rápido: contar y registrar en una sola llamada (función rate_limit_hit). Devuelve null
 // cuando la función no existe todavía, para seguir con las dos consultas de siempre.
 async function checkViaRpc(key: RateLimitKey, config: RateLimitConfig): Promise<RateLimitResult | null> {
-  if (rpcUnavailable) return null;
+  if (Date.now() < rpcRetryAt) return null;
   const { data, error: rpcError } = await supabaseAdmin.rpc("rate_limit_hit", {
     p_ip: key.ip,
     p_endpoint: key.endpoint,
@@ -32,7 +33,7 @@ async function checkViaRpc(key: RateLimitKey, config: RateLimitConfig): Promise<
   });
   if (rpcError) {
     if (rpcError.code === "PGRST202" || rpcError.code === "42883") {
-      rpcUnavailable = true;
+      rpcRetryAt = Date.now() + 5 * 60_000;
       return null;
     }
     logger.error({ endpoint: key.endpoint, code: rpcError.code }, "rate limit rpc failed");

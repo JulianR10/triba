@@ -56,4 +56,24 @@ describe("rate limit con la función rate_limit_hit (una sola consulta)", () => 
     await checkRateLimit(key, config);
     expect(mocks.rpc).toHaveBeenCalledTimes(1);
   });
+
+  it("pasados 5 minutos vuelve a probar la función (la migración pudo aplicarse mientras tanto)", async () => {
+    vi.useFakeTimers();
+    try {
+      mocks.rpc.mockResolvedValueOnce({ data: null, error: { code: "PGRST202", message: "not found" } });
+      const q: Record<string, any> = {};
+      for (const m of ["select", "eq", "gte", "order", "limit"]) q[m] = vi.fn(() => q);
+      q.insert = vi.fn(() => Promise.resolve({ error: null }));
+      q.then = (resolve: (v: unknown) => unknown) => Promise.resolve({ count: 0, error: null }).then(resolve);
+      mocks.from.mockReturnValue(q);
+      const checkRateLimit = await load();
+      await checkRateLimit(key, config);
+      mocks.rpc.mockResolvedValue({ data: [{ allowed: true, retry_after_ms: 0 }], error: null });
+      vi.advanceTimersByTime(5 * 60_000 + 1);
+      await expect(checkRateLimit(key, config)).resolves.toEqual({ allowed: true, retryAfterMs: 0 });
+      expect(mocks.rpc).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
 });
