@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { ok, error } from "../../../lib/response";
 import { logger } from "../../../lib/logger";
 import { logAdminAction } from "../../../lib/admin/audit";
-import { applyReconcileCandidates, renewExpiredMpSubscriptions } from "../../../lib/reconcile";
+import { applyReconcileCandidates, healProfileSubscriptions, renewExpiredMpSubscriptions } from "../../../lib/reconcile";
 import { sendMailClubOperationsReminder } from "../../../lib/admin/mail-club-reminders";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 
@@ -52,6 +52,23 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
 
+  // Va después de las renovaciones: una fila recién renovada ya cuenta como viva.
+  let healing: Awaited<ReturnType<typeof healProfileSubscriptions>> | null = null;
+  let healingFailed = false;
+  try {
+    healing = await healProfileSubscriptions();
+    if (healing.failed > 0) healingFailed = true;
+  } catch (err) {
+    healingFailed = true;
+    logger.error({ err }, "[cron/reconcile] profile healing error");
+  }
+  if (healing?.healed) {
+    await logAdminAction("cron", "cron", "subscriber.profile_relinked", "subscriber", undefined, {
+      via: "cron",
+      count: healing.healed,
+    });
+  }
+
   let mailClubReminder: Awaited<ReturnType<typeof sendMailClubOperationsReminder>> | null = null;
   let reminderFailed = false;
   try {
@@ -74,12 +91,13 @@ export const GET: APIRoute = async ({ request }) => {
     logger.error({ reminder: mailClubReminder }, "[cron/reconcile] Mail Club reminder delivery incomplete");
   }
 
-  if (reconcileFailed || reminderFailed || renewalsFailed) {
+  if (reconcileFailed || reminderFailed || renewalsFailed || healingFailed) {
     return error("Daily cron partially failed", 502);
   }
   return ok({
     activated,
     renewedCount: renewals?.renewed ?? 0,
+    healedProfiles: healing?.healed ?? 0,
     failedCount: reconciliation?.failed.length ?? 0,
     skippedCount: reconciliation?.skipped.length ?? 0,
     mailClubReminder,

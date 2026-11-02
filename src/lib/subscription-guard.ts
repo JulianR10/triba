@@ -11,9 +11,23 @@ export interface ActiveSubscription {
   scheduled_plan_type: string | null;
 }
 
+// De varias filas de una misma persona, la suscripción vigente que corresponde usar. La que
+// apunta el perfil gana; si no, una paga antes que una 'migrated' (cortesía); si no, la que
+// vence más tarde. Misma regla de vigencia que el gate. Sin vigente → null.
+export function pickLiveSubscription<
+  T extends { id: string; provider?: string | null; status: string; current_period_end: string | null },
+>(rows: T[], pointedId?: string | null): T | null {
+  const score = (r: T) => (r.id === pointedId ? 2 : 0) + (r.provider !== "migrated" ? 1 : 0);
+  const end = (r: T) => (r.current_period_end ? new Date(r.current_period_end).getTime() : Infinity);
+  const live = rows.filter((r) => isActiveSubscription(r.status, r.current_period_end));
+  live.sort((a, b) => score(b) - score(a) || end(b) - end(a));
+  return live[0] ?? null;
+}
+
 // Devuelve la suscripción vigente de la usuaria (si tiene) para evitar
-// dobles suscripciones. Triba no ofrece períodos de prueba: active y migrated
-// cuentan solo con el período vigente.
+// dobles suscripciones y habilitar el cambio de plan. Triba no ofrece períodos de
+// prueba: active y migrated cuentan solo con el período vigente. No depende de que el
+// puntero del perfil esté al día: se busca entre todas sus filas.
 export async function getActiveSubscriptionForUser(
   userId: string,
 ): Promise<ActiveSubscription | null> {
@@ -22,21 +36,12 @@ export async function getActiveSubscriptionForUser(
     .select("subscription_id")
     .eq("id", userId)
     .maybeSingle();
-  const subscriptionId = (profile as any)?.subscription_id as string | null;
-  if (!subscriptionId) return null;
-
-  const { data: sub } = await supabaseAdmin
+  const { data: rows } = await supabaseAdmin
     .from("subscriptions")
     .select("id, status, plan_type, provider, plan_currency, current_period_end, scheduled_plan_type")
-    .eq("id", subscriptionId)
-    .maybeSingle();
-  if (!sub) return null;
-
-  const status = (sub as any).status as string;
-  const end = (sub as any).current_period_end as string | null;
-  // Misma regla que el gate. Expiradas no habilitan upgrade/downgrade.
-  if (isActiveSubscription(status, end)) return sub as ActiveSubscription;
-  return null;
+    .eq("user_id", userId)
+    .in("status", ["active", "migrated"]);
+  return pickLiveSubscription((rows ?? []) as ActiveSubscription[], (profile as any)?.subscription_id ?? null);
 }
 
 // Hay una suscripción paga vigente (Stripe/MP) en cualquier fila de la usuaria,

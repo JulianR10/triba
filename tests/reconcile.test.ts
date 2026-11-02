@@ -32,7 +32,7 @@ vi.mock("../src/lib/logger", () => ({
   logger: { error: mocks.loggerError, info: mocks.loggerInfo, warn: mocks.loggerWarn },
 }));
 
-import { applyReconcileCandidates, renewExpiredMpSubscriptions } from "../src/lib/reconcile";
+import { applyReconcileCandidates, healProfileSubscriptions, renewExpiredMpSubscriptions } from "../src/lib/reconcile";
 
 describe("reconcile Stripe candidates", () => {
   const periodStart = Math.floor(Date.parse("2026-10-01T00:00:00Z") / 1000);
@@ -191,5 +191,84 @@ describe("renewExpiredMpSubscriptions (red de seguridad del webhook MP)", () => 
     mocks.mpGet.mockResolvedValue({ status: "authorized", summarized: { last_charged_date: "2026-10-22T22:19:03Z" } });
     mocks.applyMpRenewal.mockRejectedValue(new Error("renewal update failed"));
     await expect(renewExpiredMpSubscriptions()).resolves.toEqual({ renewed: 0, failed: 1 });
+  });
+});
+
+describe("healProfileSubscriptions (puntero del perfil)", () => {
+  const future = new Date(Date.now() + 10 * 86400000).toISOString();
+  const past = new Date(Date.now() - 86400000).toISOString();
+  let subs: any[];
+  let profiles: any[];
+  let updates: { payload: any; id: unknown }[];
+  let updateError: unknown;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    updates = [];
+    updateError = null;
+    subs = [];
+    profiles = [];
+    mocks.from.mockImplementation((table: string) => {
+      let op = "select";
+      let payload: any;
+      const q: Record<string, any> = {};
+      for (const m of ["select", "in", "order", "limit"]) q[m] = vi.fn(() => q);
+      q.eq = vi.fn((column: string, value: unknown) => {
+        if (op === "update" && column === "id") updates.push({ payload, id: value });
+        return q;
+      });
+      q.update = vi.fn((value: unknown) => {
+        op = "update";
+        payload = value;
+        return q;
+      });
+      q.maybeSingle = vi.fn(async () => ({ data: table === "profiles" ? { role: "free" } : null }));
+      q.then = (resolve: (v: unknown) => unknown) => {
+        if (op === "update") return Promise.resolve({ error: updateError }).then(resolve);
+        return Promise.resolve({ data: table === "subscriptions" ? subs : profiles, error: null }).then(resolve);
+      };
+      return q;
+    });
+  });
+
+  it("reenlaza al perfil cuyo puntero quedó en una fila vencida y fija el rol", async () => {
+    subs = [{ id: "vivo", user_id: "u1", provider: "mercadopago", status: "active", current_period_end: future }];
+    profiles = [{ id: "u1", role: "free", subscription_id: "viejo" }];
+    await expect(healProfileSubscriptions()).resolves.toEqual({ healed: 1, failed: 0 });
+    expect(updates).toHaveLength(1);
+    expect(updates[0].payload).toMatchObject({ subscription_id: "vivo", role: "subscriber" });
+  });
+
+  it("también cura al perfil sin puntero", async () => {
+    subs = [{ id: "vivo", user_id: "u1", provider: "stripe", status: "active", current_period_end: future }];
+    profiles = [{ id: "u1", role: "free", subscription_id: null }];
+    await expect(healProfileSubscriptions()).resolves.toEqual({ healed: 1, failed: 0 });
+  });
+
+  it("no mueve un puntero que ya apunta a una fila viva (ni toca el rol de una admin)", async () => {
+    subs = [
+      { id: "a", user_id: "u1", provider: "stripe", status: "active", current_period_end: future },
+      { id: "b", user_id: "u1", provider: "mercadopago", status: "active", current_period_end: future },
+      { id: "c", user_id: "u2", provider: "stripe", status: "active", current_period_end: future },
+    ];
+    profiles = [
+      { id: "u1", role: "subscriber", subscription_id: "b" },
+      { id: "u2", role: "admin", subscription_id: "c" },
+    ];
+    await expect(healProfileSubscriptions()).resolves.toEqual({ healed: 0, failed: 0 });
+    expect(updates).toHaveLength(0);
+  });
+
+  it("una fila vencida no cuenta como viva", async () => {
+    subs = [{ id: "viejo", user_id: "u1", provider: "stripe", status: "active", current_period_end: past }];
+    profiles = [{ id: "u1", role: "subscriber", subscription_id: "viejo" }];
+    await expect(healProfileSubscriptions()).resolves.toEqual({ healed: 0, failed: 0 });
+  });
+
+  it("si no puede guardar lo cuenta como fallo", async () => {
+    subs = [{ id: "vivo", user_id: "u1", provider: "stripe", status: "active", current_period_end: future }];
+    profiles = [{ id: "u1", role: "free", subscription_id: null }];
+    updateError = { message: "db down" };
+    await expect(healProfileSubscriptions()).resolves.toEqual({ healed: 0, failed: 1 });
   });
 });

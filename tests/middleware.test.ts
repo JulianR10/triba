@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getUser: vi.fn(),
   profile: { current: null as any },
   subscription: { current: null as any },
+  userRows: { current: [] as any[] },
 }));
 
 vi.mock("astro/middleware", () => ({ defineMiddleware: (fn: unknown) => fn }));
@@ -24,8 +25,10 @@ vi.mock("../src/lib/supabase-admin", () => ({
   supabaseAdmin: {
     from: (table: string) => {
       const q: Record<string, any> = {};
-      for (const m of ["select", "eq"]) q[m] = vi.fn(() => q);
+      for (const m of ["select", "eq", "in"]) q[m] = vi.fn(() => q);
       q.single = vi.fn(async () => ({ data: table === "profiles" ? mocks.profile.current : mocks.subscription.current }));
+      // Búsqueda de las filas de la persona (sin .single()): el gate no depende solo del puntero del perfil.
+      q.then = (resolve: (v: unknown) => unknown) => Promise.resolve({ data: mocks.userRows.current, error: null }).then(resolve);
       return q;
     },
   },
@@ -64,6 +67,7 @@ describe("middleware", () => {
     mocks.verified.current = { data: { user: null }, error: null };
     mocks.profile.current = null;
     mocks.subscription.current = null;
+    mocks.userRows.current = [];
   });
 
   it("rutas admin sin sesión: API → 401, página → redirige al login con retorno", async () => {
@@ -123,6 +127,36 @@ describe("middleware", () => {
     expect((await run("/revista")).locals.hasActiveSub).toBe(false);
     mocks.subscription.current = { id: "s1", status: "past_due", current_period_end: future };
     expect((await run("/revista")).locals.hasActiveSub).toBe(false);
+  });
+
+  it("puntero del perfil viejo: si la persona tiene otra suscripción vigente, tiene acceso", async () => {
+    login();
+    mocks.profile.current = { id: "u1", role: "subscriber", subscription_id: "viejo" };
+    mocks.subscription.current = { id: "viejo", status: "active", current_period_end: past };
+    mocks.userRows.current = [
+      { id: "viejo", provider: "mercadopago", status: "active", current_period_end: past },
+      { id: "vivo", provider: "mercadopago", status: "active", current_period_end: future },
+    ];
+    const { locals } = await run("/revista");
+    expect(locals.hasActiveSub).toBe(true);
+    expect(locals.subscription.id).toBe("vivo");
+  });
+
+  it("sin puntero y con una suscripción vigente (rol free) también tiene acceso", async () => {
+    login();
+    mocks.profile.current = { id: "u1", role: "free", subscription_id: null };
+    mocks.userRows.current = [{ id: "vivo", provider: "stripe", status: "active", current_period_end: future }];
+    expect((await run("/revista")).locals.hasActiveSub).toBe(true);
+  });
+
+  it("si ninguna de sus filas está vigente, sigue sin acceso y conserva la fila apuntada", async () => {
+    login();
+    mocks.profile.current = { id: "u1", role: "subscriber", subscription_id: "viejo" };
+    mocks.subscription.current = { id: "viejo", status: "active", current_period_end: past };
+    mocks.userRows.current = [{ id: "viejo", provider: "stripe", status: "active", current_period_end: past }];
+    const { locals } = await run("/revista");
+    expect(locals.hasActiveSub).toBe(false);
+    expect(locals.subscription.id).toBe("viejo");
   });
 
   it("idioma: la URL manda; la cookie solo desempata las rutas sin prefijo", async () => {

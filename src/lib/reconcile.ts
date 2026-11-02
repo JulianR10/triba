@@ -11,6 +11,7 @@ import { stripe } from "./stripe";
 import { periodRange } from "./stripe-period";
 import { roleAfterPayment } from "./profile-role";
 import { blockIfDuplicateCheckout } from "./duplicate-checkout";
+import { pickLiveSubscription } from "./subscription-guard";
 import {
   activateSubscription,
   applyMpRenewal,
@@ -258,3 +259,59 @@ export async function renewExpiredMpSubscriptions(limit = 100): Promise<{ renewe
   }
   return { renewed, failed };
 }
+
+// Cura el puntero del perfil: quien tiene una suscripción paga vigente debe figurar como
+// suscriptora aunque el puntero apunte a otra fila ya vencida/cancelada, o no exista (o el rol
+// haya quedado en 'free'). Solo reenlaza hacia una fila viva; no cancela ni toca nada del
+// proveedor, y no degrada admins. Si el puntero ya apunta a una fila viva, no lo mueve.
+export async function healProfileSubscriptions(): Promise<{ healed: number; failed: number }> {
+  const { data: rows, error } = await supabaseAdmin
+    .from("subscriptions")
+    .select("id, user_id, provider, status, current_period_end")
+    .in("provider", ["stripe", "mercadopago"])
+    .eq("status", "active");
+  if (error) throw new Error(`live subscriptions query failed: ${error.message}`);
+
+  const liveByUser = new Map<string, any[]>();
+  for (const r of (rows as any[]) || []) {
+    if (!pickLiveSubscription([r])) continue;
+    const list = liveByUser.get(r.user_id) ?? [];
+    list.push(r);
+    liveByUser.set(r.user_id, list);
+  }
+  if (liveByUser.size === 0) return { healed: 0, failed: 0 };
+
+  const { data: profiles, error: profilesError } = await supabaseAdmin
+    .from("profiles")
+    .select("id, role, subscription_id")
+    .in("id", [...liveByUser.keys()]);
+  if (profilesError) throw new Error(`profiles query failed: ${profilesError.message}`);
+
+  let healed = 0;
+  let failed = 0;
+  for (const p of (profiles as any[]) || []) {
+    const live = liveByUser.get(p.id) ?? [];
+    const pointerIsLive = live.some((r) => r.id === p.subscription_id);
+    const roleOk = p.role === "subscriber" || p.role === "admin";
+    if (pointerIsLive && roleOk) continue;
+    const target = pickLiveSubscription(live, p.subscription_id);
+    if (!target) continue;
+    const { error: updateError } = await supabaseAdmin
+      .from("profiles")
+      .update({
+        role: await roleAfterPayment(p.id),
+        subscription_id: target.id,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", p.id);
+    if (updateError) {
+      failed++;
+      logger.error({ err: updateError, userId: p.id }, "[reconcile] profile heal failed");
+      continue;
+    }
+    healed++;
+    logger.warn({ userId: p.id, subscriptionId: target.id }, "[reconcile] profile re-linked to its live subscription");
+  }
+  return { healed, failed };
+}
+

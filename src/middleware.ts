@@ -3,6 +3,7 @@ import { createSupabaseServerClient } from "./lib/supabase-server";
 import { supabaseAdmin } from "./lib/supabase-admin";
 import type { Profile, Subscription } from "./lib/types";
 import { isActiveSubscription } from "./lib/subscription-status";
+import { pickLiveSubscription } from "./lib/subscription-guard";
 import { getLocaleFromUrl } from "./i18n/locale";
 import { DEFAULT_LOCALE, type Locale } from "./i18n/ui";
 import { isEnglishApiCall, localizeApiError } from "./lib/error-i18n";
@@ -91,6 +92,20 @@ export const onRequest = defineMiddleware(async (context, next) => {
         .single();
       subscription = (s as Subscription | null) ?? null;
       hasActiveSub = isActiveSubscription(subscription?.status, subscription?.current_period_end ?? undefined);
+    }
+    // El puntero del perfil puede quedar atrás (otra fila de la misma persona renovó o se contrató
+    // después): el acceso lo decide cualquier suscripción vigente suya, no solo la apuntada.
+    if (profile && !hasActiveSub) {
+      const { data: rows } = await supabaseAdmin
+        .from("subscriptions")
+        .select("*")
+        .eq("user_id", user.id)
+        .in("status", ["active", "migrated"]);
+      const live = pickLiveSubscription((rows ?? []) as Subscription[], profile.subscription_id);
+      if (live) {
+        subscription = live;
+        hasActiveSub = true;
+      }
     }
   }
 
