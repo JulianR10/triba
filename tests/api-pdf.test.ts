@@ -130,4 +130,14 @@ describe("GET /api/pdf/[editionId]", () => {
     expect(res.status).toBe(500);
     expect(await res.text()).not.toContain("secret");
   });
+
+  it("una URL externa también pasa por el control de acceso", async () => {
+    mocks.rows.current = [version({ pdf_url: "https://otro-sitio.com/revista.pdf" })];
+    const denied = await call({ headers: fetchHeaders });
+    expect(denied.status).toBe(401);
+    const allowed = await call({ locals: subscriber });
+    expect(allowed.status).toBe(302);
+    expect(allowed.headers.get("Location")).toBe("https://otro-sitio.com/revista.pdf");
+    expect(mocks.createSignedUrl).not.toHaveBeenCalled();
+  });
 });

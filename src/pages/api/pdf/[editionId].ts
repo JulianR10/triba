@@ -81,13 +81,6 @@ export const GET: APIRoute = async ({ params, request, url, locals }) => {
   // storage://editions-pdfs/... (nuevo) o URL pública legacy del bucket
   // editions (pre-backfill): en ambos casos se firma desde el bucket real.
   const ref = parseStoredFileRef(version.pdf_url);
-  if (!ref) {
-    return new Response(null, {
-      status: 302,
-      headers: { Location: version.pdf_url },
-    });
-  }
-  const storagePath = ref.path;
 
   const serverSupabase = createSupabaseServerClient(request);
   const { data: { session } } = await serverSupabase.auth.getSession();
@@ -156,6 +149,16 @@ export const GET: APIRoute = async ({ params, request, url, locals }) => {
       headers: { Location: lang === "en" ? "/en/suscribirme" : "/suscribirme" },
     });
   }
+
+  // URL externa (ni storage:// ni del bucket): no hay nada que firmar, pero se redirige solo
+  // después del control de acceso, igual que un archivo del bucket.
+  if (!ref) {
+    return new Response(null, {
+      status: 302,
+      headers: { Location: version.pdf_url },
+    });
+  }
+  const storagePath = ref.path;
 
   const isDownload = url.searchParams.get("download") === "1";
 
