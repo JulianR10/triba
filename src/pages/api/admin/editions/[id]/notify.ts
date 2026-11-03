@@ -98,7 +98,7 @@ export const POST: APIRoute = async ({ params, locals, request }) => {
     const { data, error: liveError } = await supabaseAdmin
       .from("subscriptions")
       .select("id, status, current_period_end")
-      .in("status", ["active", "migrated"])
+      .in("status", ["active", "migrated", "past_due"])
       .order("id")
       .range(from, from + PAGE - 1);
     if (liveError) {

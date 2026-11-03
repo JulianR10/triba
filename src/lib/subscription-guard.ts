@@ -61,7 +61,7 @@ export async function getLivePaidSubscription(
     .select("status, current_period_end, cancel_at_period_end")
     .eq("user_id", userId)
     .in("provider", ["stripe", "mercadopago"])
-    .eq("status", "active");
+    .in("status", ["active", "past_due"]);
   const live = (data || []).filter((s: any) => isActiveSubscription(s.status, s.current_period_end));
   if (live.length === 0) return null;
   if (live.some((s: any) => !s.cancel_at_period_end)) return { endsAt: null };

@@ -125,7 +125,10 @@ describe("middleware", () => {
     expect((await run("/revista")).locals.hasActiveSub).toBe(true);
     mocks.subscription.current = { id: "s1", status: "active", current_period_end: past };
     expect((await run("/revista")).locals.hasActiveSub).toBe(false);
+    // Cobro fallido: Stripe reintenta, conserva el acceso mientras el período siga vigente.
     mocks.subscription.current = { id: "s1", status: "past_due", current_period_end: future };
+    expect((await run("/revista")).locals.hasActiveSub).toBe(true);
+    mocks.subscription.current = { id: "s1", status: "past_due", current_period_end: past };
     expect((await run("/revista")).locals.hasActiveSub).toBe(false);
   });
 

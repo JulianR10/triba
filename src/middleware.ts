@@ -100,7 +100,7 @@ export const onRequest = defineMiddleware(async (context, next) => {
         .from("subscriptions")
         .select("*")
         .eq("user_id", user.id)
-        .in("status", ["active", "migrated"]);
+        .in("status", ["active", "migrated", "past_due"]);
       const live = pickLiveSubscription((rows ?? []) as Subscription[], profile.subscription_id);
       if (live) {
         subscription = live;

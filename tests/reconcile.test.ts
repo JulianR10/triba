@@ -32,7 +32,12 @@ vi.mock("../src/lib/logger", () => ({
   logger: { error: mocks.loggerError, info: mocks.loggerInfo, warn: mocks.loggerWarn },
 }));
 
-import { applyReconcileCandidates, healProfileSubscriptions, renewExpiredMpSubscriptions } from "../src/lib/reconcile";
+import {
+  applyReconcileCandidates,
+  healProfileSubscriptions,
+  renewExpiredMpSubscriptions,
+  renewExpiredStripeSubscriptions,
+} from "../src/lib/reconcile";
 
 describe("reconcile Stripe candidates", () => {
   const periodStart = Math.floor(Date.parse("2026-10-01T00:00:00Z") / 1000);
@@ -191,6 +196,73 @@ describe("renewExpiredMpSubscriptions (red de seguridad del webhook MP)", () => 
     mocks.mpGet.mockResolvedValue({ status: "authorized", summarized: { last_charged_date: "2026-10-22T22:19:03Z" } });
     mocks.applyMpRenewal.mockRejectedValue(new Error("renewal update failed"));
     await expect(renewExpiredMpSubscriptions()).resolves.toEqual({ renewed: 0, failed: 1 });
+  });
+});
+
+describe("renewExpiredStripeSubscriptions (respaldo del webhook Stripe)", () => {
+  const oldEnd = "2026-10-22T21:29:41Z";
+  const newEnd = Math.floor(Date.parse("2026-11-22T21:29:41Z") / 1000);
+  let updates: Record<string, unknown>[];
+  let updateError: unknown;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    updates = [];
+    updateError = null;
+    mocks.from.mockImplementation(() => {
+      let op = "select";
+      const q: Record<string, any> = {};
+      for (const m of ["select", "eq", "in", "lt", "order", "limit"]) q[m] = vi.fn(() => q);
+      q.update = vi.fn((value: Record<string, unknown>) => {
+        op = "update";
+        updates.push(value);
+        return q;
+      });
+      q.then = (resolve: (v: unknown) => unknown) =>
+        Promise.resolve(
+          op === "update"
+            ? { error: updateError }
+            : { data: [{ id: "sub-1", provider_subscription_id: "stripe-1", current_period_end: oldEnd }], error: null },
+        ).then(resolve);
+      return q;
+    });
+  });
+
+  const stripeSub = (status: string, end = newEnd) => ({
+    id: "stripe-1",
+    status,
+    cancel_at_period_end: false,
+    items: { data: [{ current_period_start: end - 2592000, current_period_end: end }] },
+  });
+
+  it("adelanta el período si Stripe ya renovó y el webhook no lo aplicó", async () => {
+    mocks.stripeRetrieve.mockResolvedValue(stripeSub("active"));
+    await expect(renewExpiredStripeSubscriptions()).resolves.toEqual({ renewed: 1, failed: 0 });
+    expect(updates[0]).toMatchObject({ status: "active", current_period_end: new Date(newEnd * 1000).toISOString() });
+  });
+
+  it("también recupera past_due (Stripe sigue reintentando)", async () => {
+    mocks.stripeRetrieve.mockResolvedValue(stripeSub("past_due"));
+    await expect(renewExpiredStripeSubscriptions()).resolves.toEqual({ renewed: 1, failed: 0 });
+    expect(updates[0]).toMatchObject({ status: "past_due" });
+  });
+
+  it.each([
+    ["cancelada en Stripe", stripeSub("canceled")],
+    ["impaga (Stripe se rindió)", stripeSub("unpaid")],
+    ["sin período nuevo", stripeSub("active", Math.floor(Date.parse(oldEnd) / 1000))],
+  ])("no toca nada si %s", async (_name, sub) => {
+    mocks.stripeRetrieve.mockResolvedValue(sub);
+    await expect(renewExpiredStripeSubscriptions()).resolves.toEqual({ renewed: 0, failed: 0 });
+    expect(updates).toHaveLength(0);
+  });
+
+  it("cuenta el fallo si Stripe o el guardado fallan", async () => {
+    mocks.stripeRetrieve.mockRejectedValueOnce(new Error("stripe down"));
+    await expect(renewExpiredStripeSubscriptions()).resolves.toEqual({ renewed: 0, failed: 1 });
+    mocks.stripeRetrieve.mockResolvedValue(stripeSub("active"));
+    updateError = { message: "db down" };
+    await expect(renewExpiredStripeSubscriptions()).resolves.toEqual({ renewed: 0, failed: 1 });
   });
 });
 

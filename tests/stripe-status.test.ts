@@ -19,8 +19,8 @@ describe("mapStripeSubscriptionStatus", () => {
     expect(mapStripeSubscriptionStatus("canceled")).toBe("canceled");
   });
 
-  it("mapea unpaid a dunning e incomplete_expired a cancelada", () => {
-    expect(mapStripeSubscriptionStatus("unpaid")).toBe("past_due");
+  it("mapea unpaid (reintentos agotados) e incomplete_expired a cancelada", () => {
+    expect(mapStripeSubscriptionStatus("unpaid")).toBe("canceled");
     expect(mapStripeSubscriptionStatus("incomplete_expired")).toBe("canceled");
   });
 

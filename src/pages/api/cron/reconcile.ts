@@ -2,7 +2,12 @@ import type { APIRoute } from "astro";
 import { ok, error } from "../../../lib/response";
 import { logger } from "../../../lib/logger";
 import { logAdminAction } from "../../../lib/admin/audit";
-import { applyReconcileCandidates, healProfileSubscriptions, renewExpiredMpSubscriptions } from "../../../lib/reconcile";
+import {
+  applyReconcileCandidates,
+  healProfileSubscriptions,
+  renewExpiredMpSubscriptions,
+  renewExpiredStripeSubscriptions,
+} from "../../../lib/reconcile";
 import { sendMailClubOperationsReminder } from "../../../lib/admin/mail-club-reminders";
 import { supabaseAdmin } from "../../../lib/supabase-admin";
 
@@ -52,6 +57,22 @@ export const GET: APIRoute = async ({ request }) => {
     });
   }
 
+  let stripeRenewals: Awaited<ReturnType<typeof renewExpiredStripeSubscriptions>> | null = null;
+  try {
+    stripeRenewals = await renewExpiredStripeSubscriptions();
+    if (stripeRenewals.failed > 0) renewalsFailed = true;
+  } catch (err) {
+    renewalsFailed = true;
+    logger.error({ err }, "[cron/reconcile] Stripe renewals error");
+  }
+  if (stripeRenewals?.renewed) {
+    await logAdminAction("cron", "cron", "subscriber.renewed", "subscriber", undefined, {
+      via: "cron",
+      provider: "stripe",
+      count: stripeRenewals.renewed,
+    });
+  }
+
   // Va después de las renovaciones: una fila recién renovada ya cuenta como viva.
   let healing: Awaited<ReturnType<typeof healProfileSubscriptions>> | null = null;
   let healingFailed = false;
@@ -96,7 +117,7 @@ export const GET: APIRoute = async ({ request }) => {
   }
   return ok({
     activated,
-    renewedCount: renewals?.renewed ?? 0,
+    renewedCount: (renewals?.renewed ?? 0) + (stripeRenewals?.renewed ?? 0),
     healedProfiles: healing?.healed ?? 0,
     failedCount: reconciliation?.failed.length ?? 0,
     skippedCount: reconciliation?.skipped.length ?? 0,

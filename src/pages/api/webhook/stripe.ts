@@ -11,7 +11,7 @@ import { getPreferredLocale } from "../../../lib/locale-pref";
 import { sendMailClubActivation } from "../../../lib/mail-club-activation";
 import { applyUpgrade } from "../../../lib/upgrade-apply";
 import { STRIPE_PRICE_IDS, MAIL_CLUB_STRIPE_PRICE_IDS } from "../../../lib/stripe";
-import { periodRange } from "../../../lib/stripe-period";
+import { periodRange, mapStripeSubscriptionStatus, type LocalSubscriptionStatus } from "../../../lib/stripe-period";
 import { roleAfterPayment } from "../../../lib/profile-role";
 import { blockIfDuplicateCheckout } from "../../../lib/duplicate-checkout";
 
@@ -22,40 +22,7 @@ type StripeSubWithPeriod = Stripe.Subscription & {
   current_period_end: number;
 };
 
-export type LocalSubscriptionStatus =
-  | "active"
-  | "canceled"
-  | "past_due"
-  | "trialing"
-  | "incomplete"
-  | "migrated";
-
-// Mapeo explícito Stripe -> estado local. Los estados que no tienen
-// equivalente se devuelven como "unknown" y el caller los omite con un
-// warn (200, sin reintento): escribir el string crudo rompía el check y
-// generaba tormentas de retry.
-export function mapStripeSubscriptionStatus(status: string): LocalSubscriptionStatus | "unknown" {
-  switch (status) {
-    case "active":
-      return "active";
-    case "trialing":
-      return "trialing";
-    case "past_due":
-      return "past_due";
-    case "incomplete":
-      return "incomplete";
-    case "canceled":
-      return "canceled";
-    case "unpaid":
-      // Cobro vencido sin recupero: equivale a dunning local.
-      return "past_due";
-    case "incomplete_expired":
-      // El pago inicial nunca se completó: la sub no da acceso.
-      return "canceled";
-    default:
-      return "unknown";
-  }
-}
+export { mapStripeSubscriptionStatus, type LocalSubscriptionStatus };
 
 export { periodRange };
 

@@ -8,7 +8,7 @@ import { sendWelcomeEmail } from "./email";
 import { getPreferredLocale } from "./locale-pref";
 import { sendMailClubActivation } from "./mail-club-activation";
 import { stripe } from "./stripe";
-import { periodRange } from "./stripe-period";
+import { periodRange, mapStripeSubscriptionStatus } from "./stripe-period";
 import { roleAfterPayment } from "./profile-role";
 import { blockIfDuplicateCheckout } from "./duplicate-checkout";
 import { pickLiveSubscription } from "./subscription-guard";
@@ -260,6 +260,56 @@ export async function renewExpiredMpSubscriptions(limit = 100): Promise<{ renewe
   return { renewed, failed };
 }
 
+// Respaldo de renovaciones Stripe: si el webhook customer.subscription.updated se perdió, la fila
+// queda con el período vencido. Solo adelanta período/estado con evidencia de Stripe (período
+// posterior al guardado y estado active/past_due). Canceladas en Stripe las resuelve el webhook
+// (libera el perfil): acá solo se avisa. Un error de Stripe deja la fila para la corrida siguiente.
+export async function renewExpiredStripeSubscriptions(limit = 100): Promise<{ renewed: number; failed: number }> {
+  if (!stripe) return { renewed: 0, failed: 0 };
+  const { data: subs, error } = await supabaseAdmin
+    .from("subscriptions")
+    .select("id, provider_subscription_id, current_period_end")
+    .eq("provider", "stripe")
+    .in("status", ["active", "past_due"])
+    .eq("cancel_at_period_end", false)
+    .lt("current_period_end", new Date().toISOString())
+    .order("current_period_end")
+    .limit(limit);
+  if (error) throw new Error(`expired Stripe subscriptions query failed: ${error.message}`);
+
+  let renewed = 0;
+  let failed = 0;
+  for (const s of (subs as any[]) || []) {
+    try {
+      const stripeSub = await stripe.subscriptions.retrieve(s.provider_subscription_id);
+      const status = mapStripeSubscriptionStatus(stripeSub.status);
+      const period = periodRange(stripeSub);
+      if (status !== "active" && status !== "past_due") {
+        logger.warn({ subId: s.id, stripeStatus: stripeSub.status }, "[reconcile] expired Stripe sub is not renewable — webhook territory");
+        continue;
+      }
+      if (!period.end || new Date(period.end).getTime() <= new Date(s.current_period_end).getTime()) continue;
+      const { error: updateError } = await supabaseAdmin
+        .from("subscriptions")
+        .update({
+          status,
+          cancel_at_period_end: !!stripeSub.cancel_at_period_end,
+          ...(period.start ? { current_period_start: period.start } : {}),
+          current_period_end: period.end,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", s.id);
+      if (updateError) throw new Error(`stripe renewal update failed: ${updateError.message}`);
+      renewed++;
+      logger.warn({ subscriptionId: s.id }, "[reconcile] Stripe renewal recovered — the webhook did not apply it");
+    } catch (err) {
+      failed++;
+      logger.error({ err, subId: s.id }, "[reconcile] Stripe renewal error");
+    }
+  }
+  return { renewed, failed };
+}
+
 // Cura el puntero del perfil: quien tiene una suscripción paga vigente debe figurar como
 // suscriptora aunque el puntero apunte a otra fila ya vencida/cancelada, o no exista (o el rol
 // haya quedado en 'free'). Solo reenlaza hacia una fila viva; no cancela ni toca nada del
@@ -269,7 +319,7 @@ export async function healProfileSubscriptions(): Promise<{ healed: number; fail
     .from("subscriptions")
     .select("id, user_id, provider, status, current_period_end")
     .in("provider", ["stripe", "mercadopago"])
-    .eq("status", "active");
+    .in("status", ["active", "past_due"]);
   if (error) throw new Error(`live subscriptions query failed: ${error.message}`);
 
   const liveByUser = new Map<string, any[]>();

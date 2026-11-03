@@ -13,6 +13,11 @@ export function isActiveSubscription(
     // una vez al día). Sin esto la suscriptora pierde el acceso en cada renovación.
     return new Date(currentPeriodEnd).getTime() + RENEWAL_GRACE_MS > Date.now();
   }
+  if (status === "past_due") {
+    // Cobro fallido: Stripe sigue reintentando. Conserva el acceso mientras el período siga vigente;
+    // cuando Stripe se rinde la sub pasa a canceled (ver mapStripeSubscriptionStatus). Sin fecha, no.
+    return !!currentPeriodEnd && new Date(currentPeriodEnd).getTime() > Date.now();
+  }
   if (status === "migrated") {
     if (currentPeriodEnd) {
       const periodEnd = new Date(currentPeriodEnd);
@@ -70,7 +75,7 @@ export function subscriptionStatusInfo(
   const label = STATUS_LABELS[status]?.[locale] ?? (locale === "en" ? "Subscription status unavailable" : "Estado de suscripción no disponible");
   const action = STATUS_ACTIONS[status]?.[locale] ?? null;
   // P7: active coherente con isActiveSubscription para migrated (requiere no expirada); callers con fecha usan hasActiveSub aparte
-  const active = isActiveSubscription(status);
+  const active = isActiveSubscription(status, status === "past_due" ? currentPeriodEnd : undefined);
 
   return { active, label, action };
 }

@@ -37,13 +37,20 @@ describe("isActiveSubscription", () => {
     expect(isActiveSubscription("migrated", ago(60 * 60 * 1000))).toBe(false);
   });
 
+  it("keeps access while Stripe retries a failed charge (past_due) within the period", () => {
+    expect(isActiveSubscription("past_due", future)).toBe(true);
+    expect(isActiveSubscription("past_due", expired)).toBe(false);
+    expect(isActiveSubscription("past_due", null)).toBe(false);
+    expect(subscriptionStatusInfo("past_due", "es", future)).toMatchObject({ active: true, label: "Tu último cobro falló" });
+  });
+
   it("keeps backward compatibility when the period end is unknown", () => {
     expect(isActiveSubscription("active", null)).toBe(true);
     expect(isActiveSubscription("migrated", null)).toBe(true);
   });
 
   it("does not grant access for payment-incomplete or terminal states", () => {
-    for (const status of ["past_due", "incomplete", "trialing", "canceled", "cancelled", "unknown"]) {
+    for (const status of ["incomplete", "trialing", "canceled", "cancelled", "unknown"]) {
       expect(isActiveSubscription(status, future), status).toBe(false);
     }
     expect(isActiveSubscription(null, future)).toBe(false);
