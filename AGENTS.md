@@ -19,7 +19,7 @@ Operación, deploy y scripts: [`README.md`](./README.md). Trabajo en curso y mej
 
 ## Invariantes que no deben romperse
 
-- Gate de suscripción: siempre `isActiveSubscription(status, current_period_end)`; `past_due` no degrada el perfil a `free`.
+- Gate de suscripción: siempre `isActiveSubscription(status, current_period_end)`; `past_due` no degrada el perfil a `free`. Una `active` conserva el acceso 24 h tras `current_period_end` (`RENEWAL_GRACE_MS`): MP cobra después de `next_payment_date` y el atraso crece cada mes.
 - Cancelación y portal: proveedor primero; un error real del proveedor no debe marcar la baja local. `cancel_subscription` devuelve filas afectadas y el caller verifica el resultado.
 - Upgrade pendiente: TTL 60 minutos; un solo `pending` por usuaria. Bienvenida Mail Club: claim condicional `welcome_sent_at`, at-most-once con rollback si Sender falla.
 - Mail Club: elegibilidad y dirección se congelan al corte; el despacho no revalida el estado vivo. Número de fundadora consecutivo, inmutable y sin tope.

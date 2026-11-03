@@ -30,6 +30,13 @@ describe("isActiveSubscription", () => {
     expect(isActiveSubscription("migrated", expired)).toBe(false);
   });
 
+  it("keeps 'active' access during the renewal grace window, but not migrated", () => {
+    const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
+    expect(isActiveSubscription("active", ago(60 * 60 * 1000))).toBe(true);
+    expect(isActiveSubscription("active", ago(25 * 60 * 60 * 1000))).toBe(false);
+    expect(isActiveSubscription("migrated", ago(60 * 60 * 1000))).toBe(false);
+  });
+
   it("keeps backward compatibility when the period end is unknown", () => {
     expect(isActiveSubscription("active", null)).toBe(true);
     expect(isActiveSubscription("migrated", null)).toBe(true);

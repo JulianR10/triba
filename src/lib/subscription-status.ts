@@ -1,3 +1,5 @@
+export const RENEWAL_GRACE_MS = 24 * 60 * 60 * 1000;
+
 export function isActiveSubscription(
   status?: string | null,
   currentPeriodEnd?: string | null,
@@ -7,7 +9,9 @@ export function isActiveSubscription(
     // Con cancelación diferida, una sub 'active' con período vencido ya no
     // da acceso. Sin fecha conocida se considera activa (backward compat).
     if (!currentPeriodEnd) return true;
-    return new Date(currentPeriodEnd).getTime() > Date.now();
+    // Gracia: MP cobra minutos u horas después de next_payment_date (y el cron de respaldo corre
+    // una vez al día). Sin esto la suscriptora pierde el acceso en cada renovación.
+    return new Date(currentPeriodEnd).getTime() + RENEWAL_GRACE_MS > Date.now();
   }
   if (status === "migrated") {
     if (currentPeriodEnd) {
