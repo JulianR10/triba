@@ -81,11 +81,19 @@ describe("webhook Mercado Pago", () => {
     expect((await call(authorizedPayment)).status).toBe(500);
   });
 
-  it("cobro no resoluble → 200 sin tocar la suscripción", async () => {
+  it("cobro no resoluble → 500 (MP reintenta) sin tocar la suscripción", async () => {
     mocks.resolveAuthorizedPayment.mockResolvedValue(null);
-    expect((await call(authorizedPayment)).status).toBe(200);
+    expect((await call(authorizedPayment)).status).toBe(500);
     expect(mocks.applyMpRenewal).not.toHaveBeenCalled();
     expect(mocks.activateSubscription).not.toHaveBeenCalled();
+  });
+
+  it("cobro que se vuelve legible en el reintento → renueva en la misma llamada", async () => {
+    mocks.resolveAuthorizedPayment
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce({ preapprovalId: "pre-1", paymentId: "pay-1", payerEmail: null, userId: null });
+    expect((await call(authorizedPayment)).status).toBe(200);
+    expect(mocks.applyMpRenewal).toHaveBeenCalledWith("sub-1", "pre-1");
   });
 
   it("primer cobro aprobado de una sub incomplete → activa con pago confirmado", async () => {

@@ -144,13 +144,17 @@ async function handlePreApprovalEvent(preapprovalId: string): Promise<void> {
 async function handleAuthorizedPaymentEvent(dataId: string): Promise<void> {
   // dataId puede ser un pago o un authorized_payment, y el pago puede no
   // traer preapproval_id: el resolvedor cubre todos los casos.
-  const link = await resolveAuthorizedPayment(dataId);
+  let link = await resolveAuthorizedPayment(dataId);
+  // MP avisa ~1 s antes de que el cobro sea legible (02-nov-2026): reintento corto en la misma llamada.
+  for (const wait of [1500, 3000]) {
+    if (link) break;
+    await new Promise((r) => setTimeout(r, import.meta.env.MODE === "test" ? 0 : wait));
+    link = await resolveAuthorizedPayment(dataId);
+  }
   if (!link) {
-    logger.info(
-      { dataId },
-      "[MP webhook] authorized payment not resolvable to an approved charge — no-op",
-    );
-    return;
+    // MP puede devolver 404 un instante después de procesar el cobro (caso
+    // real 02-nov-2026): responder 500 para que reintente; el cron es el respaldo.
+    throw new Error(`MP authorized payment ${dataId} not resolvable to an approved charge yet`);
   }
   const { preapprovalId, paymentId } = link;
 
