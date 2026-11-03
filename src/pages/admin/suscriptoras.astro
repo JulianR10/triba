@@ -95,6 +95,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
 <script>
   import { escapeHtml } from "../../lib/escape";
   import { onPageCycle } from "../../lib/onPageCycle";
+  import { isActiveSubscription } from "../../lib/subscription-status";
   let currentPage = 1;
   let currentFilter = "all";
   let currentSearch = "";
@@ -221,7 +222,7 @@ import AdminLayout from "../../components/admin/AdminLayout.astro";
             migrated: { label: "Migrada", cls: "bg-triba-pink text-triba-brown" },
           };
           // 'active' con el período pasado no da acceso: mostrarlo como vencida, no como activa.
-          const expired = s?.status === "active" && !!s?.current_period_end && new Date(s.current_period_end).getTime() <= Date.now();
+          const expired = s?.status === "active" && !!s?.current_period_end && !isActiveSubscription(s.status, s.current_period_end);
           const meta = expired
             ? { label: "Vencida", cls: "bg-triba-red/20 text-triba-red" }
             : (s?.status && STATUS_META[s.status]) || null;

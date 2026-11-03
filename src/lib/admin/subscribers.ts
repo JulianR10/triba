@@ -63,7 +63,7 @@ export async function exportSubscribersCSV(
     const provider = s?.provider || (r.migrationId ? (r.migrationMpPreapprovalId ? "mercadopago" : r.migrationStripeSubId ? "stripe" : "migrado") : "");
     const plan = (s as any)?.plan_type || "";
     const currency = s?.plan_currency || "";
-    const expired = s?.status === "active" && !!s.current_period_end && new Date(s.current_period_end).getTime() <= Date.now();
+    const expired = s?.status === "active" && !!s.current_period_end && !isActiveSubscription(s.status, s.current_period_end);
     const statusVal = expired ? "expired" : s?.status || (r.migrationId ? "pending" : "none");
     const periodEnd = s?.current_period_end
       ? new Date(s.current_period_end).toISOString()
