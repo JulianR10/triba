@@ -2,9 +2,15 @@
 
 Próximas mejoras, trabajo en curso y registro de cambios grandes. Convenciones y reglas de código: [`AGENTS.md`](./AGENTS.md). Cómo correr, deployar y operar: [`README.md`](./README.md). No guardar claves, contraseñas, datos de suscriptoras ni tokens.
 
-## Estado al 02/11/2026 (resumen)
+## Estado al 04/11/2026 (resumen)
 
-**Hecho y en `main`** (último commit de código `af851cd`; `npm run check` 0 errores, `npm test` 222 tests, build OK al 02/11): todas las reparaciones de la auditoría QA, las decisiones de la dueña (sin pruebas gratis, solo Argentina al reabrir el Mail Club, bloqueo del segundo checkout, aviso de baja programada, Google Fonts en privacidad, voseo), la corrección de MP que pisaba el plan, el guard de duplicadas también en reconcile, el script de limpieza listo y los tests de `portal` y `upgrade-checkout`.
+**Hecho y en `main`** (último commit de código `ae4023a`; `npm run check` 0 errores, `npm test` 231 tests, build OK al 04/11): todas las reparaciones de la auditoría QA, las decisiones de la dueña (sin pruebas gratis, solo Argentina al reabrir el Mail Club, bloqueo del segundo checkout, aviso de baja programada, Google Fonts en privacidad, voseo), la corrección de MP que pisaba el plan, el guard de duplicadas también en reconcile, el script de limpieza listo y los tests de `portal` y `upgrade-checkout`.
+
+**Hecho el 03–04/11/2026 (renovaciones y acceso)**
+- Webhook MP: la renovación de `e36cca10` (02/11) la aplicó el cron y no el webhook. Causa: MP avisa ~1 s después de procesar el cobro y el `authorized_payment` todavía daba 404; el código lo descartaba con 200. Ahora `handleAuthorizedPaymentEvent` reintenta a los 1,5 s y 3 s en la misma llamada y, si sigue sin resolver, responde 500 para que MP reintente.
+- Gracia de 24 h (`RENEWAL_GRACE_MS`) para las `active` en `isActiveSubscription`: MP cobra entre 5 y 70 min después de `next_payment_date` (medido en 12 suscripciones MP), así que sin gracia se perdía el acceso en cada renovación. El admin usa el mismo criterio para "Vencida".
+- Stripe: una `past_due` conserva el acceso mientras `current_period_end` sea futuro; `unpaid` (reintentos agotados) se mapea a `canceled`. Respaldo en el cron: `renewExpiredStripeSubscriptions` adelanta el período con evidencia de Stripe. Panel de Stripe revisado: tras agotar reintentos cancela la suscripción.
+- Suite: 231 tests.
 
 **Hecho el 02/11/2026 (renovaciones MP)**
 - Incidente: ~37 suscriptoras MP quedaron con `active` y el período vencido aunque MP les cobró. Causa: `resolveAuthorizedPayment` solo buscaba entre las `incomplete`, así que el webhook de renovación era no-op. Arreglado (`/authorized_payments/{id}` resuelve el `preapproval_id`) y datos reparados con `scripts/resync-mp-periods.mjs` (dry-run por defecto; `--real` escribe).
@@ -31,7 +37,7 @@ Próximas mejoras, trabajo en curso y registro de cambios grandes. Convenciones 
 - **Límite de uso en una consulta:** `035_rate_limit_hit.sql` (**aplicada el 02/11**) junta el conteo y el registro en una sola llamada a la base (`rate_limit_hit`). Si la función no existe, el código usa las dos consultas de siempre y la vuelve a probar cada 5 minutos. El pedido de `/api/pdf` bajó a ~0,3 s.
 - **Cron activo desde el 02/11:** `CRON_SECRET` no existía en Vercel Production, así que `/api/cron/reconcile` respondía 500 y **el cron diario nunca corrió** antes de esa fecha (ni la reconciliación, ni los recordatorios del Mail Club, ni los respaldos de arriba). Se cargó como variable sensible y se redesplegó: sin autorización da 401; la primera ejecución con el secreto dio 200, sin pendientes, y limpió 1.199 filas de `rate_limits`. Corre a las 07:00 UTC.
 - Quick wins del ROADMAP que ya estaban hechos: sitemap con las ediciones reales (`sitemap.xml.ts`), JSON-LD con `set:html`, `llms.txt`, sin `picsum` en la CSP, etiqueta "Language" solo en el diccionario EN. Queda el peso muerto del newsletter (`sender.ts`, `resync-newsletters`): no tocar hasta exportar el histórico.
-- **Primera prueba real de la renovación MP por webhook:** la suscripción `e36cca10` se cobra el 02/11 a las 23:45 UTC (20:45 en Argentina; MP informa el horario con `-04:00`). Los pedidos al webhook del 02/11 (00:12 y 14:18 UTC) aún cayeron en el error viejo (`no-op`): ninguna renovación había pasado por el arreglo. Verificar después del cobro que `current_period_end` avanzó a ~02/12; si no avanzó, el cron la recupera a las 07:00 UTC y queda la señal en el log. Luego `node --env-file=.env scripts/resync-mp-periods.mjs` debe dar 0 pendientes.
+- **Renovación MP por webhook, sin confirmar:** `e36cca10` renovó el 02/11 (cobro 00:25 UTC del 03/11) por el cron de las 07:00 UTC, no por el webhook. El reintento nuevo se desplegó el 03/11; falta ver una renovación aplicada por el webhook (próximas: `84e9c1c9` 05/11 13:06 UTC, `4c716993` 05/11 18:57, `ac6d92b3` 05/11 23:13). Se ve en `vercel logs`: sin `MP renewal recovered` del cron y con `updated_at` en la hora del cobro. Luego `node --env-file=.env scripts/resync-mp-periods.mjs` (dry-run) debe dar 0 pendientes.
 - Smoke test de producción: 10/10. Los 2 fallos del popup eran del test, no del sitio: la home oculta el popup mientras el Mail Club está pausado; el test ahora lo tolera.
 - N+1 de lotes del Mail Club medido: los bucles con consultas (crear lote, purga de retención, aviso de despacho) recorren 12 personas en acciones mensuales (~0,3 s con la base en la misma región). Sin cambios; revisar si el Mail Club crece a cientos.
 
@@ -144,6 +150,10 @@ Fundadora 101, `picsum` en la CSP, peso muerto del newsletter, `llms.txt`, etiqu
 
 ## Pendientes de validación en producción
 
+- 4 suscripciones Stripe en `past_due` al 04/11 (`1fc87286`, `479dd762`, `4d9e2faa`, `74a50042`): ver si se recuperan o Stripe las cancela. `74a50042` lleva 7 intentos desde el 23/10 y conserva acceso hasta el 23/11; decidir si hace falta un tope de días propio y revisar "Reintentos inteligentes" en Stripe.
+- Mercado Pago: confirmar en Webhooks el tópico `subscription_authorized_payment`. Hubo 2 pedidos con firma inválida el 03/11 17:15 UTC (no se repitieron; vigilar).
+- 3 filas MP `active` vencidas sin marca de baja (`eee224f6`, `b6f3e03c`, `a1805fb5`): en MP están canceladas o pausada, sin acceso; solo se ven "Vencida" en el admin.
+- Mejora opcional: el cron consulta a MP todas las `active` vencidas, incluidas las ya dadas de baja, y recibe 429 inofensivos; filtrar por `cancel_at_period_end`.
 - Alta y renovación reales en EUR, USD y ARS; conciliar o reembolsar según el protocolo.
 - Portal y cancelación con una suscripción creada por checkout real (las cuentas de prueba tienen IDs de proveedor ficticios).
 - Probar el cambio Mail Club → Digital en la renovación real (el schedule de Stripe se verificó, la transición no).

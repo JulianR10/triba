@@ -41,7 +41,7 @@ Contacto de soporte para mensajes al público: `src/lib/contact.ts` (los textos 
 
 ## Operación Mail Club
 
-Zona horaria `Europe/Madrid`. El cron (`/api/cron/reconcile`, 07:00 UTC) reconcilia pagos y envía recordatorios idempotentes.
+Zona horaria `Europe/Madrid`. El cron (`/api/cron/reconcile`, 07:00 UTC) reconcilia pagos, recupera renovaciones de Mercado Pago y Stripe que el webhook no aplicó y envía recordatorios idempotentes.
 
 | Día | Qué pasa |
 |---|---|
@@ -66,7 +66,7 @@ Los que escriben van en dry-run por defecto; revisar antes de añadir `--real`.
 | `node --env-file=.env scripts/cleanup-mp-pending.mjs` | Cancela preaprobaciones MP pendientes. |
 | `node --env-file=.env scripts/update-mp-mailclub-price.mjs --amount <ARS>` | Cambia el precio MP de Mail Club; `--real` solo tras aviso de 30 días. |
 | `node --env-file=.env scripts/resync-stripe-periods.mjs` | Resincroniza los períodos de Stripe con la base. |
-| `node --env-file=.env scripts/resync-mp-periods.mjs` | Renueva las suscripciones de Mercado Pago `active` con el período vencido pero con un cobro reciente (dry-run; `--real` escribe). El cron diario hace lo mismo. |
+| `node --env-file=.env scripts/resync-mp-periods.mjs` | Renueva las suscripciones de Mercado Pago `active` con el período vencido pero con un cobro reciente (dry-run; `--real` escribe). El cron diario hace lo mismo (para Stripe, `renewExpiredStripeSubscriptions`). |
 | `node --env-file=.env scripts/dedupe-subscriptions.mjs` | Deja una suscripción viva por persona (ver ROADMAP). |
 | `node --env-file=.env scripts/export-newsletters.mjs` | Exporta el newsletter histórico. |
 
